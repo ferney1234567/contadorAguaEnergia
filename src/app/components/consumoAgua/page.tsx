@@ -3,10 +3,16 @@
 import { useState } from "react";
 import * as XLSX from "xlsx";
 
-export default function ConsumoAgua({ modoNoche }) {
+// Tipado correcto de props
+interface Props {
+  modoNoche: boolean;
+}
+
+export default function ConsumoAgua({ modoNoche }: Props) {
+
   // ======= ESTADOS =======
-  const [mesSeleccionado, setMesSeleccionado] = useState(10); // Octubre
-  const [anioSeleccionado, setAnioSeleccionado] = useState(2025);
+  const [mesSeleccionado, setMesSeleccionado] = useState<number>(10); // Octubre
+  const [anioSeleccionado, setAnioSeleccionado] = useState<number>(2025);
 
   // ======= DISEÑO =======
   const colores = {
@@ -16,13 +22,12 @@ export default function ConsumoAgua({ modoNoche }) {
   };
 
   // ======= DATOS =======
-  const meses = [
+  const meses: string[] = [
     "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
     "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
   ];
 
-  // Festivos reales de ejemplo
-  const festivos = [
+  const festivos: string[] = [
     "2025-01-01", "2025-03-24", "2025-05-01",
     "2025-07-20", "2025-08-07",
     "2025-10-12", "2025-10-31",
@@ -30,16 +35,16 @@ export default function ConsumoAgua({ modoNoche }) {
   ];
 
   // ======= FUNCIONES =======
-  const diasDelMes = (mes, anio) => {
+  const diasDelMes = (mes: number, anio: number): number => {
     return new Date(anio, mes + 1, 0).getDate();
   };
 
-  const esDomingo = (dia) => {
+  const esDomingo = (dia: number): boolean => {
     const fecha = new Date(anioSeleccionado, mesSeleccionado, dia);
     return fecha.getDay() === 0;
   };
 
-  const esFestivo = (dia) => {
+  const esFestivo = (dia: number): boolean => {
     const f = new Date(anioSeleccionado, mesSeleccionado, dia)
       .toISOString()
       .split("T")[0];
@@ -58,8 +63,8 @@ export default function ConsumoAgua({ modoNoche }) {
   }
 
   // ======= EXPORTAR A EXCEL =======
-  const exportarExcel = () => {
-    const data = [];
+  const exportarExcel = (): void => {
+    const data: any[] = [];
 
     for (let d = 1; d <= totalDias; d++) {
       data.push({
@@ -121,7 +126,7 @@ export default function ConsumoAgua({ modoNoche }) {
             </select>
           </div>
 
-          {/* Totales D, F, NA */}
+          {/* Totales */}
           <div className={`${colores.tarjeta} border ${colores.borde} p-4 rounded-lg`}>
             <h3 className="font-bold mb-2">Resumen</h3>
             <p>D (Domingos): <b className="text-purple-400">{totalD}</b></p>

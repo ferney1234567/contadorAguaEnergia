@@ -9,31 +9,57 @@ import {
   Legend,
 } from "chart.js";
 import { Bar } from "react-chartjs-2";
-import { 
-  FaWater, 
-  FaBolt, 
-  FaChartLine, 
+import {
+  FaWater,
+  FaBolt,
+  FaChartLine,
   FaClipboardList,
   FaTint,
-  FaLightbulb 
+  FaLightbulb,
 } from "react-icons/fa";
+import { FC } from "react";
 
 ChartJS.register(BarElement, CategoryScale, LinearScale, Tooltip, Legend);
 
-export default function DashboardInicio({ modoNoche }) {
+interface Props {
+  modoNoche: boolean;
+}
+
+const DashboardInicio: FC<Props> = ({ modoNoche }) => {
   const meses = [
-    "Ene", "Feb", "Mar", "Abr", "May", "Jun",
-    "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"
+    "Ene",
+    "Feb",
+    "Mar",
+    "Abr",
+    "May",
+    "Jun",
+    "Jul",
+    "Ago",
+    "Sep",
+    "Oct",
+    "Nov",
+    "Dic",
   ];
 
-  const consumoAgua = [900, 850, 880, 920, 950, 970, 930, 910, 880, 900, 940, 960];
-  const consumoEnergia = [310, 305, 320, 330, 345, 350, 340, 325, 315, 300, 310, 330];
+  const consumoAgua = [
+    900, 850, 880, 920, 950, 970, 930, 910, 880, 900, 940, 960,
+  ];
+  const consumoEnergia = [
+    310, 305, 320, 330, 345, 350, 340, 325, 315, 300, 310, 330,
+  ];
 
-  // Colores modernos
- const colores = {
-    fondo: modoNoche ? "bg-[#121212] text-white" : "bg-white text-black",
-    tarjeta: modoNoche ? "bg-[#1e1e1e]" : "bg-[#f5f5f5]",
-    borde: modoNoche ? "border-[#333]" : "border-[#ddd]",
+  // 🎨 PALETA DE COLORES BIEN DEFINIDA
+  const colores = {
+    fondo: modoNoche ? "bg-[#121212] text-white" : "bg-[#ffffff] text-black",
+    tarjeta: modoNoche ? "#1e1e1e" : "#ffffff",
+    borde: modoNoche ? "#333" : "#e5e7eb",
+    texto: modoNoche ? "#ffffff" : "#1f2937",
+    textoSec: modoNoche ? "#d1d5db" : "#6b7280",
+
+    agua: "#0ea5e9",
+    energia: "#f59e0b",
+    peligro: "#dc2626",
+    exito: "#10b981",
   };
 
   const opcionesGrafica = {
@@ -42,37 +68,33 @@ export default function DashboardInicio({ modoNoche }) {
       legend: {
         labels: {
           color: colores.texto,
-          font: { size: 12, weight: '500' }
-        }
+        },
       },
       tooltip: {
         backgroundColor: colores.tarjeta,
         titleColor: colores.texto,
         bodyColor: colores.texto,
-        borderColor: modoNoche ? '#334155' : '#e2e8f0',
+        borderColor: colores.borde,
         borderWidth: 1,
-        cornerRadius: 8,
-        padding: 12
-      }
+        cornerRadius: 6,
+      },
     },
     scales: {
       x: {
         ticks: {
-          color: colores.textoSecundario,
-          font: { size: 11 }
+          color: colores.textoSec,
         },
         grid: {
-          color: modoNoche ? '#1e293b' : '#f1f5f9',
-        }
+          color: modoNoche ? "#1f2937" : "#e5e7eb",
+        },
       },
       y: {
         ticks: {
-          color: colores.textoSecundario,
-          font: { size: 11 }
+          color: colores.textoSec,
         },
         grid: {
-          color: modoNoche ? '#1e293b' : '#f1f5f9',
-        }
+          color: modoNoche ? "#1f2937" : "#e5e7eb",
+        },
       },
     },
   };
@@ -83,12 +105,8 @@ export default function DashboardInicio({ modoNoche }) {
       {
         label: "Consumo Agua (L)",
         data: consumoAgua,
-        backgroundColor: modoNoche 
-          ? 'rgba(6, 182, 212, 0.7)'
-          : 'linear-gradient(180deg, rgba(6, 182, 212, 0.8) 0%, rgba(8, 145, 178, 0.9) 100%)',
-        borderRadius: 12,
-        borderWidth: 0,
-        borderSkipped: false,
+        backgroundColor: colores.agua,
+        borderRadius: 10,
       },
     ],
   };
@@ -99,159 +117,109 @@ export default function DashboardInicio({ modoNoche }) {
       {
         label: "Consumo Energía (kWh)",
         data: consumoEnergia,
-        backgroundColor: modoNoche
-          ? 'rgba(245, 158, 11, 0.7)'
-          : 'linear-gradient(180deg, rgba(245, 158, 11, 0.8) 0%, rgba(217, 119, 6, 0.9) 100%)',
-        borderRadius: 12,
-        borderWidth: 0,
-        borderSkipped: false,
+        backgroundColor: colores.energia,
+        borderRadius: 10,
       },
     ],
   };
 
   return (
-    <div
-      className={`
-        w-full h-full transition-all duration-300 
-        overflow-y-auto pb-10 px-4
-      `}
-      style={{ backgroundColor: colores.fondo }}
-    >
-      {/* TARJETAS MEJORADAS */}
+    <div className={`w-full h-full p-6 ${colores.fondo}`}>
+      {/* TARJETAS */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6 mb-10">
-        {/* Tarjeta Agua */}
-        <div 
-          className="p-6 rounded-2xl shadow-lg backdrop-blur-sm border transition-all duration-300 hover:scale-105 hover:shadow-xl"
-          style={{
-            backgroundColor: colores.tarjeta,
-            color: colores.texto,
-            borderColor: modoNoche ? '#334155' : '#f1f5f9'
-          }}
+        {/* Agua */}
+        <div
+          className="p-6 rounded-xl shadow-lg border transition hover:scale-105"
+          style={{ background: colores.tarjeta, borderColor: colores.borde }}
         >
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-lg">Agua</h3>
-            <div 
-              className="p-3 rounded-full"
-              style={{ backgroundColor: modoNoche ? '#0c4a6e20' : '#e0f2fe' }}
-            >
-              <FaWater className="text-xl" style={{ color: colores.agua }} />
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="font-bold text-lg">Agua</h3>
+            <div className="p-3 rounded-full bg-blue-100">
+              <FaWater className="text-blue-600 text-xl" />
             </div>
           </div>
-          <p className="text-3xl font-bold mb-1" style={{ color: colores.agua }}>12.520 L</p>
+          <p className="text-3xl font-bold text-blue-600">12.520 L</p>
           <span className="text-sm opacity-70">Este mes</span>
         </div>
 
-        {/* Tarjeta Energía */}
-        <div 
-          className="p-6 rounded-2xl shadow-lg backdrop-blur-sm border transition-all duration-300 hover:scale-105 hover:shadow-xl"
-          style={{
-            backgroundColor: colores.tarjeta,
-            color: colores.texto,
-            borderColor: modoNoche ? '#334155' : '#f1f5f9'
-          }}
+        {/* Energía */}
+        <div
+          className="p-6 rounded-xl shadow-lg border transition hover:scale-105"
+          style={{ background: colores.tarjeta, borderColor: colores.borde }}
         >
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-lg">Energía</h3>
-            <div 
-              className="p-3 rounded-full"
-              style={{ backgroundColor: modoNoche ? '#713f1220' : '#fef3c7' }}
-            >
-              <FaBolt className="text-xl" style={{ color: colores.energia }} />
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="font-bold text-lg">Energía</h3>
+            <div className="p-3 rounded-full bg-yellow-100">
+              <FaBolt className="text-yellow-500 text-xl" />
             </div>
           </div>
-          <p className="text-3xl font-bold mb-1" style={{ color: colores.energia }}>3.980 kWh</p>
+          <p className="text-3xl font-bold text-yellow-500">3.980 kWh</p>
           <span className="text-sm opacity-70">Este mes</span>
         </div>
 
-        {/* Tarjeta Promedio */}
-        <div 
-          className="p-6 rounded-2xl shadow-lg backdrop-blur-sm border transition-all duration-300 hover:scale-105 hover:shadow-xl"
-          style={{
-            backgroundColor: colores.tarjeta,
-            color: colores.texto,
-            borderColor: modoNoche ? '#334155' : '#f1f5f9'
-          }}
+        {/* Promedio */}
+        <div
+          className="p-6 rounded-xl shadow-lg border transition hover:scale-105"
+          style={{ background: colores.tarjeta, borderColor: colores.borde }}
         >
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-lg">Promedio Diario</h3>
-            <div 
-              className="p-3 rounded-full"
-              style={{ backgroundColor: modoNoche ? '#04785720' : '#d1fae5' }}
-            >
-              <FaChartLine className="text-xl" style={{ color: colores.exito }} />
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="font-bold text-lg">Promedio Diario</h3>
+            <div className="p-3 rounded-full bg-green-100">
+              <FaChartLine className="text-green-500 text-xl" />
             </div>
           </div>
-          <p className="text-3xl font-bold mb-1" style={{ color: colores.exito }}>850</p>
+          <p className="text-3xl font-bold text-green-500">850</p>
           <span className="text-sm opacity-70">L / kWh promedio</span>
         </div>
 
-        {/* Tarjeta Lecturas */}
-        <div 
-          className="p-6 rounded-2xl shadow-lg backdrop-blur-sm border transition-all duration-300 hover:scale-105 hover:shadow-xl"
-          style={{
-            backgroundColor: colores.tarjeta,
-            color: colores.texto,
-            borderColor: modoNoche ? '#334155' : '#f1f5f9'
-          }}
+        {/* Lecturas */}
+        <div
+          className="p-6 rounded-xl shadow-lg border transition hover:scale-105"
+          style={{ background: colores.tarjeta, borderColor: colores.borde }}
         >
-          <div className="flex items-center justify-between mb-4">
-            <h3 className="font-semibold text-lg">Lecturas Totales</h3>
-            <div 
-              className="p-3 rounded-full"
-              style={{ backgroundColor: modoNoche ? '#dc262620' : '#fee2e2' }}
-            >
-              <FaClipboardList className="text-xl" style={{ color: colores.peligro }} />
+          <div className="flex justify-between items-center mb-3">
+            <h3 className="font-bold text-lg">Lecturas Totales</h3>
+            <div className="p-3 rounded-full bg-red-100">
+              <FaClipboardList className="text-red-500 text-xl" />
             </div>
           </div>
-          <p className="text-3xl font-bold mb-1" style={{ color: colores.peligro }}>128</p>
+          <p className="text-3xl font-bold text-red-500">128</p>
           <span className="text-sm opacity-70">Registradas</span>
         </div>
       </div>
 
-      {/* GRÁFICAS MEJORADAS */}
+      {/* GRÁFICAS */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        {/* Gráfica Agua */}
-        <div 
-          className="p-6 rounded-2xl shadow-lg border transition-all duration-300"
-          style={{
-            backgroundColor: colores.tarjeta,
-            color: colores.texto,
-            borderColor: modoNoche ? '#334155' : '#f1f5f9'
-          }}
+        {/* Agua */}
+        <div
+          className="p-6 rounded-xl shadow-lg border"
+          style={{ background: colores.tarjeta, borderColor: colores.borde }}
         >
-          <div className="flex items-center gap-3 mb-6">
-            <div 
-              className="p-2 rounded-lg"
-              style={{ backgroundColor: modoNoche ? '#0c4a6e20' : '#e0f2fe' }}
-            >
-              <FaTint style={{ color: colores.agua }} />
+          <div className="flex gap-3 items-center mb-4">
+            <div className="p-2 rounded-lg bg-blue-100">
+              <FaTint className="text-blue-600" />
             </div>
-            <h3 className="text-xl font-bold">Consumo de Agua (Mensual)</h3>
+            <h3 className="font-bold text-lg">Consumo de Agua</h3>
           </div>
           <Bar data={dataAgua} options={opcionesGrafica} />
         </div>
 
-        {/* Gráfica Energía */}
-        <div 
-          className="p-6 rounded-2xl shadow-lg border transition-all duration-300"
-          style={{
-            backgroundColor: colores.tarjeta,
-            color: colores.texto,
-            borderColor: modoNoche ? '#334155' : '#f1f5f9'
-          }}
+        {/* Energía */}
+        <div
+          className="p-6 rounded-xl shadow-lg border"
+          style={{ background: colores.tarjeta, borderColor: colores.borde }}
         >
-          <div className="flex items-center gap-3 mb-6">
-            <div 
-              className="p-2 rounded-lg"
-              style={{ backgroundColor: modoNoche ? '#713f1220' : '#fef3c7' }}
-            >
-              <FaLightbulb style={{ color: colores.energia }} />
+          <div className="flex gap-3 items-center mb-4">
+            <div className="p-2 rounded-lg bg-yellow-100">
+              <FaLightbulb className="text-yellow-500" />
             </div>
-            <h3 className="text-xl font-bold">Consumo de Energía (Mensual)</h3>
+            <h3 className="font-bold text-lg">Consumo de Energía</h3>
           </div>
           <Bar data={dataEnergia} options={opcionesGrafica} />
         </div>
       </div>
     </div>
   );
-}
+};
+
+export default DashboardInicio;

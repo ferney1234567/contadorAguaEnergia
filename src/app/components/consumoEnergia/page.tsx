@@ -2,8 +2,13 @@
 
 import { useState } from "react";
 
-export default function ConsumoEnergia({ modoNoche }) {
-  const [mesSeleccionado, setMesSeleccionado] = useState("Noviembre");
+// Tipado correcto para Next.js
+interface Props {
+  modoNoche: boolean;
+}
+
+export default function ConsumoEnergia({ modoNoche }: Props) {
+  const [mesSeleccionado, setMesSeleccionado] = useState<string>("Noviembre");
 
   const colores = {
     fondo: modoNoche ? "bg-[#121212] text-white" : "bg-white text-black",
@@ -16,12 +21,12 @@ export default function ConsumoEnergia({ modoNoche }) {
     diaNA: "bg-purple-400",
   };
 
-  const meses = [
+  const meses: string[] = [
     "Enero","Febrero","Marzo","Abril","Mayo","Junio",
     "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"
   ];
 
-  const dias = Array.from({ length: 31 }, (_, i) => i + 1);
+  const dias: number[] = Array.from({ length: 31 }, (_, i) => i + 1);
 
   return (
     <div className={`w-full ${colores.fondo}`}>
@@ -55,13 +60,16 @@ export default function ConsumoEnergia({ modoNoche }) {
           <div className={`${colores.tarjeta} border ${colores.borde} p-4 rounded-lg shadow`}>
             <div className="flex items-center gap-4">
               <div className="flex items-center gap-1">
-                <span className={`w-5 h-5 ${colores.diaD} inline-block rounded-sm`}></span> <span>D</span>
+                <span className={`w-5 h-5 ${colores.diaD} inline-block rounded-sm`} />
+                <span>D</span>
               </div>
               <div className="flex items-center gap-1">
-                <span className={`w-5 h-5 ${colores.diaF} inline-block rounded-sm`}></span> <span>F</span>
+                <span className={`w-5 h-5 ${colores.diaF} inline-block rounded-sm`} />
+                <span>F</span>
               </div>
               <div className="flex items-center gap-1">
-                <span className={`w-5 h-5 ${colores.diaNA} inline-block rounded-sm`}></span> <span>NA</span>
+                <span className={`w-5 h-5 ${colores.diaNA} inline-block rounded-sm`} />
+                <span>NA</span>
               </div>
             </div>
           </div>
@@ -90,7 +98,7 @@ export default function ConsumoEnergia({ modoNoche }) {
           <table className="w-full text-center">
             <thead className={modoNoche ? "bg-[#222]" : "bg-gray-100"}>
               <tr>
-                <th className="p-3 border">Noviembre</th>
+                <th className="p-3 border">{mesSeleccionado}</th>
                 <th className="p-3 border">Medidor A</th>
                 <th className="p-3 border">Medidor B</th>
                 <th className="p-3 border">Total A</th>
