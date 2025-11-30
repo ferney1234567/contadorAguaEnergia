@@ -12,10 +12,10 @@ import {
   Menu 
 } from "lucide-react";
 
-import DashboardInicio from "./components/dashboard/page";
-import ConsumoAgua from "./components/consumoAgua/page";
-import ConsumoEnergia from "./components/consumoEnergia/page";
-import Lecturas from "./components/lecturas/page";
+import DashboardInicio from "./components/dashboard/dasboard";
+import ConsumoAgua from "./components/consumoAgua/consumoAgua";
+import ConsumoEnergia from "./components/consumoEnergia/consumoEnergia";
+import Lecturas from "./components/lecturas/lecturas";
 
 
 export default function MenuPrincipal() {

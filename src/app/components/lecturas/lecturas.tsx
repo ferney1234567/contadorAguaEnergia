@@ -3,7 +3,11 @@
 import { useEffect, useRef, useState } from "react";
 import { Camera, Pencil, SlidersHorizontal, Save, X } from "lucide-react";
 
-export default function Lecturas() {
+interface Props {
+  modoNoche: boolean;
+}
+
+export default function Lecturas({ modoNoche }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
 
   const [streamActivo, setStreamActivo] = useState(false);
@@ -11,14 +15,17 @@ export default function Lecturas() {
   const [modoManual, setModoManual] = useState(false);
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
 
+  // 🎨 COLORES DINÁMICOS — MODO DÍA / MODO NOCHE
   const colores = {
-    fondo: "bg-[#F5F5F5] text-black",
-    tarjeta: "bg-white",
-    botones: "bg-white text-black",
+    fondo: modoNoche ? "bg-[#121212] text-white" : "bg-[#F5F5F5] text-black",
+    tarjeta: modoNoche ? "bg-[#1f1f1f]" : "bg-white",
+    botones: modoNoche ? "bg-[#2a2a2a] text-white" : "bg-white text-black",
     rojo: "bg-[#E30613] hover:bg-[#c10510] text-white",
+    panelFiltros: modoNoche ? "bg-[#2a2a2a] text-white" : "bg-white text-black",
+    input: modoNoche ? "bg-[#333] text-white" : "bg-white text-black",
   };
 
-  // Activar cámara trasera
+  // ========== ACTIVAR CÁMARA ==========
   const iniciarCamara = async () => {
     try {
       setModoManual(false);
@@ -40,7 +47,7 @@ export default function Lecturas() {
     }
   };
 
-  // Detener cámara
+  // ========== DETENER CÁMARA ==========
   const detenerCamara = () => {
     if (videoRef.current?.srcObject) {
       const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
@@ -49,7 +56,7 @@ export default function Lecturas() {
     setStreamActivo(false);
   };
 
-  // Apagar cámara al abrir manual o filtros
+  // Auto apagar cámara si abres manual o filtros
   useEffect(() => {
     if (modoManual || mostrarFiltros) detenerCamara();
   }, [modoManual, mostrarFiltros]);
@@ -60,14 +67,14 @@ export default function Lecturas() {
       {/* TÍTULO */}
       <h1 className="text-3xl font-extrabold mb-5">Lecturas</h1>
 
-      {/* CUADRO DE LECTURA */}
+      {/* CUADRO LECTURA */}
       <div className={`${colores.tarjeta} w-full max-w-sm p-4 rounded-xl shadow-lg`}>
         {modoManual ? (
           <input
             type="text"
             value={lectura}
             onChange={(e) => setLectura(e.target.value)}
-            className="w-full bg-transparent text-center text-3xl font-mono outline-none"
+            className={`w-full text-center text-3xl font-mono outline-none ${colores.input}`}
           />
         ) : (
           <p className="text-center font-mono text-3xl tracking-wider">{lectura}</p>
@@ -78,13 +85,11 @@ export default function Lecturas() {
       {!modoManual && !mostrarFiltros && (
         <div className="w-full max-w-sm mt-6 flex justify-center">
           <div className="relative w-full h-52 md:h-64 bg-black rounded-xl overflow-hidden shadow-lg">
-
             {!streamActivo && (
               <div className="absolute inset-0 flex items-center justify-center text-white opacity-70">
                 <p className="text-lg font-bold">Cámara apagada</p>
               </div>
             )}
-
             <video
               ref={videoRef}
               autoPlay
@@ -98,7 +103,7 @@ export default function Lecturas() {
 
       {/* PANEL DE FILTROS */}
       {mostrarFiltros && (
-        <div className="w-full max-w-sm mt-6 p-4 rounded-xl shadow-lg bg-white text-black">
+        <div className={`w-full max-w-sm mt-6 p-4 rounded-xl shadow-lg ${colores.panelFiltros}`}>
           <h3 className="font-bold text-lg mb-4">Filtros</h3>
 
           <label className="block mb-4">
@@ -113,7 +118,7 @@ export default function Lecturas() {
 
           <button
             onClick={() => setMostrarFiltros(false)}
-            className="w-full mt-2 p-3 rounded-lg bg-gray-300 hover:bg-gray-400 flex items-center justify-center"
+            className="w-full mt-2 p-3 rounded-lg bg-gray-400 hover:bg-gray-500 flex items-center justify-center"
           >
             <X size={20} className="mr-2" /> Cerrar
           </button>
@@ -128,7 +133,7 @@ export default function Lecturas() {
           onClick={iniciarCamara}
           className={`${colores.botones} w-24 px-4 py-3 rounded-xl shadow-lg flex flex-col items-center`}
         >
-          <Camera size={24} className="mb-1" />
+          <Camera size={24} className="mb-1 text-red-500" />
           <span className="text-sm font-semibold">Escanear</span>
         </button>
 
@@ -137,7 +142,7 @@ export default function Lecturas() {
           onClick={() => { setModoManual(true); setMostrarFiltros(false); }}
           className={`${colores.botones} w-24 px-4 py-3 rounded-xl shadow-lg flex flex-col items-center`}
         >
-          <Pencil size={24} className="mb-1" />
+          <Pencil size={24} className="mb-1 text-red-500" />
           <span className="text-sm font-semibold">Manual</span>
         </button>
 
@@ -146,12 +151,12 @@ export default function Lecturas() {
           onClick={() => { setMostrarFiltros(true); setModoManual(false); }}
           className={`${colores.botones} w-24 px-4 py-3 rounded-xl shadow-lg flex flex-col items-center`}
         >
-          <SlidersHorizontal size={24} className="mb-1" />
+          <SlidersHorizontal size={24} className="mb-1 text-red-500" />
           <span className="text-sm font-semibold">Filtros</span>
         </button>
       </div>
 
-      {/* BOTÓN ROJO GUARDAR */}
+      {/* BOTÓN GUARDAR */}
       <button
         className={`mt-10 w-full max-w-sm py-4 rounded-xl flex items-center justify-center text-xl shadow-lg ${colores.rojo}`}
       >
@@ -161,14 +166,10 @@ export default function Lecturas() {
 
       {/* CERRAR CÁMARA */}
       {streamActivo && (
-        <button
-          onClick={detenerCamara}
-          className="mt-4 text-red-500 underline text-center"
-        >
+        <button onClick={detenerCamara} className="mt-4 text-red-500 underline text-center">
           Apagar cámara
         </button>
       )}
-
     </div>
   );
 }
