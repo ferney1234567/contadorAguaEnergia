@@ -64,7 +64,7 @@ export default function ConsumoAgua({ modoNoche }: Props) {
 
   // ======= EXPORTAR A EXCEL =======
   const exportarExcel = (): void => {
-    const data: any[] = [];
+   const data: Record<string, string | number>[] = [];
 
     for (let d = 1; d <= totalDias; d++) {
       data.push({
