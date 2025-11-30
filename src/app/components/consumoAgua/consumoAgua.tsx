@@ -2,76 +2,82 @@
 
 import { useState } from "react";
 import * as XLSX from "xlsx";
+import {
+  Calendar,
+  Download,
+  Droplets,
+  BarChart3,
+} from "lucide-react";
 
-// Tipado correcto de props
 interface Props {
   modoNoche: boolean;
 }
 
 export default function ConsumoAgua({ modoNoche }: Props) {
-
-  // ======= ESTADOS =======
-  const [mesSeleccionado, setMesSeleccionado] = useState<number>(10); // Octubre
+  const [mesSeleccionado, setMesSeleccionado] = useState<number>(10);
   const [anioSeleccionado, setAnioSeleccionado] = useState<number>(2025);
 
-  // ======= DISEÑO =======
+  // 🎨 PALETA 100% MODO DÍA / NOCHE
   const colores = {
-    fondo: modoNoche ? "bg-[#121212] text-white" : "bg-white text-black",
-    tarjeta: modoNoche ? "bg-[#1e1e1e]" : "bg-[#f5f5f5]",
-    borde: modoNoche ? "border-[#333]" : "border-[#ddd]",
+    fondo: modoNoche ? "bg-[#0d0d0d] text-white" : "bg-[#ffffff] text-black",
+
+    tarjeta: modoNoche
+      ? "bg-[#1a1a1a] border border-[#333]"
+      : "bg-white border border-gray-200",
+
+    sombra: modoNoche
+      ? "shadow-[0px_4px_12px_rgba(0,0,0,0.5)]"
+      : "shadow-[0px_4px_15px_rgba(0,0,0,0.08)]",
+
+    domingo: modoNoche ? "bg-purple-700 text-white" : "bg-purple-300 text-black",
+    festivo: modoNoche ? "bg-red-700 text-white" : "bg-red-300 text-black",
+    habil: modoNoche ? "bg-[#1b1b1b]" : "bg-white",
+
+    domingoFila: modoNoche ? "bg-purple-900 text-white" : "bg-purple-100 text-black",
+    festivoFila: modoNoche ? "bg-red-900 text-white" : "bg-red-100 text-black",
+    habilFila: modoNoche ? "bg-[#111]" : "bg-white",
+
+    bordeSuave: modoNoche ? "border border-[#2a2a2a]" : "border border-gray-200",
   };
 
-  // ======= DATOS =======
-  const meses: string[] = [
-    "Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio",
-    "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre"
+  const meses = [
+    "Enero","Febrero","Marzo","Abril","Mayo","Junio",
+    "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"
   ];
 
-  const festivos: string[] = [
-    "2025-01-01", "2025-03-24", "2025-05-01",
-    "2025-07-20", "2025-08-07",
-    "2025-10-12", "2025-10-31",
-    "2025-11-11", "2025-12-25"
+  const festivos = [
+    "2025-01-01","2025-03-24","2025-05-01",
+    "2025-07-20","2025-08-07",
+    "2025-10-12","2025-10-31",
+    "2025-11-11","2025-12-25"
   ];
 
-  // ======= FUNCIONES =======
-  const diasDelMes = (mes: number, anio: number): number => {
-    return new Date(anio, mes + 1, 0).getDate();
-  };
+  const diasDelMes = (mes: number, anio: number) =>
+    new Date(anio, mes + 1, 0).getDate();
 
-  const esDomingo = (dia: number): boolean => {
-    const fecha = new Date(anioSeleccionado, mesSeleccionado, dia);
-    return fecha.getDay() === 0;
-  };
+  const totalDias = diasDelMes(mesSeleccionado, anioSeleccionado);
 
-  const esFestivo = (dia: number): boolean => {
+  const esDomingo = (dia: number) =>
+    new Date(anioSeleccionado, mesSeleccionado, dia).getDay() === 0;
+
+  const esFestivo = (dia: number) => {
     const f = new Date(anioSeleccionado, mesSeleccionado, dia)
       .toISOString()
       .split("T")[0];
-
     return festivos.includes(f);
   };
 
-  // ======= CONTADORES =======
-  const totalDias = diasDelMes(mesSeleccionado, anioSeleccionado);
-  let totalD = 0, totalF = 0, totalNA = 0;
-
-  for (let i = 1; i <= totalDias; i++) {
-    if (esDomingo(i)) totalD++;
-    if (esFestivo(i)) totalF++;
-    if (!esDomingo(i) && !esFestivo(i)) totalNA++;
-  }
-
-  // ======= EXPORTAR A EXCEL =======
-  const exportarExcel = (): void => {
-   const data: Record<string, string | number>[] = [];
-
+  const exportarExcel = () => {
+    const data: Record<string, string | number>[] = [];
     for (let d = 1; d <= totalDias; d++) {
+      const tipo = esDomingo(d) ? "D" : esFestivo(d) ? "F" : "NA";
       data.push({
         Dia: d,
-        Tipo: esDomingo(d) ? "D" : esFestivo(d) ? "F" : "NA",
-        Bodega2: "",
-        Bodega4: "",
+        Tipo: tipo,
+        Bodega2: tipo,
+        Bodega4: tipo,
+        Total2: tipo,
+        Total4: tipo,
       });
     }
 
@@ -81,44 +87,68 @@ export default function ConsumoAgua({ modoNoche }: Props) {
     XLSX.writeFile(wb, "Consumo_Agua.xlsx");
   };
 
-  // ============================================
-  // ================== UI =======================
-  // ============================================
-
   return (
-    <div className={`w-full ${colores.fondo}`}>
-      <div className="w-full max-w-[1900px] mx-auto pt-5">
+    <div className={`w-full min-h-screen ${colores.fondo} p-3 md:p-6`}>
+      <div className="max-w-[2000px] mx-auto">
 
-        {/* TARJETAS SUPERIORES */}
-        <div className="grid grid-cols-1 md:grid-cols-5 gap-6 mb-10">
+        {/* ==== TÍTULO ==== */}
+        <h2 className="text-center text-xl mb-10 font-semibold opacity-80">
+          {meses[mesSeleccionado]} {anioSeleccionado}
+        </h2>
 
-          {/* Meta */}
-          <div className={`${colores.tarjeta} border ${colores.borde} p-4 rounded-lg`}>
-            <h3 className="font-bold text-lg">Meta diaria</h3>
-            <p className="text-sm mt-2">41 metros cúbicos</p>
+        {/* ==== TARJETAS RESPONSIVAS ==== */}
+        <div
+          className="
+            grid
+            grid-cols-1
+            sm:grid-cols-2
+            md:grid-cols-3
+            lg:grid-cols-5
+            gap-4
+            mb-10
+          "
+        >
+
+          {/* Meta Mensual */}
+          <div className={`${colores.tarjeta} ${colores.sombra} p-5 rounded-2xl`}>
+            <h3 className="font-bold text-lg flex items-center gap-2">
+              <Droplets size={22} className="text-blue-400" />
+              Meta Mensual
+            </h3>
+            <p className="mt-4 text-2xl font-bold text-blue-500">41 m³</p>
           </div>
 
           {/* Mes */}
-          <div className={`${colores.tarjeta} border ${colores.borde} p-4 rounded-lg`}>
-            <h3 className="font-bold mb-2">Mes</h3>
+          <div className={`${colores.tarjeta} ${colores.sombra} p-5 rounded-2xl`}>
+            <h3 className="font-bold text-lg flex items-center gap-2">
+              <Calendar size={22} className="text-indigo-400" />
+              Mes
+            </h3>
             <select
+              className={`mt-3 w-full p-3 rounded-lg font-bold ${
+                modoNoche ? "bg-[#2a2a2a] text-white" : "bg-gray-100"
+              }`}
               value={mesSeleccionado}
               onChange={(e) => setMesSeleccionado(parseInt(e.target.value))}
-              className="w-full p-2 rounded bg-white text-black"
             >
               {meses.map((mes, i) => (
-                <option key={mes} value={i}>{mes}</option>
+                <option key={i} value={i}>{mes}</option>
               ))}
             </select>
           </div>
 
           {/* Año */}
-          <div className={`${colores.tarjeta} border ${colores.borde} p-4 rounded-lg`}>
-            <h3 className="font-bold mb-2">Año</h3>
+          <div className={`${colores.tarjeta} ${colores.sombra} p-5 rounded-2xl`}>
+            <h3 className="font-bold text-lg flex items-center gap-2">
+              <Calendar size={22} className="text-indigo-400" />
+              Año
+            </h3>
             <select
+              className={`mt-3 w-full p-3 rounded-lg font-bold ${
+                modoNoche ? "bg-[#2a2a2a] text-white" : "bg-gray-100"
+              }`}
               value={anioSeleccionado}
               onChange={(e) => setAnioSeleccionado(parseInt(e.target.value))}
-              className="w-full p-2 rounded bg-white text-black"
             >
               {[2024, 2025, 2026, 2027].map((anio) => (
                 <option key={anio} value={anio}>{anio}</option>
@@ -126,55 +156,109 @@ export default function ConsumoAgua({ modoNoche }: Props) {
             </select>
           </div>
 
-          {/* Totales */}
-          <div className={`${colores.tarjeta} border ${colores.borde} p-4 rounded-lg`}>
-            <h3 className="font-bold mb-2">Resumen</h3>
-            <p>D (Domingos): <b className="text-purple-400">{totalD}</b></p>
-            <p>F (Festivos): <b className="text-red-400">{totalF}</b></p>
-            <p>NA (Hábiles): <b className="text-green-500">{totalNA}</b></p>
+          {/* Resumen */}
+          <div className={`${colores.tarjeta} ${colores.sombra} p-5 rounded-2xl`}>
+            <h3 className="font-bold text-lg flex items-center gap-2">
+              <BarChart3 size={22} className="text-green-500" />
+              Resumen
+            </h3>
+            <div className="mt-4 text-sm leading-7">
+              <p><b className="text-purple-400 text-lg">D</b> — Domingos</p>
+              <p><b className="text-red-500 text-lg">F</b> — Festivos</p>
+              <p><b className="text-green-500 text-lg">NA</b> — Hábiles</p>
+            </div>
           </div>
 
           {/* Exportar */}
-          <div className={`${colores.tarjeta} border ${colores.borde} p-4 rounded-lg flex items-center justify-center`}>
+          <div className={`${colores.tarjeta} ${colores.sombra} p-5 rounded-2xl flex items-center justify-center`}>
             <button
               onClick={exportarExcel}
-              className="bg-green-600 hover:bg-green-700 text-white px-5 py-2 rounded-lg shadow"
+              className="flex items-center gap-3 px-6 py-3 bg-green-600 hover:bg-green-700 text-white text-lg rounded-xl shadow-lg"
             >
-              Exportar datos
+              <Download size={24} />
+              Exportar
             </button>
           </div>
         </div>
 
-        {/* CALENDARIO */}
-        <h2 className="text-center text-2xl font-bold mb-4">
-          {meses[mesSeleccionado]} {anioSeleccionado}
-        </h2>
+        {/* ===== CALENDARIO ===== */}
+        <div className="overflow-x-auto">
+          <h6 className="text-center text-3xl font-extrabold mb-3">
+            Total día del mes — Meta:{" "}
+            <span className="text-blue-500">41 m³</span>
+          </h6>
 
-        <div className="grid grid-cols-31 min-w-[900px] border border-gray-300 mb-12">
-          {[...Array(totalDias)].map((_, i) => {
-            const dia = i + 1;
+          {/* FILA 1 — Días */}
+          <div
+            className={`
+              grid
+              grid-cols-8
+              sm:grid-cols-12
+              lg:grid-cols-31
+              min-w-[900px]
+              ${colores.bordeSuave}
+              rounded-t-xl
+            `}
+          >
+            {[...Array(totalDias)].map((_, i) => {
+              const dia = i + 1;
+              const estilo =
+                esDomingo(dia)
+                  ? colores.domingo
+                  : esFestivo(dia)
+                  ? colores.festivo
+                  : colores.habil;
 
-            const color =
-              esDomingo(dia) ? "bg-purple-300 text-black" :
-              esFestivo(dia) ? "bg-red-300 text-black" :
-              "text-blue-700";
+              return (
+                <div
+                  key={dia}
+                  className={`border ${colores.bordeSuave} p-2 text-center text-lg font-bold ${estilo}`}
+                >
+                  {dia}
+                </div>
+              );
+            })}
+          </div>
 
-            return (
-              <div
-                key={dia}
-                className={`border border-gray-300 p-2 text-center font-bold ${color}`}
-              >
-                {dia}
-              </div>
-            );
-          })}
+          {/* FILA 2 — TIPOS */}
+          <div
+            className={`
+              grid
+              grid-cols-8
+              sm:grid-cols-12
+              lg:grid-cols-31
+              min-w-[900px]
+              ${colores.bordeSuave}
+            `}
+          >
+            {[...Array(totalDias)].map((_, i) => {
+              const dia = i + 1;
+              const tipo = esDomingo(dia) ? "D" : esFestivo(dia) ? "F" : "NA";
+
+              const estilo =
+                tipo === "D"
+                  ? colores.domingoFila
+                  : tipo === "F"
+                  ? colores.festivoFila
+                  : colores.habilFila;
+
+              return (
+                <div
+                  key={dia}
+                  className={`border ${colores.bordeSuave} p-2 text-center font-bold ${estilo}`}
+                >
+                  {tipo}
+                </div>
+              );
+            })}
+          </div>
         </div>
 
-        {/* TABLA */}
-        <div className="w-full border border-gray-300 rounded-lg overflow-hidden shadow-lg">
-          <table className="w-full text-center text-sm">
-            <thead className={modoNoche ? "bg-[#989494]" : "bg-gray-100"}>
-              <tr>
+        {/* ===== TABLA ===== */}
+        <div className="mt-12 w-full overflow-x-auto">
+          <table className={`w-full min-w-[900px] ${colores.bordeSuave} text-center text-sm rounded-xl overflow-hidden`}>
+            <thead className={modoNoche ? "bg-[#2a2a2a]" : "bg-gray-200"}>
+              <tr className="text-lg">
                 <th className="p-3 border">Día</th>
                 <th className="p-3 border">Tipo</th>
                 <th className="p-3 border">Bodega 2</th>
@@ -189,18 +273,23 @@ export default function ConsumoAgua({ modoNoche }: Props) {
                 const dia = i + 1;
                 const tipo = esDomingo(dia) ? "D" : esFestivo(dia) ? "F" : "NA";
 
-                const fondo =
-                  tipo === "D" ? "bg-purple-100" :
-                  tipo === "F" ? "bg-red-100" : "";
+                const estiloFila =
+                  tipo === "D"
+                    ? colores.domingoFila
+                    : tipo === "F"
+                    ? colores.festivoFila
+                    : colores.habilFila;
 
                 return (
-                  <tr key={dia} className={fondo}>
-                    <td className="p-3 border">{dia}</td>
+                  <tr key={dia} className={`${estiloFila} text-lg`}>
+                    <td className="p-3 border font-bold">{dia}</td>
+                    <td className="p-3 border font-extrabold">{tipo}</td>
+
+                    {/* TODA la fila coloreada */}
                     <td className="p-3 border font-bold">{tipo}</td>
-                    <td className="p-3 border"></td>
-                    <td className="p-3 border"></td>
-                    <td className="p-3 border"></td>
-                    <td className="p-3 border"></td>
+                    <td className="p-3 border font-bold">{tipo}</td>
+                    <td className="p-3 border font-bold">{tipo}</td>
+                    <td className="p-3 border font-bold">{tipo}</td>
                   </tr>
                 );
               })}
