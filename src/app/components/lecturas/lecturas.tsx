@@ -60,7 +60,8 @@ export default function Lecturas({ modoNoche }: Props) {
           width: { ideal: 1280 },
           height: { ideal: 720 },
           // 🔥 Tipado corregido sin errores ESLint
-          advanced: flashActivo ? ([{ torch: true }] as MediaTrackConstraintSet[]) : [],
+     advanced: flashActivo ? ([{ torch: true }] as unknown as MediaTrackConstraintSet[]) : [],
+
         },
       };
 
@@ -90,7 +91,8 @@ export default function Lecturas({ modoNoche }: Props) {
     setFlashActivo(nuevoEstado);
 
     await track.applyConstraints({
-      advanced: [{ torch: nuevoEstado } as MediaTrackConstraintSet],
+     advanced: [{ torch: nuevoEstado } as unknown as MediaTrackConstraintSet],
+
     });
   };
 
