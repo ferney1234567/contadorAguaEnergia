@@ -70,7 +70,7 @@ export default function MenuPrincipal() {
   };
 
   return (
-    <div className={`w-full h-screen flex flex-col ${colores.contenido}`}>
+    <div className={`w-full  flex flex-col ${colores.contenido}`}>
 
       {/* --------------------------- HEADER --------------------------- */}
       <header 

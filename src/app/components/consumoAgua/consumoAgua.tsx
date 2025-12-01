@@ -19,10 +19,10 @@ export default function ConsumoAgua({ modoNoche }: Props) {
 
   // 🎨 PALETA 100% MODO DÍA / NOCHE
   const colores = {
-    fondo: modoNoche ? "bg-[#0d0d0d] text-white" : "bg-[#ffffff] text-black",
+    fondo: modoNoche ? "bg-[#121212] text-white" : "bg-[#ffffff] text-black",
 
     tarjeta: modoNoche
-      ? "bg-[#1a1a1a] border border-[#333]"
+      ? "bg-[#121212] border border-[#333]"
       : "bg-white border border-gray-200",
 
     sombra: modoNoche
@@ -96,94 +96,152 @@ export default function ConsumoAgua({ modoNoche }: Props) {
           {meses[mesSeleccionado]} {anioSeleccionado}
         </h2>
 
-        {/* ==== TARJETAS RESPONSIVAS ==== */}
-        <div
-          className="
-            grid
-            grid-cols-1
-            sm:grid-cols-2
-            md:grid-cols-3
-            lg:grid-cols-5
-            gap-4
-            mb-10
-          "
-        >
+       {/* ==== TARJETAS RESPONSIVAS ==== */}
+<div
+  className="
+    w-full
+    grid
+    grid-cols-1
+    sm:grid-cols-2
+    md:grid-cols-3
+    lg:grid-cols-5
+    gap-3       /* MÁS COMPACTO */
+    mb-10
+  "
+>
 
-          {/* Meta Mensual */}
-          <div className={`${colores.tarjeta} ${colores.sombra} p-5 rounded-2xl`}>
-            <h3 className="font-bold text-lg flex items-center gap-2">
-              <Droplets size={22} className="text-blue-400" />
-              Meta Mensual
-            </h3>
-            <p className="mt-4 text-2xl font-bold text-blue-500">41 m³</p>
-          </div>
+  {/* Tarjeta genérica optimizada */}
+  {/** META MENSUAL */}
+  <div
+    className={`
+      ${colores.tarjeta} ${colores.sombra}
+      w-full
+      rounded-xl
+      p-4
+      flex flex-col
+    `}
+  >
+    <h3 className="font-medium text-sm flex items-center gap-2">
+      <Droplets size={18} className="text-blue-400" />
+      Meta Mensual
+    </h3>
 
-          {/* Mes */}
-          <div className={`${colores.tarjeta} ${colores.sombra} p-5 rounded-2xl`}>
-            <h3 className="font-bold text-lg flex items-center gap-2">
-              <Calendar size={22} className="text-indigo-400" />
-              Mes
-            </h3>
-            <select
-              className={`mt-3 w-full p-3 rounded-lg font-bold ${
-                modoNoche ? "bg-[#2a2a2a] text-white" : "bg-gray-100"
-              }`}
-              value={mesSeleccionado}
-              onChange={(e) => setMesSeleccionado(parseInt(e.target.value))}
-            >
-              {meses.map((mes, i) => (
-                <option key={i} value={i}>{mes}</option>
-              ))}
-            </select>
-          </div>
+    <p className="mt-3 text-2xl font-bold text-blue-500">41 m³</p>
+  </div>
 
-          {/* Año */}
-          <div className={`${colores.tarjeta} ${colores.sombra} p-5 rounded-2xl`}>
-            <h3 className="font-bold text-lg flex items-center gap-2">
-              <Calendar size={22} className="text-indigo-400" />
-              Año
-            </h3>
-            <select
-              className={`mt-3 w-full p-3 rounded-lg font-bold ${
-                modoNoche ? "bg-[#2a2a2a] text-white" : "bg-gray-100"
-              }`}
-              value={anioSeleccionado}
-              onChange={(e) => setAnioSeleccionado(parseInt(e.target.value))}
-            >
-              {[2024, 2025, 2026, 2027].map((anio) => (
-                <option key={anio} value={anio}>{anio}</option>
-              ))}
-            </select>
-          </div>
+  {/** MES */}
+  <div
+    className={`
+      ${colores.tarjeta} ${colores.sombra}
+      w-full
+      rounded-xl
+      p-4
+      flex flex-col
+    `}
+  >
+    <h3 className="font-medium text-sm flex items-center gap-2">
+      <Calendar size={18} className="text-indigo-400" />
+      Mes
+    </h3>
 
-          {/* Resumen */}
-          <div className={`${colores.tarjeta} ${colores.sombra} p-5 rounded-2xl`}>
-            <h3 className="font-bold text-lg flex items-center gap-2">
-              <BarChart3 size={22} className="text-green-500" />
-              Resumen
-            </h3>
-            <div className="mt-4 text-sm leading-7">
-              <p><b className="text-purple-400 text-lg">D</b> — Domingos</p>
-              <p><b className="text-red-500 text-lg">F</b> — Festivos</p>
-              <p><b className="text-green-500 text-lg">NA</b> — Hábiles</p>
-            </div>
-          </div>
+    <select
+      className={`
+        mt-3 w-full p-2 rounded-lg font-semibold text-sm
+        ${modoNoche ? "bg-[#2a2a2a] text-white" : "bg-gray-100 text-black"}
+      `}
+      value={mesSeleccionado}
+      onChange={(e) => setMesSeleccionado(parseInt(e.target.value))}
+    >
+      {meses.map((mes, i) => (
+        <option key={i} value={i}>{mes}</option>
+      ))}
+    </select>
+  </div>
 
-          {/* Exportar */}
-          <div className={`${colores.tarjeta} ${colores.sombra} p-5 rounded-2xl flex items-center justify-center`}>
-            <button
-              onClick={exportarExcel}
-              className="flex items-center gap-3 px-6 py-3 bg-green-600 hover:bg-green-700 text-white text-lg rounded-xl shadow-lg"
-            >
-              <Download size={24} />
-              Exportar
-            </button>
-          </div>
-        </div>
+  {/** AÑO */}
+  <div
+    className={`
+      ${colores.tarjeta} ${colores.sombra}
+      w-full
+      rounded-xl
+      p-4
+      flex flex-col
+    `}
+  >
+    <h3 className="font-medium text-sm flex items-center gap-2">
+      <Calendar size={18} className="text-indigo-400" />
+      Año
+    </h3>
+
+    <select
+      className={`
+        mt-3 w-full p-2 rounded-lg font-semibold text-sm
+        ${modoNoche ? "bg-[#2a2a2a] text-white" : "bg-gray-100 text-black"}
+      `}
+      value={anioSeleccionado}
+      onChange={(e) => setAnioSeleccionado(parseInt(e.target.value))}
+    >
+      {[2024, 2025, 2026, 2027].map((anio) => (
+        <option key={anio} value={anio}>{anio}</option>
+      ))}
+    </select>
+  </div>
+
+  {/** RESUMEN */}
+  <div
+    className={`
+      ${colores.tarjeta} ${colores.sombra}
+      w-full
+      rounded-xl
+      p-4
+      flex flex-col
+    `}
+  >
+    <h3 className="font-medium text-sm flex items-center gap-2">
+      <BarChart3 size={18} className="text-green-500" />
+      Resumen
+    </h3>
+
+    <div className="mt-2 text-xs leading-5">
+      <p><b className="text-purple-400">D</b> — Domingos</p>
+      <p><b className="text-red-500">F</b> — Festivos</p>
+      <p><b className="text-green-500">NA</b> — Hábiles</p>
+    </div>
+  </div>
+
+  {/** EXPORTAR */}
+  <div
+    className={`
+      ${colores.tarjeta} ${colores.sombra}
+      w-full
+      rounded-xl
+      p-4
+      flex items-center justify-center
+    `}
+  >
+    <button
+      onClick={exportarExcel}
+      className="
+        flex items-center gap-2
+        px-5 py-2
+        bg-green-600 hover:bg-green-700
+        text-white
+        text-sm
+        rounded-lg
+        shadow-md
+      "
+    >
+      <Download size={18} />
+      Exportar
+    </button>
+  </div>
+
+</div>
+
 
         {/* ===== CALENDARIO ===== */}
         <div className="overflow-x-auto">
-          <h6 className="text-center text-3xl font-extrabold mb-3">
+          <h6 className="text-center text-3xl font-extrabold mb-1">
             Total día del mes — Meta:{" "}
             <span className="text-blue-500">41 m³</span>
           </h6>
@@ -192,7 +250,7 @@ export default function ConsumoAgua({ modoNoche }: Props) {
           <div
             className={`
               grid
-              grid-cols-8
+              grid-cols-3
               sm:grid-cols-12
               lg:grid-cols-31
               min-w-[900px]
@@ -269,31 +327,31 @@ export default function ConsumoAgua({ modoNoche }: Props) {
             </thead>
 
             <tbody>
-              {[...Array(totalDias)].map((_, i) => {
-                const dia = i + 1;
-                const tipo = esDomingo(dia) ? "D" : esFestivo(dia) ? "F" : "NA";
+  {[...Array(totalDias)].map((_, i) => {
+    const dia = i + 1;
+    const tipo = esDomingo(dia) ? "D" : esFestivo(dia) ? "F" : "NA";
 
-                const estiloFila =
-                  tipo === "D"
-                    ? colores.domingoFila
-                    : tipo === "F"
-                    ? colores.festivoFila
-                    : colores.habilFila;
+    const estiloFila =
+      tipo === "D"
+        ? colores.domingoFila
+        : tipo === "F"
+        ? colores.festivoFila
+        : colores.habilFila;
 
-                return (
-                  <tr key={dia} className={`${estiloFila} text-lg`}>
-                    <td className="p-3 border font-bold">{dia}</td>
-                    <td className="p-3 border font-extrabold">{tipo}</td>
+    return (
+      <tr key={dia} className={`${estiloFila} text-lg`}>
+        <td className={`p-3 ${colores.bordeSuave} font-bold`}>{dia}</td>
+        <td className={`p-3 ${colores.bordeSuave} font-extrabold`}>{tipo}</td>
 
-                    {/* TODA la fila coloreada */}
-                    <td className="p-3 border font-bold">{tipo}</td>
-                    <td className="p-3 border font-bold">{tipo}</td>
-                    <td className="p-3 border font-bold">{tipo}</td>
-                    <td className="p-3 border font-bold">{tipo}</td>
-                  </tr>
-                );
-              })}
-            </tbody>
+        <td className={`p-3 ${colores.bordeSuave} font-bold`}>{tipo}</td>
+        <td className={`p-3 ${colores.bordeSuave} font-bold`}>{tipo}</td>
+        <td className={`p-3 ${colores.bordeSuave} font-bold`}>{tipo}</td>
+        <td className={`p-3 ${colores.bordeSuave} font-bold`}>{tipo}</td>
+      </tr>
+    );
+  })}
+</tbody>
+
           </table>
         </div>
 

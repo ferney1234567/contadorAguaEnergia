@@ -1,65 +1,129 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import { Camera, Pencil, SlidersHorizontal, Save, X } from "lucide-react";
+import {
+  Camera,
+  Pencil,
+  SlidersHorizontal,
+  Save,
+  X,
+  Zap,
+} from "lucide-react";
 
 interface Props {
   modoNoche: boolean;
 }
 
+// ⭐ EXTENSIÓN NECESARIA PARA PERMITIR FLASH ⭐
+interface TorchCapabilities extends MediaTrackCapabilities {
+  torch?: boolean;
+}
+
 export default function Lecturas({ modoNoche }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
+  const streamRef = useRef<MediaStream | null>(null);
 
+  const [lectura, setLectura] = useState("");
   const [streamActivo, setStreamActivo] = useState(false);
-  const [lectura, setLectura] = useState("0023456");
   const [modoManual, setModoManual] = useState(false);
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
+  const [flashActivo, setFlashActivo] = useState(false);
 
-  // 🎨 COLORES DINÁMICOS — MODO DÍA / MODO NOCHE
+  // 🎨 COLORES
   const colores = {
-    fondo: modoNoche ? "bg-[#121212] text-white" : "bg-[#F5F5F5] text-black",
-    tarjeta: modoNoche ? "bg-[#1f1f1f]" : "bg-white",
-    botones: modoNoche ? "bg-[#2a2a2a] text-white" : "bg-white text-black",
-    rojo: "bg-[#E30613] hover:bg-[#c10510] text-white",
-    panelFiltros: modoNoche ? "bg-[#2a2a2a] text-white" : "bg-white text-black",
+    fondo: modoNoche ? "bg-[#121212] text-white" : "bg-[#F4F4F4] text-black",
+    tarjeta: modoNoche
+      ? "bg-[#1f1f1f] border border-white"
+      : "bg-white border border-white",
+    panelFiltros: modoNoche
+      ? "bg-[#2a2a2a] text-white border border-white"
+      : "bg-white text-black border border-white",
     input: modoNoche ? "bg-[#333] text-white" : "bg-white text-black",
+    botones: modoNoche
+      ? "bg-[#2a2a2a] border border-white"
+      : "bg-white border border-white",
+    rojo: "bg-[#E30613] hover:bg-[#b8040f] text-white",
   };
 
-  // ========== ACTIVAR CÁMARA ==========
+  // 🎥 INICIAR CÁMARA
   const iniciarCamara = async () => {
     try {
       setModoManual(false);
       setMostrarFiltros(false);
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: { facingMode: { ideal: "environment" } },
-        audio: false,
-      });
+      const constraints: MediaStreamConstraints = {
+        video: {
+          facingMode: "environment",
+          width: { ideal: 1280 },
+          height: { ideal: 720 },
+         advanced: flashActivo ? ([{ torch: true }] as any) : [],
 
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-      }
+        },
+      };
 
+      const stream = await navigator.mediaDevices.getUserMedia(constraints);
+      streamRef.current = stream;
+
+      if (videoRef.current) videoRef.current.srcObject = stream;
       setStreamActivo(true);
-    } catch (err) {
-      console.error("Error cámara:", err);
-      alert("No se pudo acceder a la cámara.");
+    } catch (error) {
+      alert("⚠️ Tu dispositivo no soporta cámara o flash.");
     }
   };
 
-  // ========== DETENER CÁMARA ==========
+  // 🔦 FLASH FUNCIONAL CON TIPADO EXTENDIDO
+  const toggleFlash = async () => {
+    if (!streamRef.current) return;
+
+    const track = streamRef.current.getVideoTracks()[0];
+    const caps = track.getCapabilities?.() as TorchCapabilities;
+
+    if (!caps?.torch) {
+      alert("⚠️ Tu dispositivo NO soporta flash.");
+      return;
+    }
+
+    const nuevoEstado = !flashActivo;
+    setFlashActivo(nuevoEstado);
+
+    await track.applyConstraints({
+      advanced: [{ torch: nuevoEstado } as any],
+    });
+  };
+
+  // 🛑 DETENER CÁMARA
   const detenerCamara = () => {
-    if (videoRef.current?.srcObject) {
-      const tracks = (videoRef.current.srcObject as MediaStream).getTracks();
-      tracks.forEach((t) => t.stop());
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
     }
     setStreamActivo(false);
   };
 
-  // Auto apagar cámara si abres manual o filtros
+  // 🎚 FILTROS EN TIEMPO REAL
+  const aplicarFiltros = () => {
+    if (!videoRef.current) return;
+
+    const brillo = (document.getElementById("brillo") as HTMLInputElement)?.value;
+    const contraste = (document.getElementById("contraste") as HTMLInputElement)?.value;
+    const saturacion = (document.getElementById("saturacion") as HTMLInputElement)?.value;
+
+    videoRef.current.style.filter = `
+      brightness(${brillo}%)
+      contrast(${contraste}%)
+      saturate(${saturacion}%)
+    `;
+  };
+
+  // Apagar cámara si abres manual o filtros
   useEffect(() => {
     if (modoManual || mostrarFiltros) detenerCamara();
   }, [modoManual, mostrarFiltros]);
+
+  // SOLO PERMITIR NÚMEROS
+  const handleLecturaInput = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value.replace(/[^0-9]/g, "");
+    setLectura(value);
+  };
 
   return (
     <div className={`w-full min-h-screen p-5 flex flex-col items-center ${colores.fondo}`}>
@@ -67,29 +131,33 @@ export default function Lecturas({ modoNoche }: Props) {
       {/* TÍTULO */}
       <h1 className="text-3xl font-extrabold mb-5">Lecturas</h1>
 
-      {/* CUADRO LECTURA */}
+      {/* CUADRO DE LECTURA */}
       <div className={`${colores.tarjeta} w-full max-w-sm p-4 rounded-xl shadow-lg`}>
         {modoManual ? (
           <input
-            type="text"
+            type="tel"
+            inputMode="numeric"
+            pattern="[0-9]*"
+            placeholder="Lectura…"
             value={lectura}
-            onChange={(e) => setLectura(e.target.value)}
-            className={`w-full text-center text-3xl font-mono outline-none ${colores.input}`}
+            onChange={handleLecturaInput}
+            className={`w-full text-center text-3xl font-mono outline-none p-2 rounded-xl ${colores.input}`}
           />
         ) : (
-          <p className="text-center font-mono text-3xl tracking-wider">{lectura}</p>
+          <p className="text-center text-3xl font-mono">{lectura || "—"}</p>
         )}
       </div>
 
       {/* CÁMARA */}
       {!modoManual && !mostrarFiltros && (
-        <div className="w-full max-w-sm mt-6 flex justify-center">
-          <div className="relative w-full h-52 md:h-64 bg-black rounded-xl overflow-hidden shadow-lg">
+        <div className="w-full max-w-sm mt-5">
+          <div className="relative w-full h-64 bg-black rounded-xl overflow-hidden shadow-lg border border-white">
             {!streamActivo && (
-              <div className="absolute inset-0 flex items-center justify-center text-white opacity-70">
-                <p className="text-lg font-bold">Cámara apagada</p>
+              <div className="absolute inset-0 flex items-center justify-center text-white opacity-60">
+                <p>Cámara apagada</p>
               </div>
             )}
+
             <video
               ref={videoRef}
               autoPlay
@@ -98,75 +166,79 @@ export default function Lecturas({ modoNoche }: Props) {
               className="w-full h-full object-cover"
             />
           </div>
+
+          {streamActivo && (
+            <button
+              onClick={toggleFlash}
+              className="w-full mt-3 p-3 rounded-xl bg-yellow-500 text-white flex justify-center gap-2 border border-white"
+            >
+              <Zap size={22} />
+              Flash {flashActivo ? "ON" : "OFF"}
+            </button>
+          )}
         </div>
       )}
 
       {/* PANEL DE FILTROS */}
       {mostrarFiltros && (
-        <div className={`w-full max-w-sm mt-6 p-4 rounded-xl shadow-lg ${colores.panelFiltros}`}>
-          <h3 className="font-bold text-lg mb-4">Filtros</h3>
+        <div className={`${colores.panelFiltros} w-full max-w-sm mt-5 p-5 rounded-xl shadow-xl`}>
+          <h3 className="text-lg font-bold mb-4">Filtros</h3>
 
           <label className="block mb-4">
             Brillo
-            <input type="range" min="0" max="200" defaultValue="100" className="w-full" />
+            <input id="brillo" type="range" min="50" max="200" defaultValue="100"
+                   onChange={aplicarFiltros} className="w-full accent-red-500" />
           </label>
 
           <label className="block mb-4">
             Contraste
-            <input type="range" min="0" max="200" defaultValue="100" className="w-full" />
+            <input id="contraste" type="range" min="50" max="200" defaultValue="100"
+                   onChange={aplicarFiltros} className="w-full accent-red-500" />
+          </label>
+
+          <label className="block mb-4">
+            Saturación
+            <input id="saturacion" type="range" min="50" max="200" defaultValue="100"
+                   onChange={aplicarFiltros} className="w-full accent-red-500" />
           </label>
 
           <button
             onClick={() => setMostrarFiltros(false)}
-            className="w-full mt-2 p-3 rounded-lg bg-gray-400 hover:bg-gray-500 flex items-center justify-center"
+            className="w-full mt-3 p-3 rounded-xl bg-gray-500 text-white flex justify-center gap-2 border border-white"
           >
-            <X size={20} className="mr-2" /> Cerrar
+            <X size={20} />
+            Cerrar
           </button>
         </div>
       )}
 
       {/* BOTONES */}
       <div className="flex gap-4 mt-6 w-full max-w-sm justify-center">
-
-        {/* ESCANEAR */}
-        <button
-          onClick={iniciarCamara}
-          className={`${colores.botones} w-24 px-4 py-3 rounded-xl shadow-lg flex flex-col items-center`}
-        >
-          <Camera size={24} className="mb-1 text-red-500" />
-          <span className="text-sm font-semibold">Escanear</span>
+        <button onClick={iniciarCamara} className={`${colores.botones} w-24 py-3 rounded-xl shadow-lg flex flex-col items-center`}>
+          <Camera size={26} className="text-red-600" />
+          <span className="text-sm font-bold">Escanear</span>
         </button>
 
-        {/* MANUAL */}
-        <button
-          onClick={() => { setModoManual(true); setMostrarFiltros(false); }}
-          className={`${colores.botones} w-24 px-4 py-3 rounded-xl shadow-lg flex flex-col items-center`}
-        >
-          <Pencil size={24} className="mb-1 text-red-500" />
-          <span className="text-sm font-semibold">Manual</span>
+        <button onClick={() => setModoManual(true)} className={`${colores.botones} w-24 py-3 rounded-xl shadow-lg flex flex-col items-center`}>
+          <Pencil size={26} className="text-red-600" />
+          <span className="text-sm font-bold">Manual</span>
         </button>
 
-        {/* FILTROS */}
-        <button
-          onClick={() => { setMostrarFiltros(true); setModoManual(false); }}
-          className={`${colores.botones} w-24 px-4 py-3 rounded-xl shadow-lg flex flex-col items-center`}
-        >
-          <SlidersHorizontal size={24} className="mb-1 text-red-500" />
-          <span className="text-sm font-semibold">Filtros</span>
+        <button onClick={() => setMostrarFiltros(true)} className={`${colores.botones} w-24 py-3 rounded-xl shadow-lg flex flex-col items-center`}>
+          <SlidersHorizontal size={26} className="text-red-600" />
+          <span className="text-sm font-bold">Filtros</span>
         </button>
       </div>
 
-      {/* BOTÓN GUARDAR */}
-      <button
-        className={`mt-10 w-full max-w-sm py-4 rounded-xl flex items-center justify-center text-xl shadow-lg ${colores.rojo}`}
-      >
-        <Save size={26} className="mr-2" />
+      {/* GUARDAR */}
+      <button className={`mt-10 w-full max-w-sm py-4 rounded-xl shadow-lg text-xl flex justify-center items-center gap-3 ${colores.rojo}`}>
+        <Save size={28} />
         Guardar Lectura
       </button>
 
-      {/* CERRAR CÁMARA */}
+      {/* DETENER CÁMARA */}
       {streamActivo && (
-        <button onClick={detenerCamara} className="mt-4 text-red-500 underline text-center">
+        <button onClick={detenerCamara} className="mt-4 text-red-600 underline">
           Apagar cámara
         </button>
       )}
