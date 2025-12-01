@@ -32,16 +32,19 @@ export default function Lecturas({ modoNoche }: Props) {
   // 🎨 COLORES
   const colores = {
     fondo: modoNoche ? "bg-[#121212] text-white" : "bg-[#F4F4F4] text-black",
-    tarjeta: modoNoche
-      ? "bg-[#1f1f1f] border border-white"
-      : "bg-white border border-white",
-    panelFiltros: modoNoche
-      ? "bg-[#2a2a2a] text-white border border-white"
-      : "bg-white text-black border border-white",
+    tarjeta:
+      modoNoche
+        ? "bg-[#1f1f1f] border border-white"
+        : "bg-white border border-white",
+    panelFiltros:
+      modoNoche
+        ? "bg-[#2a2a2a] text-white border border-white"
+        : "bg-white text-black border border-white",
     input: modoNoche ? "bg-[#333] text-white" : "bg-white text-black",
-    botones: modoNoche
-      ? "bg-[#2a2a2a] border border-white"
-      : "bg-white border border-white",
+    botones:
+      modoNoche
+        ? "bg-[#2a2a2a] border border-white"
+        : "bg-white border border-white",
     rojo: "bg-[#E30613] hover:bg-[#b8040f] text-white",
   };
 
@@ -56,8 +59,8 @@ export default function Lecturas({ modoNoche }: Props) {
           facingMode: "environment",
           width: { ideal: 1280 },
           height: { ideal: 720 },
-         advanced: flashActivo ? ([{ torch: true }] as any) : [],
-
+          // 🔥 Tipado corregido sin errores ESLint
+          advanced: flashActivo ? ([{ torch: true }] as MediaTrackConstraintSet[]) : [],
         },
       };
 
@@ -66,12 +69,12 @@ export default function Lecturas({ modoNoche }: Props) {
 
       if (videoRef.current) videoRef.current.srcObject = stream;
       setStreamActivo(true);
-    } catch (error) {
+    } catch {
       alert("⚠️ Tu dispositivo no soporta cámara o flash.");
     }
   };
 
-  // 🔦 FLASH FUNCIONAL CON TIPADO EXTENDIDO
+  // 🔦 FLASH FUNCIONAL
   const toggleFlash = async () => {
     if (!streamRef.current) return;
 
@@ -87,7 +90,7 @@ export default function Lecturas({ modoNoche }: Props) {
     setFlashActivo(nuevoEstado);
 
     await track.applyConstraints({
-      advanced: [{ torch: nuevoEstado } as any],
+      advanced: [{ torch: nuevoEstado } as MediaTrackConstraintSet],
     });
   };
 
@@ -114,7 +117,7 @@ export default function Lecturas({ modoNoche }: Props) {
     `;
   };
 
-  // Apagar cámara si abres manual o filtros
+  // Apaga cámara al entrar en modo manual o filtros
   useEffect(() => {
     if (modoManual || mostrarFiltros) detenerCamara();
   }, [modoManual, mostrarFiltros]);
@@ -128,10 +131,9 @@ export default function Lecturas({ modoNoche }: Props) {
   return (
     <div className={`w-full min-h-screen p-5 flex flex-col items-center ${colores.fondo}`}>
 
-      {/* TÍTULO */}
       <h1 className="text-3xl font-extrabold mb-5">Lecturas</h1>
 
-      {/* CUADRO DE LECTURA */}
+      {/* CUADRO LECTURA */}
       <div className={`${colores.tarjeta} w-full max-w-sm p-4 rounded-xl shadow-lg`}>
         {modoManual ? (
           <input
@@ -179,7 +181,7 @@ export default function Lecturas({ modoNoche }: Props) {
         </div>
       )}
 
-      {/* PANEL DE FILTROS */}
+      {/* FILTROS */}
       {mostrarFiltros && (
         <div className={`${colores.panelFiltros} w-full max-w-sm mt-5 p-5 rounded-xl shadow-xl`}>
           <h3 className="text-lg font-bold mb-4">Filtros</h3>
@@ -187,19 +189,19 @@ export default function Lecturas({ modoNoche }: Props) {
           <label className="block mb-4">
             Brillo
             <input id="brillo" type="range" min="50" max="200" defaultValue="100"
-                   onChange={aplicarFiltros} className="w-full accent-red-500" />
+              onChange={aplicarFiltros} className="w-full accent-red-500" />
           </label>
 
           <label className="block mb-4">
             Contraste
             <input id="contraste" type="range" min="50" max="200" defaultValue="100"
-                   onChange={aplicarFiltros} className="w-full accent-red-500" />
+              onChange={aplicarFiltros} className="w-full accent-red-500" />
           </label>
 
           <label className="block mb-4">
             Saturación
             <input id="saturacion" type="range" min="50" max="200" defaultValue="100"
-                   onChange={aplicarFiltros} className="w-full accent-red-500" />
+              onChange={aplicarFiltros} className="w-full accent-red-500" />
           </label>
 
           <button
@@ -214,17 +216,20 @@ export default function Lecturas({ modoNoche }: Props) {
 
       {/* BOTONES */}
       <div className="flex gap-4 mt-6 w-full max-w-sm justify-center">
-        <button onClick={iniciarCamara} className={`${colores.botones} w-24 py-3 rounded-xl shadow-lg flex flex-col items-center`}>
+        <button onClick={iniciarCamara}
+          className={`${colores.botones} w-24 py-3 rounded-xl shadow-lg flex flex-col items-center`}>
           <Camera size={26} className="text-red-600" />
           <span className="text-sm font-bold">Escanear</span>
         </button>
 
-        <button onClick={() => setModoManual(true)} className={`${colores.botones} w-24 py-3 rounded-xl shadow-lg flex flex-col items-center`}>
+        <button onClick={() => setModoManual(true)}
+          className={`${colores.botones} w-24 py-3 rounded-xl shadow-lg flex flex-col items-center`}>
           <Pencil size={26} className="text-red-600" />
           <span className="text-sm font-bold">Manual</span>
         </button>
 
-        <button onClick={() => setMostrarFiltros(true)} className={`${colores.botones} w-24 py-3 rounded-xl shadow-lg flex flex-col items-center`}>
+        <button onClick={() => setMostrarFiltros(true)}
+          className={`${colores.botones} w-24 py-3 rounded-xl shadow-lg flex flex-col items-center`}>
           <SlidersHorizontal size={26} className="text-red-600" />
           <span className="text-sm font-bold">Filtros</span>
         </button>
