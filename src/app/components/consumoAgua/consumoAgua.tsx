@@ -14,8 +14,13 @@ interface Props {
 }
 
 export default function ConsumoAgua({ modoNoche }: Props) {
-  const [mesSeleccionado, setMesSeleccionado] = useState<number>(10);
-  const [anioSeleccionado, setAnioSeleccionado] = useState<number>(2025);
+  // FECHA REAL DEL SISTEMA
+  const hoy = new Date();
+  const mesActual = hoy.getMonth();   // 0-11
+  const anioActual = hoy.getFullYear();
+
+  const [mesSeleccionado, setMesSeleccionado] = useState<number>(mesActual);
+  const [anioSeleccionado, setAnioSeleccionado] = useState<number>(anioActual);
 
   // 🎨 PALETA 100% MODO DÍA / NOCHE
   const colores = {
@@ -45,12 +50,44 @@ export default function ConsumoAgua({ modoNoche }: Props) {
     "Julio","Agosto","Septiembre","Octubre","Noviembre","Diciembre"
   ];
 
-  const festivos = [
+  // FESTIVOS POR AÑO → Para que siempre funcione
+ // FESTIVOS POR AÑO (COLOMBIA) → COMPLETOS Y CORRECTOS
+const festivosPorAño: Record<number, string[]> = {
+  2024: [
+    "2024-12-08", // Inmaculada Concepción
+    "2024-12-25", // Navidad
+  ],
+  2025: [
     "2025-01-01","2025-03-24","2025-05-01",
     "2025-07-20","2025-08-07",
     "2025-10-12","2025-10-31",
-    "2025-11-11","2025-12-25"
-  ];
+    "2025-11-11",
+
+    // DICIEMBRE REAL
+    "2025-12-08", // Inmaculada Concepción
+    "2025-12-25", // Navidad
+  ],
+  2026: [
+    "2026-01-01","2026-03-23","2026-03-24",
+    "2026-05-01","2026-07-20",
+    "2026-08-07","2026-10-12",
+
+    // DICIEMBRE REAL
+    "2026-12-08",
+    "2026-12-25",
+  ],
+  2027: [
+    "2027-01-01","2027-03-22","2027-05-01",
+    "2027-07-20","2027-08-07","2027-10-12",
+
+    // DICIEMBRE REAL
+    "2027-12-08",
+    "2027-12-25",
+  ],
+};
+
+
+  const festivos = festivosPorAño[anioSeleccionado] || [];
 
   const diasDelMes = (mes: number, anio: number) =>
     new Date(anio, mes + 1, 0).getDate();
@@ -89,66 +126,42 @@ export default function ConsumoAgua({ modoNoche }: Props) {
 
   return (
     <div className={`w-full min-h-screen ${colores.fondo} p-3 md:p-6`}>
-      <div className="max-w-[2000px] mx-auto">
+    <div className="w-full px-3">
 
-        {/* ==== TÍTULO ==== */}
-        <h2 className="text-center text-xl mb-10 font-semibold opacity-80">
-          {meses[mesSeleccionado]} {anioSeleccionado}
-        </h2>
-
-       {/* ==== TARJETAS RESPONSIVAS ==== */}
-<div
+  <div
   className="
     w-full
-    grid
-    grid-cols-1
+    grid grid-cols-1
     sm:grid-cols-2
     md:grid-cols-3
-    lg:grid-cols-5
-    gap-3       /* MÁS COMPACTO */
-    mb-10
+    xl:grid-cols-5
+    gap-4
+    mb-4
+    place-items-start
   "
 >
+  {/* Meta */}
+  <div className={`${colores.tarjeta} ${colores.sombra} w-full max-w-[350px] min-w-0 rounded-xl p-4`}>
 
-  {/* Tarjeta genérica optimizada */}
-  {/** META MENSUAL */}
-  <div
-    className={`
-      ${colores.tarjeta} ${colores.sombra}
-      w-full
-      rounded-xl
-      p-4
-      flex flex-col
-    `}
-  >
     <h3 className="font-medium text-sm flex items-center gap-2">
       <Droplets size={18} className="text-blue-400" />
       Meta Mensual
     </h3>
-
     <p className="mt-3 text-2xl font-bold text-blue-500">41 m³</p>
   </div>
 
-  {/** MES */}
-  <div
-    className={`
-      ${colores.tarjeta} ${colores.sombra}
-      w-full
-      rounded-xl
-      p-4
-      flex flex-col
-    `}
-  >
+  {/* Mes */}
+ <div className={`${colores.tarjeta} ${colores.sombra} w-full max-w-[350px] min-w-0 rounded-xl p-4`}>
+
     <h3 className="font-medium text-sm flex items-center gap-2">
       <Calendar size={18} className="text-indigo-400" />
       Mes
     </h3>
 
     <select
-      className={`
-        mt-3 w-full p-2 rounded-lg font-semibold text-sm
-        ${modoNoche ? "bg-[#2a2a2a] text-white" : "bg-gray-100 text-black"}
-      `}
+      className={`mt-3 w-full p-2 rounded-lg font-semibold text-sm ${
+        modoNoche ? "bg-[#2a2a2a] text-white" : "bg-gray-100 text-black"
+      }`}
       value={mesSeleccionado}
       onChange={(e) => setMesSeleccionado(parseInt(e.target.value))}
     >
@@ -158,26 +171,18 @@ export default function ConsumoAgua({ modoNoche }: Props) {
     </select>
   </div>
 
-  {/** AÑO */}
-  <div
-    className={`
-      ${colores.tarjeta} ${colores.sombra}
-      w-full
-      rounded-xl
-      p-4
-      flex flex-col
-    `}
-  >
+  {/* Año */}
+ <div className={`${colores.tarjeta} ${colores.sombra} w-full max-w-[350px] min-w-0 rounded-xl p-4`}>
+
     <h3 className="font-medium text-sm flex items-center gap-2">
       <Calendar size={18} className="text-indigo-400" />
       Año
     </h3>
 
     <select
-      className={`
-        mt-3 w-full p-2 rounded-lg font-semibold text-sm
-        ${modoNoche ? "bg-[#2a2a2a] text-white" : "bg-gray-100 text-black"}
-      `}
+      className={`mt-3 w-full p-2 rounded-lg font-semibold text-sm ${
+        modoNoche ? "bg-[#2a2a2a] text-white" : "bg-gray-100 text-black"
+      }`}
       value={anioSeleccionado}
       onChange={(e) => setAnioSeleccionado(parseInt(e.target.value))}
     >
@@ -187,21 +192,13 @@ export default function ConsumoAgua({ modoNoche }: Props) {
     </select>
   </div>
 
-  {/** RESUMEN */}
-  <div
-    className={`
-      ${colores.tarjeta} ${colores.sombra}
-      w-full
-      rounded-xl
-      p-4
-      flex flex-col
-    `}
-  >
+  {/* Resumen */}
+ <div className={`${colores.tarjeta} ${colores.sombra} w-full max-w-[350px] min-w-0 rounded-xl p-4`}>
+
     <h3 className="font-medium text-sm flex items-center gap-2">
       <BarChart3 size={18} className="text-green-500" />
       Resumen
     </h3>
-
     <div className="mt-2 text-xs leading-5">
       <p><b className="text-purple-400">D</b> — Domingos</p>
       <p><b className="text-red-500">F</b> — Festivos</p>
@@ -209,50 +206,39 @@ export default function ConsumoAgua({ modoNoche }: Props) {
     </div>
   </div>
 
-  {/** EXPORTAR */}
-  <div
-    className={`
-      ${colores.tarjeta} ${colores.sombra}
-      w-full
-      rounded-xl
-      p-4
-      flex items-center justify-center
-    `}
-  >
+  {/* Exportar */}
+  <div className={`${colores.tarjeta} ${colores.sombra} w-full max-w-[350px] min-w-0 rounded-xl p-4`}>
+
     <button
       onClick={exportarExcel}
       className="
         flex items-center gap-2
         px-5 py-2
         bg-green-600 hover:bg-green-700
-        text-white
-        text-sm
-        rounded-lg
-        shadow-md
+        text-white text-sm
+        rounded-lg shadow-md
       "
     >
       <Download size={18} />
       Exportar
     </button>
   </div>
-
 </div>
 
 
-        {/* ===== CALENDARIO ===== */}
+
+
+        {/* CALENDARIO */}
         <div className="overflow-x-auto">
           <h6 className="text-center text-3xl font-extrabold mb-1">
             Total día del mes — Meta:{" "}
             <span className="text-blue-500">41 m³</span>
           </h6>
 
-          {/* FILA 1 — Días */}
+          {/* Fila días */}
           <div
             className={`
-              grid
-              grid-cols-3
-              sm:grid-cols-12
-              lg:grid-cols-31
+              grid grid-cols-${totalDias}
               min-w-[900px]
               ${colores.bordeSuave}
               rounded-t-xl
@@ -278,13 +264,10 @@ export default function ConsumoAgua({ modoNoche }: Props) {
             })}
           </div>
 
-          {/* FILA 2 — TIPOS */}
+          {/* Fila tipo */}
           <div
             className={`
-              grid
-              grid-cols-8
-              sm:grid-cols-12
-              lg:grid-cols-31
+              grid grid-cols-${totalDias}
               min-w-[900px]
               ${colores.bordeSuave}
             `}
@@ -312,7 +295,8 @@ export default function ConsumoAgua({ modoNoche }: Props) {
           </div>
         </div>
 
-        {/* ===== TABLA ===== */}
+
+        {/* TABLA */}
         <div className="mt-12 w-full overflow-x-auto">
           <table className={`w-full min-w-[900px] ${colores.bordeSuave} text-center text-sm rounded-xl overflow-hidden`}>
             <thead className={modoNoche ? "bg-[#2a2a2a]" : "bg-gray-200"}>
@@ -327,31 +311,31 @@ export default function ConsumoAgua({ modoNoche }: Props) {
             </thead>
 
             <tbody>
-  {[...Array(totalDias)].map((_, i) => {
-    const dia = i + 1;
-    const tipo = esDomingo(dia) ? "D" : esFestivo(dia) ? "F" : "NA";
+              {[...Array(totalDias)].map((_, i) => {
+                const dia = i + 1;
+                const tipo = esDomingo(dia) ? "D" : esFestivo(dia) ? "F" : "NA";
 
-    const estiloFila =
-      tipo === "D"
-        ? colores.domingoFila
-        : tipo === "F"
-        ? colores.festivoFila
-        : colores.habilFila;
+                const estiloFila =
+                  tipo === "D"
+                    ? colores.domingoFila
+                    : tipo === "F"
+                    ? colores.festivoFila
+                    : colores.habilFila;
 
-    return (
-      <tr key={dia} className={`${estiloFila} text-lg`}>
-        <td className={`p-3 ${colores.bordeSuave} font-bold`}>{dia}</td>
-        <td className={`p-3 ${colores.bordeSuave} font-extrabold`}>{tipo}</td>
+                return (
+                  <tr key={dia} className={`${estiloFila} text-lg`}>
+                    <td className={`p-3 ${colores.bordeSuave} font-bold`}>{dia}</td>
+                    <td className={`p-3 ${colores.bordeSuave} font-extrabold`}>{tipo}</td>
 
-        <td className={`p-3 ${colores.bordeSuave} font-bold`}>{tipo}</td>
-        <td className={`p-3 ${colores.bordeSuave} font-bold`}>{tipo}</td>
-        <td className={`p-3 ${colores.bordeSuave} font-bold`}>{tipo}</td>
-        <td className={`p-3 ${colores.bordeSuave} font-bold`}>{tipo}</td>
-      </tr>
-    );
-  })}
-</tbody>
-
+                    {/* Campos repetidos */}
+                    <td className={`p-3 ${colores.bordeSuave} font-bold`}>{tipo}</td>
+                    <td className={`p-3 ${colores.bordeSuave} font-bold`}>{tipo}</td>
+                    <td className={`p-3 ${colores.bordeSuave} font-bold`}>{tipo}</td>
+                    <td className={`p-3 ${colores.bordeSuave} font-bold`}>{tipo}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
           </table>
         </div>
 

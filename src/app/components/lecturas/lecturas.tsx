@@ -75,6 +75,77 @@ export default function Lecturas({ modoNoche }: Props) {
     }
   };
 
+
+  const capturarFrame = async () => {
+  if (!videoRef.current) return;
+
+  const canvas = document.createElement("canvas");
+  canvas.width = videoRef.current.videoWidth;
+  canvas.height = videoRef.current.videoHeight;
+
+  const ctx = canvas.getContext("2d");
+  if (!ctx) return;
+
+  ctx.drawImage(
+    videoRef.current,
+    0,
+    0,
+    canvas.width,
+    canvas.height
+  );
+
+  return new Promise<Blob | null>((resolve) =>
+    canvas.toBlob((blob) => resolve(blob), "image/jpeg")
+  );
+};
+
+const escanearContador = async () => {
+  try {
+    if (!streamActivo) {
+      alert("Primero enciende la cámara");
+      return;
+    }
+
+    if (!videoRef.current?.videoWidth) {
+      alert("La cámara aún no está lista para capturar");
+      return;
+    }
+
+    const foto = await capturarFrame();
+
+    if (!foto) {
+      alert("No se pudo capturar la imagen");
+      return;
+    }
+
+    const form = new FormData();
+    form.append("file", foto, "captura.jpg");
+
+  const resp = await fetch("http://127.0.0.1:8000/ocr/leer_contador", {
+  method: "POST",
+  body: form,
+});
+
+
+    if (!resp.ok) {
+      throw new Error("Backend no respondió correctamente");
+    }
+
+    const data = await resp.json();
+    console.log("RESPUESTA OCR:", data);
+
+    setModoManual(false);
+setLectura(data.lectura || "—");
+
+
+  } catch (error) {
+    console.error("ERROR ESCANEO:", error);
+    alert("No se pudo conectar con el backend. ¿Está encendido?");
+  }
+};
+
+
+
   // 🔦 FLASH FUNCIONAL
   const toggleFlash = async () => {
     if (!streamRef.current) return;
@@ -217,31 +288,48 @@ export default function Lecturas({ modoNoche }: Props) {
       )}
 
       {/* BOTONES */}
-      <div className="flex gap-4 mt-6 w-full max-w-sm justify-center">
-        <button onClick={iniciarCamara}
-          className={`${colores.botones} w-24 py-3 rounded-xl shadow-lg flex flex-col items-center`}>
-          <Camera size={26} className="text-red-600" />
-          <span className="text-sm font-bold">Escanear</span>
-        </button>
+<div className="flex gap-4 mt-6 w-full max-w-sm justify-center">
+  <button
+    onClick={iniciarCamara}
+    className={`${colores.botones} w-24 py-3 rounded-xl shadow-lg flex flex-col items-center`}
+  >
+    <Camera size={26} className="text-red-600" />
+    <span className="text-sm font-bold">Escanear</span>
+  </button>
 
-        <button onClick={() => setModoManual(true)}
-          className={`${colores.botones} w-24 py-3 rounded-xl shadow-lg flex flex-col items-center`}>
-          <Pencil size={26} className="text-red-600" />
-          <span className="text-sm font-bold">Manual</span>
-        </button>
+  {/* BOTÓN PARA TOMAR FOTO Y ENVIAR AL BACKEND */}
+  <button
+    onClick={escanearContador}
+    className="bg-green-600 text-white w-24 py-3 rounded-xl shadow-lg flex flex-col items-center border border-white"
+  >
+    <Camera size={26} />
+    <span className="text-sm font-bold">Tomar</span>
+  </button>
 
-        <button onClick={() => setMostrarFiltros(true)}
-          className={`${colores.botones} w-24 py-3 rounded-xl shadow-lg flex flex-col items-center`}>
-          <SlidersHorizontal size={26} className="text-red-600" />
-          <span className="text-sm font-bold">Filtros</span>
-        </button>
-      </div>
+  <button
+    onClick={() => setModoManual(true)}
+    className={`${colores.botones} w-24 py-3 rounded-xl shadow-lg flex flex-col items-center`}
+  >
+    <Pencil size={26} className="text-red-600" />
+    <span className="text-sm font-bold">Manual</span>
+  </button>
+
+  <button
+    onClick={() => setMostrarFiltros(true)}
+    className={`${colores.botones} w-24 py-3 rounded-xl shadow-lg flex flex-col items-center`}
+  >
+    <SlidersHorizontal size={26} className="text-red-600" />
+    <span className="text-sm font-bold">Filtros</span>
+  </button>
+</div>
+
 
       {/* GUARDAR */}
       <button className={`mt-10 w-full max-w-sm py-4 rounded-xl shadow-lg text-xl flex justify-center items-center gap-3 ${colores.rojo}`}>
         <Save size={28} />
         Guardar Lectura
       </button>
+      
 
       {/* DETENER CÁMARA */}
       {streamActivo && (
