@@ -8,7 +8,7 @@ import { FontSizeProvider } from '../../FontSizeContext'; // 👈 importamos el 
 const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
-  title: 'ConvocApp',
+  title: 'Consumo de Agua y Energía',
   description: 'Aprende Next.js construyendo una Pokédex',
 };
 

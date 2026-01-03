@@ -8,13 +8,14 @@ import {
   Save,
   X,
   Zap,
+  Droplets,
+  Flame
 } from "lucide-react";
 
 interface Props {
   modoNoche: boolean;
 }
 
-// ⭐ EXTENSIÓN NECESARIA PARA PERMITIR FLASH ⭐
 interface TorchCapabilities extends MediaTrackCapabilities {
   torch?: boolean;
 }
@@ -29,27 +30,32 @@ export default function Lecturas({ modoNoche }: Props) {
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
   const [flashActivo, setFlashActivo] = useState(false);
 
-  // 🎨 COLORES
+  // ⭐ NUEVO ESTADO
+  const [bodegaSeleccionada, setBodegaSeleccionada] = useState("");
+
   const colores = {
     fondo: modoNoche ? "bg-[#121212] text-white" : "bg-[#F4F4F4] text-black",
-    tarjeta:
-      modoNoche
-        ? "bg-[#1f1f1f] border border-white"
-        : "bg-white border border-white",
-    panelFiltros:
-      modoNoche
-        ? "bg-[#2a2a2a] text-white border border-white"
-        : "bg-white text-black border border-white",
-    input: modoNoche ? "bg-[#333] text-white" : "bg-white text-black",
-    botones:
-      modoNoche
-        ? "bg-[#2a2a2a] border border-white"
-        : "bg-white border border-white",
+    tarjeta: modoNoche ? "bg-[#1f1f1f] border border-white"
+                       : "bg-white border border-white",
+    panelFiltros: modoNoche ? "bg-[#2a2a2a] text-white border border-white"
+                            : "bg-white text-black border border-white",
+    input: modoNoche ? "bg-[#333] text-white"
+                     : "bg-white text-black",
+    botones: modoNoche ? "bg-[#2a2a2a] border border-white"
+                       : "bg-white border border-white",
     rojo: "bg-[#E30613] hover:bg-[#b8040f] text-white",
   };
 
-  // 🎥 INICIAR CÁMARA
+  // =======================
+  //     CONTROL CÁMARA
+  // =======================
+
   const iniciarCamara = async () => {
+    if (!bodegaSeleccionada) {
+      alert("⚠️ Primero selecciona la bodega.");
+      return;
+    }
+
     try {
       setModoManual(false);
       setMostrarFiltros(false);
@@ -59,9 +65,9 @@ export default function Lecturas({ modoNoche }: Props) {
           facingMode: "environment",
           width: { ideal: 1280 },
           height: { ideal: 720 },
-          // 🔥 Tipado corregido sin errores ESLint
-     advanced: flashActivo ? ([{ torch: true }] as unknown as MediaTrackConstraintSet[]) : [],
-
+          advanced: flashActivo
+            ? ([{ torch: true }] as unknown as MediaTrackConstraintSet[])
+            : [],
         },
       };
 
@@ -75,39 +81,31 @@ export default function Lecturas({ modoNoche }: Props) {
     }
   };
 
-
   const capturarFrame = async () => {
-  if (!videoRef.current) return;
+    if (!videoRef.current) return;
 
-  const canvas = document.createElement("canvas");
-  canvas.width = videoRef.current.videoWidth;
-  canvas.height = videoRef.current.videoHeight;
+    const canvas = document.createElement("canvas");
+    canvas.width = videoRef.current.videoWidth;
+    canvas.height = videoRef.current.videoHeight;
 
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
 
-  ctx.drawImage(
-    videoRef.current,
-    0,
-    0,
-    canvas.width,
-    canvas.height
-  );
+    ctx.drawImage(videoRef.current, 0, 0, canvas.width, canvas.height);
 
-  return new Promise<Blob | null>((resolve) =>
-    canvas.toBlob((blob) => resolve(blob), "image/jpeg")
-  );
-};
+    return new Promise<Blob | null>((resolve) =>
+      canvas.toBlob((blob) => resolve(blob), "image/jpeg")
+    );
+  };
 
-const escanearContador = async () => {
-  try {
-    if (!streamActivo) {
-      alert("Primero enciende la cámara");
+  const escanearContador = async () => {
+    if (!bodegaSeleccionada) {
+      alert("⚠️ Selecciona la bodega antes de escanear.");
       return;
     }
 
-    if (!videoRef.current?.videoWidth) {
-      alert("La cámara aún no está lista para capturar");
+    if (!streamActivo) {
+      alert("Enciende la cámara primero.");
       return;
     }
 
@@ -120,33 +118,55 @@ const escanearContador = async () => {
 
     const form = new FormData();
     form.append("file", foto, "captura.jpg");
+    form.append("bodega", bodegaSeleccionada); // ⭐ SE ENVÍA AL BACKEND
 
-  const resp = await fetch("http://127.0.0.1:8000/ocr/leer_contador", {
-  method: "POST",
-  body: form,
-});
+    try {
+      const resp = await fetch("http://localhost:8000/ocr/leer_contador", {
+        method: "POST",
+        body: form,
+      });
 
+      const data = await resp.json();
+      setLectura(data.lectura || "—");
 
-    if (!resp.ok) {
-      throw new Error("Backend no respondió correctamente");
+    } catch {
+      alert("No se pudo conectar con el backend.");
     }
+  };
 
-    const data = await resp.json();
-    console.log("RESPUESTA OCR:", data);
+  const guardarLectura = async () => {
+  if (!bodegaSeleccionada || !lectura) {
+    alert("⚠️ Selecciona la bodega e ingresa la lectura.");
+    return;
+  }
 
-    setModoManual(false);
-setLectura(data.lectura || "—");
+  const tipo = bodegaSeleccionada.includes("agua") ? "agua" : "energia";
 
+  try {
+    const resp = await fetch("http://localhost:8000/lecturas/guardar", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        bodega: bodegaSeleccionada,
+        lectura: Number(lectura),
+        tipo,
+        fecha: new Date().toISOString(),
+      }),
+    });
 
-  } catch (error) {
-    console.error("ERROR ESCANEO:", error);
-    alert("No se pudo conectar con el backend. ¿Está encendido?");
+    if (!resp.ok) throw new Error();
+
+    alert("✅ Lectura guardada correctamente");
+    setLectura("");
+
+  } catch {
+    alert("❌ Error al guardar la lectura");
   }
 };
 
 
-
-  // 🔦 FLASH FUNCIONAL
   const toggleFlash = async () => {
     if (!streamRef.current) return;
 
@@ -162,12 +182,10 @@ setLectura(data.lectura || "—");
     setFlashActivo(nuevoEstado);
 
     await track.applyConstraints({
-     advanced: [{ torch: nuevoEstado } as unknown as MediaTrackConstraintSet],
-
+      advanced: [{ torch: nuevoEstado } as unknown as MediaTrackConstraintSet],
     });
   };
 
-  // 🛑 DETENER CÁMARA
   const detenerCamara = () => {
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((t) => t.stop());
@@ -175,44 +193,48 @@ setLectura(data.lectura || "—");
     setStreamActivo(false);
   };
 
-  // 🎚 FILTROS EN TIEMPO REAL
-  const aplicarFiltros = () => {
-    if (!videoRef.current) return;
-
-    const brillo = (document.getElementById("brillo") as HTMLInputElement)?.value;
-    const contraste = (document.getElementById("contraste") as HTMLInputElement)?.value;
-    const saturacion = (document.getElementById("saturacion") as HTMLInputElement)?.value;
-
-    videoRef.current.style.filter = `
-      brightness(${brillo}%)
-      contrast(${contraste}%)
-      saturate(${saturacion}%)
-    `;
-  };
-
-  // Apaga cámara al entrar en modo manual o filtros
   useEffect(() => {
     if (modoManual || mostrarFiltros) detenerCamara();
   }, [modoManual, mostrarFiltros]);
 
-  // SOLO PERMITIR NÚMEROS
   const handleLecturaInput = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value.replace(/[^0-9]/g, "");
     setLectura(value);
   };
 
+  // ======================================================
+  //                    RENDER UI
+  // ======================================================
+
   return (
     <div className={`w-full min-h-screen p-5 flex flex-col items-center ${colores.fondo}`}>
 
-      <h1 className="text-3xl font-extrabold mb-5">Lecturas</h1>
+      <h1 className="text-3xl font-extrabold mb-5">Registrar Lectura</h1>
+
+      {/* ⭐⭐⭐ SELECTOR DE BODEGA ⭐⭐⭐ */}
+      <div className="w-full max-w-sm mb-5">
+        <label className="font-bold text-sm">Seleccionar Bodega</label>
+
+        <select
+          value={bodegaSeleccionada}
+          onChange={(e) => setBodegaSeleccionada(e.target.value)}
+          className={`w-full mt-1 p-3 rounded-xl border text-sm font-semibold ${colores.input}`}
+        >
+          <option value="">-- Seleccionar --</option>
+
+          <option value="bodega_2_agua">💧 Agua - Bodega 2</option>
+          <option value="bodega_4_agua">💧 Agua - Bodega 4</option>
+
+          <option value="bodega_1_energia">⚡ Energía - Bodega 1</option>
+          <option value="bodega_3_energia">⚡ Energía - Bodega 3</option>
+        </select>
+      </div>
 
       {/* CUADRO LECTURA */}
       <div className={`${colores.tarjeta} w-full max-w-sm p-4 rounded-xl shadow-lg`}>
         {modoManual ? (
           <input
             type="tel"
-            inputMode="numeric"
-            pattern="[0-9]*"
             placeholder="Lectura…"
             value={lectura}
             onChange={handleLecturaInput}
@@ -226,26 +248,20 @@ setLectura(data.lectura || "—");
       {/* CÁMARA */}
       {!modoManual && !mostrarFiltros && (
         <div className="w-full max-w-sm mt-5">
-          <div className="relative w-full h-64 bg-black rounded-xl overflow-hidden shadow-lg border border-white">
+          <div className="relative w-full h-64 rounded-xl overflow-hidden shadow-lg border border-white bg-black">
             {!streamActivo && (
-              <div className="absolute inset-0 flex items-center justify-center text-white opacity-60">
-                <p>Cámara apagada</p>
+              <div className="absolute inset-0 flex items-center justify-center text-white opacity-70">
+                Cámara apagada
               </div>
             )}
 
-            <video
-              ref={videoRef}
-              autoPlay
-              playsInline
-              muted
-              className="w-full h-full object-cover"
-            />
+            <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
           </div>
 
           {streamActivo && (
             <button
               onClick={toggleFlash}
-              className="w-full mt-3 p-3 rounded-xl bg-yellow-500 text-white flex justify-center gap-2 border border-white"
+              className="w-full mt-3 p-3 rounded-xl bg-yellow-500 text-white flex justify-center gap-2"
             >
               <Zap size={22} />
               Flash {flashActivo ? "ON" : "OFF"}
@@ -254,86 +270,50 @@ setLectura(data.lectura || "—");
         </div>
       )}
 
-      {/* FILTROS */}
-      {mostrarFiltros && (
-        <div className={`${colores.panelFiltros} w-full max-w-sm mt-5 p-5 rounded-xl shadow-xl`}>
-          <h3 className="text-lg font-bold mb-4">Filtros</h3>
-
-          <label className="block mb-4">
-            Brillo
-            <input id="brillo" type="range" min="50" max="200" defaultValue="100"
-              onChange={aplicarFiltros} className="w-full accent-red-500" />
-          </label>
-
-          <label className="block mb-4">
-            Contraste
-            <input id="contraste" type="range" min="50" max="200" defaultValue="100"
-              onChange={aplicarFiltros} className="w-full accent-red-500" />
-          </label>
-
-          <label className="block mb-4">
-            Saturación
-            <input id="saturacion" type="range" min="50" max="200" defaultValue="100"
-              onChange={aplicarFiltros} className="w-full accent-red-500" />
-          </label>
-
-          <button
-            onClick={() => setMostrarFiltros(false)}
-            className="w-full mt-3 p-3 rounded-xl bg-gray-500 text-white flex justify-center gap-2 border border-white"
-          >
-            <X size={20} />
-            Cerrar
-          </button>
-        </div>
-      )}
-
       {/* BOTONES */}
-<div className="flex gap-4 mt-6 w-full max-w-sm justify-center">
-  <button
-    onClick={iniciarCamara}
-    className={`${colores.botones} w-24 py-3 rounded-xl shadow-lg flex flex-col items-center`}
-  >
-    <Camera size={26} className="text-red-600" />
-    <span className="text-sm font-bold">Escanear</span>
-  </button>
+      <div className="flex gap-4 mt-6 w-full max-w-sm justify-center">
+        <button
+          onClick={iniciarCamara}
+          className={`${colores.botones} w-24 py-3 rounded-xl shadow-lg flex flex-col items-center`}
+        >
+          <Camera size={26} className="text-red-600" />
+          <span className="text-sm font-bold">Escanear</span>
+        </button>
 
-  {/* BOTÓN PARA TOMAR FOTO Y ENVIAR AL BACKEND */}
-  <button
-    onClick={escanearContador}
-    className="bg-green-600 text-white w-24 py-3 rounded-xl shadow-lg flex flex-col items-center border border-white"
-  >
-    <Camera size={26} />
-    <span className="text-sm font-bold">Tomar</span>
-  </button>
+        <button
+          onClick={escanearContador}
+          className="bg-green-600 text-white w-24 py-3 rounded-xl shadow-lg flex flex-col items-center"
+        >
+          <Camera size={26} />
+          <span className="text-sm font-bold">Tomar</span>
+        </button>
 
-  <button
-    onClick={() => setModoManual(true)}
-    className={`${colores.botones} w-24 py-3 rounded-xl shadow-lg flex flex-col items-center`}
-  >
-    <Pencil size={26} className="text-red-600" />
-    <span className="text-sm font-bold">Manual</span>
-  </button>
+        <button
+          onClick={() => setModoManual(true)}
+          className={`${colores.botones} w-24 py-3 rounded-xl shadow-lg flex flex-col items-center`}
+        >
+          <Pencil size={26} className="text-red-600" />
+          <span className="text-sm font-bold">Manual</span>
+        </button>
+      </div>
 
-  <button
-    onClick={() => setMostrarFiltros(true)}
-    className={`${colores.botones} w-24 py-3 rounded-xl shadow-lg flex flex-col items-center`}
-  >
-    <SlidersHorizontal size={26} className="text-red-600" />
-    <span className="text-sm font-bold">Filtros</span>
-  </button>
-</div>
+      {/* BOTÓN GUARDAR */}
+     <button
+  onClick={guardarLectura}
+  disabled={!bodegaSeleccionada || !lectura}
+  className={`mt-10 w-full max-w-sm py-4 rounded-xl shadow-lg text-xl
+    flex justify-center items-center gap-3
+    ${colores.rojo}
+    disabled:opacity-50 disabled:cursor-not-allowed
+  `}
+>
+  <Save size={28} />
+  Guardar Lectura
+</button>
 
 
-      {/* GUARDAR */}
-      <button className={`mt-10 w-full max-w-sm py-4 rounded-xl shadow-lg text-xl flex justify-center items-center gap-3 ${colores.rojo}`}>
-        <Save size={28} />
-        Guardar Lectura
-      </button>
-      
-
-      {/* DETENER CÁMARA */}
       {streamActivo && (
-        <button onClick={detenerCamara} className="mt-4 text-red-600 underline">
+        <button onClick={detenerCamara} className="mt-4 text-red-500 underline">
           Apagar cámara
         </button>
       )}
