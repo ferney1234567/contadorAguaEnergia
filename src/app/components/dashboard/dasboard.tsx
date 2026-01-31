@@ -1,51 +1,58 @@
 "use client";
 
-import {
-  Chart as ChartJS,
-  ArcElement,
-  BarElement,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Tooltip,
-  Legend
-} from "chart.js";
-
+import {Chart as ChartJS,ArcElement,BarElement,CategoryScale,LinearScale,PointElement,LineElement,Tooltip,Legend} from "chart.js";
 import { Bar, Line } from "react-chartjs-2";
-import * as XLSX from "xlsx";
+import { FC, useState, useEffect } from "react";
+import { exportarDashboardExcel } from "../../utils/exportadorgeneral";
+import {FaWater,FaBolt,FaChartLine,FaClipboardList,FaTint,FaLightbulb,} from "react-icons/fa";
+import { exportarDashboardPDF } from "../../utils/exportadorDashboardPDF";
 
-
-import {
-  FaWater,
-  FaBolt,
-  FaChartLine,
-  FaClipboardList,
-  FaTint,
-  FaLightbulb,
-} from "react-icons/fa";
-
-import { FC, useState } from "react";
-import ConsumoAgua from "../consumoAgua/consumoAgua";
-import ConsumoEnergia from "../consumoEnergia/consumoEnergia";
-
-
-ChartJS.register(
-  ArcElement,
-  BarElement,
-  CategoryScale,
-  LinearScale,
-  PointElement,
-  LineElement,
-  Tooltip,
-  Legend
-);
+ChartJS.register(ArcElement,BarElement,CategoryScale,LinearScale,PointElement,LineElement,Tooltip,Legend);
 
 interface Props {
   modoNoche: boolean;
-  
 }
 
+const calcularConsumoMensual = (lecturas: any) => {
+  const meses = Array(12).fill(0);
+
+  Object.entries(lecturas).forEach(([mes, dias]: any) => {
+    Object.values(dias).forEach((d: any) => {
+      meses[Number(mes)] += (d.total2 || 0) + (d.total4 || 0);
+    });
+  });
+
+  return meses.map(v => Number(v.toFixed(2)));
+};
+
+const totalAnual = (lecturas: any) =>
+  Object.values(lecturas).reduce((acc: number, dias: any) => {
+    return (
+      acc +
+      Object.values(dias).reduce(
+        (s: number, d: any) => s + d.total2 + d.total4,
+        0
+      )
+    );
+  }, 0);
+
+  
+const promedioDiario = (lecturas: any) => {
+  let total = 0;
+  let dias = 0;
+
+  Object.values(lecturas).forEach((mes: any) => {
+    Object.values(mes).forEach((d: any) => {
+      const t = d.total2 + d.total4;
+      if (t > 0) {
+        total += t;
+        dias++;
+      }
+    });
+  });
+
+  return dias ? Number((total / dias).toFixed(2)) : 0;
+};
 
 const DashboardInicio: FC<Props> = ({ modoNoche }) => {
 
@@ -53,58 +60,29 @@ const DashboardInicio: FC<Props> = ({ modoNoche }) => {
      MESES
   ============================== */
   const meses = [
-    "Ene","Feb","Mar","Abr","May","Jun",
-    "Jul","Ago","Sep","Oct","Nov","Dic"
+    "Ene", "Feb", "Mar", "Abr", "May", "Jun",
+    "Jul", "Ago", "Sep", "Oct", "Nov", "Dic"
   ];
 
-  /* ==============================
-     DATOS POR AÑO
-     → Puedes conectar con tu API luego
-  ============================== */
-  const datosAnuales: any = {
-    2023: {
-      consumoAgua: [820,830,780,900,910,920,880,875,860,890,910,950],
-      consumoEnergia: [290,300,310,320,335,340,330,320,300,295,310,320],
-      aguaTotal: 11500,
-      energiaTotal: 4200,
-      promedioAgua: 780,
-      promedioEnergia: 110,
-    },
-    2024: {
-      consumoAgua: [880,840,860,920,950,970,930,900,880,910,930,960],
-      consumoEnergia: [300,310,315,330,340,350,340,325,310,305,315,330],
-      aguaTotal: 12200,
-      energiaTotal: 4500,
-      promedioAgua: 820,
-      promedioEnergia: 120,
-    },
-    2025: {
-      consumoAgua: [900,850,880,920,950,970,930,910,880,900,940,960],
-      consumoEnergia: [310,305,320,330,345,350,340,325,315,300,310,330],
-      aguaTotal: 12520,
-      energiaTotal: 3980,
-      promedioAgua: 850,
-      promedioEnergia: 128,
-    }
-  };
+  const [anio, setAnio] = useState<number>(new Date().getFullYear());
+  const [lecturasAgua, setLecturasAgua] = useState({});
+  const [lecturasEnergia, setLecturasEnergia] = useState({});
+  // 🔌 ENERGÍA (DESDE BD)
+  const consumoEnergiaMensual = calcularConsumoMensual(lecturasEnergia);
+  const totalEnergiaAnual = totalAnual(lecturasEnergia);
+  const promedioEnergiaReal = promedioDiario(lecturasEnergia);
+  // 🔌 AGUA (si luego haces lo mismo)
+  const consumoAguaMensual = calcularConsumoMensual(lecturasAgua);
+  const totalAguaAnual = totalAnual(lecturasAgua);
+  const promedioAguaReal = promedioDiario(lecturasAgua);
+  const [aniosDisponibles, setAniosDisponibles] = useState<number[]>([]);
 
-  /* ==============================
-     ESTADO DEL AÑO SELECCIONADO
-  ============================== */
-  const [anio, setAnio] = useState(2025);
-const metaAgua = 13000;      // L
-const metaEnergia = 4200;   // kWh
-
-const metaMensualAgua = metaAgua / 12;
-const metaMensualEnergia = metaEnergia / 12;
-const [lecturasAgua, setLecturasAgua] = useState({});
-const [lecturasEnergia, setLecturasEnergia] = useState({});
-
-
-  const consumoAgua = datosAnuales[anio].consumoAgua;
-  
-  const consumoEnergia = datosAnuales[anio].consumoEnergia;
-
+  const [metaAgua, setMetaAgua] = useState(0);
+  const [metaEnergia, setMetaEnergia] = useState(0);
+  const [metaMensualAgua, setMetaMensualAgua] = useState(0);
+  const [metaMensualEnergia, setMetaMensualEnergia] = useState(0);
+  const [metasAguaMensual, setMetasAguaMensual] = useState<number[]>(Array(12).fill(0));
+  const [metasEnergiaMensual, setMetasEnergiaMensual] = useState<number[]>(Array(12).fill(0));
   /* ==============================
      PALETA
   ============================== */
@@ -137,15 +115,15 @@ const [lecturasEnergia, setLecturasEnergia] = useState({});
       },
     },
     scales: {
-      x: { ticks: { color: textSoft }, grid: { display: false }},
-      y: { ticks: { color: textSoft }, grid: { color: modoNoche ? "#2a2a2a" : "#e5e7eb" }},
+      x: { ticks: { color: textSoft }, grid: { display: false } },
+      y: { ticks: { color: textSoft }, grid: { color: modoNoche ? "#2a2a2a" : "#e5e7eb" } },
     }
   };
 
   const opcionesBarras = {
     responsive: true,
     plugins: {
-      legend: { labels: { color: textColor }},
+      legend: { labels: { color: textColor } },
       tooltip: {
         backgroundColor: modoNoche ? "#1e1e1e" : "#ffffff",
         titleColor: textColor,
@@ -155,8 +133,8 @@ const [lecturasEnergia, setLecturasEnergia] = useState({});
       },
     },
     scales: {
-      x: { ticks: { color: textSoft }, grid: { display: false }},
-      y: { ticks: { color: textSoft }, grid: { color: modoNoche ? "#2a2a2a" : "#e5e7eb" }},
+      x: { ticks: { color: textSoft }, grid: { display: false } },
+      y: { ticks: { color: textSoft }, grid: { color: modoNoche ? "#2a2a2a" : "#e5e7eb" } },
     },
   };
 
@@ -167,7 +145,7 @@ const [lecturasEnergia, setLecturasEnergia] = useState({});
     labels: meses,
     datasets: [{
       label: "Consumo Agua (L)",
-      data: consumoAgua,
+      data: consumoAguaMensual,
       backgroundColor: colores.agua,
       borderRadius: 10,
     }],
@@ -177,7 +155,7 @@ const [lecturasEnergia, setLecturasEnergia] = useState({});
     labels: meses,
     datasets: [{
       label: "Consumo Energía (kWh)",
-      data: consumoEnergia,
+      data: consumoEnergiaMensual,
       backgroundColor: colores.energia,
       borderRadius: 10,
     }],
@@ -187,7 +165,7 @@ const [lecturasEnergia, setLecturasEnergia] = useState({});
     labels: meses,
     datasets: [{
       label: "Agua total (L)",
-      data: consumoAgua,
+      data: consumoAguaMensual,
       borderColor: colores.agua,
       backgroundColor: colores.aguaGradient,
       tension: 0.4,
@@ -201,7 +179,7 @@ const [lecturasEnergia, setLecturasEnergia] = useState({});
     labels: meses,
     datasets: [{
       label: "Energía total (kWh)",
-      data: consumoEnergia,
+      data: consumoEnergiaMensual,
       borderColor: colores.energia,
       backgroundColor: colores.energiaGradient,
       tension: 0.4,
@@ -212,153 +190,211 @@ const [lecturasEnergia, setLecturasEnergia] = useState({});
   };
 
   const dataMetaAgua = {
-  labels: ["Agua"],
-  datasets: [
-    {
-      label: "Meta",
-      data: [metaAgua],
-      backgroundColor: modoNoche ? "#1e293b" : "#e5e7eb",
-      barThickness: 20,
-      borderRadius: 10,
-    },
-    {
-      label: "Consumo real",
-      data: [datosAnuales[anio].aguaTotal],
-      backgroundColor: colores.agua,
-      barThickness: 12,
-      borderRadius: 10,
-    },
-  ],
-};
+    labels: ["Agua"],
+    datasets: [
+      {
+        label: "Meta",
+        data: [metaAgua],
+        backgroundColor: modoNoche ? "#1e293b" : "#e5e7eb",
+        barThickness: 20,
+        borderRadius: 10,
+      },
+      {
+        label: "Consumo real",
+
+        data: [totalAguaAnual],
+        backgroundColor: colores.agua,
+        barThickness: 12,
+        borderRadius: 10,
+      },
+    ],
+  };
+
+  useEffect(() => {
+    const cargarEnergia = async () => {
+      try {
+        const res = await fetch("http://127.0.0.1:8000/energia");
+        const data = await res.json();
+
+        const estructurado: any = {};
+        const aniosSet = new Set<number>();
+
+        data.forEach((item: any) => {
+          const fecha = new Date(item.fecha + "T00:00:00");
+          const year = fecha.getFullYear();
+          aniosSet.add(year);
+
+          if (year !== anio) return;
+
+          const mes = fecha.getMonth();
+          const dia = fecha.getDate();
+
+          if (!estructurado[mes]) estructurado[mes] = {};
+          estructurado[mes][dia] = {
+            total2: item.total_bodega1,
+            total4: item.total_bodega2,
+          };
+        });
+
+        setLecturasEnergia(estructurado);
+        setAniosDisponibles((prev) =>
+          Array.from(new Set([...prev, ...Array.from(aniosSet)])).sort()
+        );
+      } catch (error) {
+        console.error("Error cargando energía", error);
+      }
+    };
+
+    cargarEnergia();
+  }, [anio]);
+
+  useEffect(() => {
+    const cargarMetas = async () => {
+      try {
+        const res = await fetch(`http://127.0.0.1:8000/metas/${anio}`);
+        const data = await res.json();
+
+        const agua = Array(12).fill(0);
+        const energia = Array(12).fill(0);
+
+        // 🔵 AGUA
+        if (data?.agua?.meta_mensual) {
+          agua.fill(Number(data.agua.meta_mensual));
+        }
+
+        // 🟡 ENERGÍA
+        if (data?.energia?.meta_mensual) {
+          energia.fill(Number(data.energia.meta_mensual));
+        }
+
+        setMetasAguaMensual(agua);
+        setMetasEnergiaMensual(energia);
+
+        setMetaAgua(data?.agua?.meta_mensual ?? 0);
+        setMetaEnergia(data?.energia?.meta_mensual ?? 0);
+
+      } catch (error) {
+        console.error("Error cargando metas", error);
+        setMetasAguaMensual(Array(12).fill(0));
+        setMetasEnergiaMensual(Array(12).fill(0));
+      }
+    };
+
+    cargarMetas();
+  }, [anio]);
 
 
 
 
-const dataDiferenciaAguaMensual = {
-  labels: meses,
-  datasets: [
-    {
-      label: "Meta mensual",
-      data: Array(12).fill(metaMensualAgua),
-      backgroundColor: modoNoche ? "#334155" : "#e5e7eb", // gris neutro
-      borderRadius: 6,
-      barThickness: 14,
-    },
-    {
-      label: "Consumo real",
-      data: consumoAgua,
-      backgroundColor: consumoAgua.map((v: number) =>
-  v <= metaMensualAgua
-    ? "#38bdf8"
-    : "#ef4444"
-),
-      borderRadius: 6,
-      barThickness: 14,
-    },
-  ],
-};
+  useEffect(() => {
+    const cargarAgua = async () => {
+      try {
+        const res = await fetch("http://127.0.0.1:8000/agua");
+        const data = await res.json();
 
+        const estructurado: any = {};
+        const aniosSet = new Set<number>();
 
-const dataDiferenciaEnergiaMensual = {
-  labels: meses,
-  datasets: [
-    {
-      label: "Meta mensual",
-      data: Array(12).fill(metaMensualEnergia),
-      backgroundColor: modoNoche ? "#334155" : "#e5e7eb", // gris neutro
-      borderRadius: 6,
-      barThickness: 14,
-    },
-    {
-      label: "Consumo real",
-      data: consumoEnergia,
-    backgroundColor: consumoEnergia.map((v: number) =>
-  v <= metaMensualEnergia
-          ? "#facc15"   // amarillo (cumple)
-          : "#f97316"   // naranja fuerte (se pasa)
-      ),
-      borderRadius: 6,
-      barThickness: 14,
-    },
-  ],
-};
+        data.forEach((item: any) => {
+          const fecha = new Date(item.fecha + "T00:00:00");
+          const year = fecha.getFullYear();
 
-const exportarDashboardExcel = () => {
-  /* ======================
-     HOJA 1: DASHBOARD
-  ====================== */
-  const hojaDashboard = [
-    ["Año", anio],
-    [],
-    ["Indicador", "Valor", "Unidad"],
-    ["Consumo total de agua", datosAnuales[anio].aguaTotal, "Litros"],
-    ["Consumo total de energía", datosAnuales[anio].energiaTotal, "kWh"],
-    ["Promedio diario agua", datosAnuales[anio].promedioAgua, "L/día"],
-    ["Promedio diario energía", datosAnuales[anio].promedioEnergia, "kWh/día"],
-    ["Meta anual agua", metaAgua, "Litros"],
-    ["Meta anual energía", metaEnergia, "kWh"],
-  ];
+          aniosSet.add(year);
 
-  /* ======================
-     HOJA 2: AGUA
-  ====================== */
-const hojaAgua = [
-  ["Mes", "Día", "Total Bodega 2", "Total Bodega 4", "Total Día"],
-];
+          if (year !== anio) return;
 
-Object.entries(lecturasAgua).forEach(([mes, dias]: any) => {
-  Object.entries(dias).forEach(([dia, d]: any) => {
-    hojaAgua.push([
-      meses[Number(mes)],
-      dia,
-      d.total2,
-      d.total4,
-      d.total2 + d.total4,
-    ]);
-  });
-});
+          const mes = fecha.getMonth();
+          const dia = fecha.getDate();
 
+          if (!estructurado[mes]) estructurado[mes] = {};
 
-  /* ======================
-     HOJA 3: ENERGÍA
-  ====================== */
- const hojaEnergia = [
-  ["Mes", "Día", "Consumo", "Total Día"],
-];
+          estructurado[mes][dia] = {
+            total2: item.total_bodega1,
+            total4: item.total_bodega2,
+          };
+        });
 
-Object.entries(lecturasEnergia).forEach(([mes, dias]: any) => {
-  Object.entries(dias).forEach(([dia, d]: any) => {
-    hojaEnergia.push([
-      meses[Number(mes)],
-      dia,
-      d.total2,
-      d.total4,
-      d.total2 + d.total4,
-    ]);
-  });
-});
+        setAniosDisponibles((prev) =>
+          Array.from(new Set([...prev, ...Array.from(aniosSet)])).sort()
+        );
 
+        setLecturasAgua(estructurado);
+      } catch (error) {
+        console.error("Error cargando agua", error);
+      }
+    };
 
-  /* ======================
-     CREAR EXCEL
-  ====================== */
-  const wb = XLSX.utils.book_new();
-
-  const wsDashboard = XLSX.utils.aoa_to_sheet(hojaDashboard);
-  const wsAgua = XLSX.utils.aoa_to_sheet(hojaAgua);
-  const wsEnergia = XLSX.utils.aoa_to_sheet(hojaEnergia);
-
-  XLSX.utils.book_append_sheet(wb, wsDashboard, "Dashboard");
-  XLSX.utils.book_append_sheet(wb, wsAgua, "Agua");
-  XLSX.utils.book_append_sheet(wb, wsEnergia, "Energía");
-
-  XLSX.writeFile(wb, `Dashboard_Consumos_${anio}.xlsx`);
-  
-};
+    cargarAgua();
+  }, [anio]);
 
 
 
 
+  const dataDiferenciaAguaMensual = {
+    labels: meses,
+    datasets: [
+      {
+        label: "Meta mensual",
+        data: metasAguaMensual,
+        backgroundColor: "#e5e7eb",
+        borderRadius: 6,
+        barThickness: 14,
+      },
+      {
+        label: "Consumo real",
+        data: consumoAguaMensual,
+        backgroundColor: consumoAguaMensual.map((v, i) =>
+          v <= metasAguaMensual[i] ? "#38bdf8" : "#ef4444"
+        ),
+        borderRadius: 6,
+        barThickness: 14,
+      },
+    ],
+  };
+
+
+
+  const dataDiferenciaEnergiaMensual = {
+    labels: meses,
+    datasets: [
+      {
+        label: "Meta mensual (kWh)",
+        data: metasEnergiaMensual,
+        backgroundColor: modoNoche ? "#334155" : "#e5e7eb",
+        borderRadius: 6,
+        barThickness: 14,
+      },
+      {
+        label: "Consumo real (kWh)",
+        data: consumoEnergiaMensual,
+        backgroundColor: consumoEnergiaMensual.map((v, i) =>
+          metasEnergiaMensual[i] === 0
+            ? "#94a3b8" // sin meta
+            : v <= metasEnergiaMensual[i]
+              ? "#facc15" // dentro de meta
+              : "#f97316" // excedido
+        ),
+        borderRadius: 6,
+        barThickness: 14,
+      },
+    ],
+  };
+
+
+  const handleExportarExcel = () => {
+    exportarDashboardExcel({
+      anio,
+      meses,
+      lecturasAgua,
+      lecturasEnergia,
+      totalAguaAnual,
+      totalEnergiaAnual,
+      promedioAguaReal,
+      promedioEnergiaReal,
+      metaAgua,
+      metaEnergia,
+    });
+  };
 
   /* ==============================
      RENDER
@@ -366,65 +402,86 @@ Object.entries(lecturasEnergia).forEach(([mes, dias]: any) => {
   return (
     <div className={`w-full min-h-screen p-6 ${colores.fondo}`}>
 
-     {/* === TOOLBAR SUPERIOR === */}
+      {/* === TOOLBAR SUPERIOR === */}
 <div
   className={`
     w-full flex flex-col md:flex-row
     md:items-center md:justify-between
     gap-4 mb-8 p-4 rounded-xl
-    border
+    border backdrop-blur-md
     ${modoNoche
-      ? "bg-[#0d0d0d] border-gray-700"
-      : "bg-gray-50 border-gray-200"}
+      ? "bg-white/10 border-white/20 text-white"
+      : "bg-gray-50 border-gray-200 text-black"}
   `}
 >
-  {/* === SELECTOR DE AÑO === */}
-  <div className="flex items-center gap-3">
-    <span
-      className={`
+        {/* === SELECTOR DE AÑO === */}
+        <div className="flex items-center gap-3">
+          <span
+            className={`
         text-sm font-medium
         ${modoNoche ? "text-gray-300" : "text-gray-700"}
       `}
-    >
-      Año en análisis
-    </span>
+          >
+            Año en análisis
+          </span>
 
-    <select
-      value={anio}
-      onChange={(e) => setAnio(parseInt(e.target.value))}
-      className={`
+          <select
+            value={anio}
+            onChange={(e) => setAnio(parseInt(e.target.value))}
+            className={`
         px-4 py-2 rounded-lg border text-sm font-semibold cursor-pointer
         ${modoNoche
-          ? "bg-[#151515] border-gray-600 text-white"
-          : "bg-white border-gray-300 text-black"}
+                ? "bg-[#151515] border-gray-100 text-white"
+                : "bg-white border-gray-300 text-black"}
         focus:ring-2 focus:ring-emerald-500 outline-none
       `}
-    >
-      {Object.keys(datosAnuales).map((a) => (
-        <option key={a} value={a}>
-          {a}
-        </option>
-      ))}
-    </select>
-  </div>
+          >
 
-  {/* === ACCIONES === */}
-  <div className="flex items-center gap-3">
-    <button
-      onClick={exportarDashboardExcel}
-      className="
-        px-5 py-2.5 rounded-lg text-sm font-semibold
-        bg-emerald-600 hover:bg-emerald-700
-        text-white
-        shadow-md
-        flex items-center gap-2
-        transition
-      "
-    >
-      📊 Exportar a Excel
-    </button>
-  </div>
-</div>
+            {aniosDisponibles.map((y) => (
+              <option key={y} value={y}>
+                {y}
+              </option>
+            ))}
+          </select>
+        </div>
+
+        {/* === ACCIONES === */}
+        <div className="flex items-center gap-3">
+        <button
+  onClick={() =>
+    exportarDashboardPDF({
+      anio,
+      meses,
+      consumoAguaMensual,
+      consumoEnergiaMensual,
+      totalAguaAnual,
+      totalEnergiaAnual,
+      promedioAguaReal,
+      promedioEnergiaReal,
+      metaAgua,
+      metaEnergia,
+    })
+  }
+  className="px-5 py-2.5 rounded-lg text-sm font-semibold
+    bg-red-600 hover:bg-red-700
+    text-white shadow-md flex items-center gap-2"
+>
+  📄 Exportar PDF
+</button>
+
+
+          <button
+            onClick={handleExportarExcel}
+            className="px-5 py-2.5 rounded-lg text-sm font-semibold
+             bg-emerald-600 hover:bg-emerald-700
+             text-white shadow-md flex items-center gap-2"
+          >
+            📊 Exportar a Excel
+          </button>
+           {/* PDF */}
+
+        </div>
+      </div>
 
 
       {/* TARJETAS SUPERIORES */}
@@ -439,7 +496,8 @@ Object.entries(lecturasEnergia).forEach(([mes, dias]: any) => {
             </div>
           </div>
           <p className="text-3xl font-bold text-blue-400">
-            {datosAnuales[anio].aguaTotal.toLocaleString()} L
+            {totalAguaAnual.toLocaleString()}
+            L
           </p>
           <span className={`text-sm ${textSoft}`}>Total del año</span>
         </div>
@@ -453,7 +511,8 @@ Object.entries(lecturasEnergia).forEach(([mes, dias]: any) => {
             </div>
           </div>
           <p className="text-3xl font-bold text-yellow-500">
-            {datosAnuales[anio].energiaTotal.toLocaleString()} kWh
+            {totalEnergiaAnual.toLocaleString()}
+            kWh
           </p>
           <span className={`text-sm ${textSoft}`}>Total del año</span>
         </div>
@@ -467,7 +526,8 @@ Object.entries(lecturasEnergia).forEach(([mes, dias]: any) => {
             </div>
           </div>
           <p className="text-3xl font-bold text-green-500">
-            {datosAnuales[anio].promedioAgua}
+            {promedioAguaReal}
+
           </p>
           <span className={`text-sm ${textSoft}`}>L / día</span>
         </div>
@@ -481,7 +541,8 @@ Object.entries(lecturasEnergia).forEach(([mes, dias]: any) => {
             </div>
           </div>
           <p className="text-3xl font-bold text-red-500">
-            {datosAnuales[anio].promedioEnergia}
+            {promedioEnergiaReal}
+
           </p>
           <span className={`text-sm ${textSoft}`}>kWh / día</span>
         </div>
@@ -491,16 +552,26 @@ Object.entries(lecturasEnergia).forEach(([mes, dias]: any) => {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
 
         <div className={`p-6 rounded-xl shadow-lg border ${cardBg} ${cardBorder}`}>
-          <h3 className={`font-bold text-lg mb-4 flex items-center gap-2 ${textColor}`}>
-            <FaTint className="text-blue-500" /> Consumo mensual de Agua
-          </h3>
+         <h3 className={`font-bold text-lg mb-4 flex items-center gap-2 ${textColor}`}>
+  <FaTint className="text-blue-500" />
+  Consumo mensual de Agua
+  <span className="ml-2 text-sm font-semibold text-blue-400">
+    (Meta: {metaAgua || 0} L)
+  </span>
+</h3>
+
           <Bar data={dataAgua} options={opcionesBarras} />
         </div>
 
         <div className={`p-6 rounded-xl shadow-lg border ${cardBg} ${cardBorder}`}>
-          <h3 className={`font-bold text-lg mb-4 flex items-center gap-2 ${textColor}`}>
-            <FaLightbulb className="text-yellow-500" /> Consumo mensual de Energía
-          </h3>
+         <h3 className={`font-bold text-lg mb-4 flex items-center gap-2 ${textColor}`}>
+  <FaLightbulb className="text-yellow-500" />
+  Consumo mensual de Energía
+  <span className="ml-2 text-sm font-semibold text-yellow-400">
+    (Meta: {metaEnergia || 0} kWh)
+  </span>
+</h3>
+
           <Bar data={dataEnergia} options={opcionesBarras} />
         </div>
       </div>
@@ -523,82 +594,85 @@ Object.entries(lecturasEnergia).forEach(([mes, dias]: any) => {
         </div>
       </div>
 
-     
 
 
-{/* === DIFERENCIA VS META · MENSUAL === */}
-<div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8 lg:gap-10 mt-10">
 
-  {/* ================= AGUA ================= */}
-  <div
-    className={`
+      {/* === DIFERENCIA VS META · MENSUAL === */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8 lg:gap-10 mt-10">
+
+        {/* ================= AGUA ================= */}
+        <div
+          className={`
       p-4 sm:p-6 lg:p-8
       rounded-xl shadow-lg border
       ${cardBg} ${cardBorder}
     `}
-  >
-    <h4
-      className={`
+        >
+          <h4
+            className={`
         text-sm sm:text-base font-semibold
         mb-4 sm:mb-6
         flex items-center gap-2
         ${textSoft}
       `}
-    >
-      <FaWater className="text-blue-500 text-base sm:text-lg" />
-      Diferencia vs Meta · Agua (Mensual)
-    </h4>
+          >
+            <FaWater className="text-blue-500 text-base sm:text-lg" />
+            Diferencia vs Meta · Agua (Mensual)
+          </h4>
 
-    <div className="h-[260px] sm:h-[300px] lg:h-[360px]">
-      <Bar
-        data={dataDiferenciaAguaMensual}
-        options={{
-          ...opcionesBarras,
-          maintainAspectRatio: false,
-        }}
-      />
-    </div>
-  </div>
+          <div className="h-[260px] sm:h-[300px] lg:h-[360px]">
+            <Bar
+              data={dataDiferenciaAguaMensual}
+              options={{
+                ...opcionesBarras,
+                maintainAspectRatio: false,
+              }}
+            />
+          </div>
+        </div>
 
-  {/* ================= ENERGÍA ================= */}
-  <div
-    className={`
+        {/* ================= ENERGÍA ================= */}
+        <div
+          className={`
       p-4 sm:p-6 lg:p-8
       rounded-xl shadow-lg border
       ${cardBg} ${cardBorder}
     `}
-  >
-    <h4
-      className={`
+        >
+          <h4
+            className={`
         text-sm sm:text-base font-semibold
         mb-4 sm:mb-6
         flex items-center gap-2
         ${textSoft}
       `}
-    >
-      <FaBolt className="text-yellow-500 text-base sm:text-lg" />
-      Diferencia vs Meta · Energía (Mensual)
-    </h4>
+          >
+            <FaBolt className="text-yellow-500 text-base sm:text-lg" />
+            Diferencia vs Meta · Energía (Mensual)
+          </h4>
 
-    <div className="h-[260px] sm:h-[300px] lg:h-[360px]">
-      <Bar
-        data={dataDiferenciaEnergiaMensual}
-        options={{
-          ...opcionesBarras,
-          maintainAspectRatio: false,
-        }}
-      />
+          <div className="h-[260px] sm:h-[300px] lg:h-[360px]">
+            <Bar
+              data={dataDiferenciaEnergiaMensual}
+              options={{
+                ...opcionesBarras,
+                maintainAspectRatio: false,
+              }}
+            />
+          </div>
+        </div>
+
+
+
+
+      </div>
+
+
+
+
     </div>
-  </div>
 
 
-
-</div>
-
-
-    </div>
-    
-    
   );
 
 };

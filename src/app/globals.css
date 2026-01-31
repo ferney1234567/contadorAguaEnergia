@@ -105,9 +105,13 @@ body > div {
   --accent: oklch(0.97 0 0);
   --accent-foreground: oklch(0.205 0 0);
   --destructive: oklch(0.577 0.245 27.325);
-  --border: oklch(0.922 0 0);
+  /* --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
-  --ring: oklch(0.708 0 0);
+  --ring: oklch(0.708 0 0); */
+  --border: oklch(1 0 0);        /* BLANCO PURO */
+--input: oklch(1 0 0);         /* inputs blancos */
+--ring: oklch(1 0 0 / 60%);    /* focus suave blanco */
+
   --chart-1: oklch(0.646 0.222 41.116);
   --chart-2: oklch(0.6 0.118 184.704);
   --chart-3: oklch(0.398 0.07 227.392);
@@ -174,6 +178,18 @@ body > div {
   background-image: none !important;
 }
 
+/* Quitar flechas de select (todos los navegadores modernos) */
+select {
+  -webkit-appearance: none; /* Chrome, Safari */
+  -moz-appearance: none;    /* Firefox */
+  appearance: none;
+  background-image: none;
+}
+
+/* Quitar flecha en IE / Edge viejo */
+select::-ms-expand {
+  display: none;
+}
 
 
 

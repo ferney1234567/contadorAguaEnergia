@@ -1,16 +1,7 @@
 "use client";
 
 import { useEffect, useRef, useState } from "react";
-import {
-  Camera,
-  Pencil,
-  SlidersHorizontal,
-  Save,
-  X,
-  Zap,
-  Droplets,
-  Flame
-} from "lucide-react";
+import {Camera,Pencil,SlidersHorizontal,Save,X,Zap,Droplets,Flame} from "lucide-react";
 
 interface Props {
   modoNoche: boolean;
@@ -23,16 +14,12 @@ interface TorchCapabilities extends MediaTrackCapabilities {
 export default function Lecturas({ modoNoche }: Props) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
-
   const [lectura, setLectura] = useState("");
   const [streamActivo, setStreamActivo] = useState(false);
   const [modoManual, setModoManual] = useState(false);
   const [mostrarFiltros, setMostrarFiltros] = useState(false);
   const [flashActivo, setFlashActivo] = useState(false);
-
-  // ⭐ NUEVO ESTADO
   const [bodegaSeleccionada, setBodegaSeleccionada] = useState("");
-
   const colores = {
     fondo: modoNoche ? "bg-[#121212] text-white" : "bg-[#F4F4F4] text-black",
     tarjeta: modoNoche ? "bg-[#1f1f1f] border border-white"
@@ -121,7 +108,7 @@ export default function Lecturas({ modoNoche }: Props) {
     form.append("bodega", bodegaSeleccionada); // ⭐ SE ENVÍA AL BACKEND
 
     try {
-      const resp = await fetch("http://localhost:8000/ocr/leer_contador", {
+      const resp = await fetch("", {
         method: "POST",
         body: form,
       });
@@ -134,7 +121,7 @@ export default function Lecturas({ modoNoche }: Props) {
     }
   };
 
-  const guardarLectura = async () => {
+ const guardarLectura = async () => {
   if (!bodegaSeleccionada || !lectura) {
     alert("⚠️ Selecciona la bodega e ingresa la lectura.");
     return;
@@ -143,7 +130,7 @@ export default function Lecturas({ modoNoche }: Props) {
   const tipo = bodegaSeleccionada.includes("agua") ? "agua" : "energia";
 
   try {
-    const resp = await fetch("http://localhost:8000/lecturas/guardar", {
+    const resp = await fetch("http://127.0.0.1:8000/lecturas/manual", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -152,7 +139,7 @@ export default function Lecturas({ modoNoche }: Props) {
         bodega: bodegaSeleccionada,
         lectura: Number(lectura),
         tipo,
-        fecha: new Date().toISOString(),
+        fecha: new Date().toISOString().split("T")[0],
       }),
     });
 
@@ -165,6 +152,7 @@ export default function Lecturas({ modoNoche }: Props) {
     alert("❌ Error al guardar la lectura");
   }
 };
+
 
 
   const toggleFlash = async () => {
@@ -310,8 +298,6 @@ export default function Lecturas({ modoNoche }: Props) {
   <Save size={28} />
   Guardar Lectura
 </button>
-
-
       {streamActivo && (
         <button onClick={detenerCamara} className="mt-4 text-red-500 underline">
           Apagar cámara
