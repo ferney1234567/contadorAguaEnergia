@@ -17,6 +17,8 @@ import ConsumoAgua from "./components/consumoAgua/consumoAgua";
 import ConsumoEnergia from "./components/consumoEnergia/consumoEnergia";
 import Lecturas from "./components/lecturas/lecturas";
 
+
+
 export default function MenuPrincipal() {
   /* ================= ESTADOS GENERALES ================= */
   const [sidebarAbierto, setSidebarAbierto] = useState(false);
@@ -188,8 +190,74 @@ export default function MenuPrincipal() {
           {vistaActual === "lecturas" && (
             <Lecturas modoNoche={modoNoche} />
           )}
+
+
+            <footer
+  className={`
+    mt-12 py-6
+    border-t
+    ${modoNoche
+      ? "bg-[#1a1a1a] border-[#2f2f2f] text-gray-300"
+      : "bg-[#f2f2f2] border-gray-300 text-gray-700"}
+  `}
+>
+  <div className="max-w-6xl mx-auto flex flex-col gap-4 text-center px-4">
+
+    {/* NOMBRE EMPRESA */}
+    <h2
+      className={`
+        text-lg md:text-xl font-bold tracking-wide
+        ${modoNoche ? "text-gray-100" : "text-gray-800"}
+      `}
+    >
+      Envia Mensajería y Transporte
+    </h2>
+
+    {/* LEMA */}
+    <p
+      className={`
+        text-sm md:text-base font-medium
+        ${modoNoche ? "text-gray-400" : "text-gray-600"}
+      `}
+    >
+      Movemos el país con eficiencia, responsabilidad y compromiso sostenible
+    </p>
+
+    {/* INFO SISTEMA */}
+    <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs md:text-sm mt-2">
+      <div>
+        <span className="font-semibold">Sistema</span><br />
+        Gestión de Consumo de Agua y Energía
+      </div>
+
+      <div>
+        <span className="font-semibold">Año</span><br />
+        {new Date().getFullYear()}
+      </div>
+
+      <div>
+        <span className="font-semibold">Versión</span><br />
+        v1.0 · Producción
+      </div>
+    </div>
+
+    {/* COPYRIGHT */}
+    <div
+      className={`
+        mt-3 text-[11px]
+        ${modoNoche ? "text-gray-500" : "text-gray-500"}
+      `}
+    >
+      © {new Date().getFullYear()} Envia · Uso interno corporativo
+    </div>
+  </div>
+</footer>
         </main>
       </div>
     </div>
   );
 }
+
+        
+
+      

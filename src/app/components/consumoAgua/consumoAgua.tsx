@@ -37,8 +37,6 @@ type LecturasPorAnio = Record<
 interface Props {
   modoNoche: boolean;
 }
-
-
 export default function ConsumoAgua({
   modoNoche,
 }: Props) {
@@ -120,7 +118,7 @@ const [lecturas, setLecturas] = useState<LecturasPorAnio>({});
   
 
   const mesesARenderizar = mesSeleccionado === "todos" ? meses.map((_, i) => i) : [mesSeleccionado];
-
+  
   const obtenerDiasDelMes = (mes: number) => {
     const totalDiasMes = new Date(anioSeleccionado, mes + 1, 0).getDate();
     return Array.from({ length: totalDiasMes }, (_, i) => {
@@ -505,6 +503,7 @@ const obtenerEstadoConsumo = (
   };
 
 
+  
   const guardarAutomatico = (
     mes: number,
     dia: number,
