@@ -36,18 +36,15 @@ type LecturasPorAnio = Record<
 
 interface Props {
   modoNoche: boolean;
-  lecturas: LecturasPorAnio;
-  setLecturas: React.Dispatch<
-    React.SetStateAction<LecturasPorAnio>
-  >;
 }
+
 
 export default function ConsumoAgua({
   modoNoche,
-  lecturas,
-  setLecturas,
 }: Props) {
+
   /* ================= FECHA ================= */
+const [lecturas, setLecturas] = useState<LecturasPorAnio>({});
 
   const hoy = new Date();
   const mesActual = hoy.getMonth();
