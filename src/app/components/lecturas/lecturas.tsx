@@ -12,6 +12,9 @@ interface TorchCapabilities extends MediaTrackCapabilities {
 }
 
 export default function Lecturas({ modoNoche }: Props) {
+  const [cargandoOCR, setCargandoOCR] = useState(false);
+const [confianza, setConfianza] = useState<number | null>(null);
+const [errorOCR, setErrorOCR] = useState<string | null>(null);
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const streamRef = useRef<MediaStream | null>(null);
   const [lectura, setLectura] = useState("");
@@ -86,40 +89,57 @@ export default function Lecturas({ modoNoche }: Props) {
   };
 
   const escanearContador = async () => {
-    if (!bodegaSeleccionada) {
-      alert("⚠️ Selecciona la bodega antes de escanear.");
-      return;
-    }
+  if (!bodegaSeleccionada) {
+    alert("⚠️ Selecciona la bodega antes de escanear.");
+    return;
+  }
 
-    if (!streamActivo) {
-      alert("Enciende la cámara primero.");
-      return;
-    }
+  if (!streamActivo) {
+    alert("Enciende la cámara primero.");
+    return;
+  }
 
-    const foto = await capturarFrame();
+  const foto = await capturarFrame();
+  if (!foto) {
+    alert("No se pudo capturar la imagen");
+    return;
+  }
 
-    if (!foto) {
-      alert("No se pudo capturar la imagen");
-      return;
-    }
+  const form = new FormData();
+  form.append("file", foto);
 
-    const form = new FormData();
-    form.append("file", foto, "captura.jpg");
-    form.append("bodega", bodegaSeleccionada); // ⭐ SE ENVÍA AL BACKEND
+  try {
+    setCargandoOCR(true);
+    setErrorOCR(null);
+    setLectura("");
 
-    try {
-      const resp = await fetch("", {
+    const resp = await fetch(
+      "http://127.0.0.1:8000/ocr/leer_contador",
+      {
         method: "POST",
         body: form,
-      });
+      }
+    );
 
-      const data = await resp.json();
-      setLectura(data.lectura || "—");
+    if (!resp.ok) throw new Error("Error OCR");
 
-    } catch {
-      alert("No se pudo conectar con el backend.");
+    const data = await resp.json();
+
+    if (!data.lectura) {
+      setErrorOCR("No se detectaron números");
+      return;
     }
-  };
+
+    setLectura(data.lectura);
+    setConfianza(data.confianza ?? null);
+
+  } catch {
+    setErrorOCR("No se pudo procesar la imagen");
+  } finally {
+    setCargandoOCR(false);
+  }
+};
+
 
  const guardarLectura = async () => {
   if (!bodegaSeleccionada || !lectura) {
@@ -194,115 +214,153 @@ export default function Lecturas({ modoNoche }: Props) {
   //                    RENDER UI
   // ======================================================
 
-  return (
-    <div className={`w-full min-h-screen p-5 flex flex-col items-center ${colores.fondo}`}>
+ return (
+  <div
+    className={`w-full min-h-screen p-5 flex flex-col items-center ${colores.fondo}`}
+  >
+    <h1 className="text-3xl font-extrabold mb-5">Registrar Lectura</h1>
 
-      <h1 className="text-3xl font-extrabold mb-5">Registrar Lectura</h1>
+    {/* ⭐⭐⭐ SELECTOR DE BODEGA ⭐⭐⭐ */}
+    <div className="w-full max-w-sm mb-5">
+      <label className="font-bold text-sm">Seleccionar Bodega</label>
 
-      {/* ⭐⭐⭐ SELECTOR DE BODEGA ⭐⭐⭐ */}
-      <div className="w-full max-w-sm mb-5">
-        <label className="font-bold text-sm">Seleccionar Bodega</label>
+      <select
+        value={bodegaSeleccionada}
+        onChange={(e) => setBodegaSeleccionada(e.target.value)}
+        className={`w-full mt-1 p-3 rounded-xl border text-sm font-semibold ${colores.input}`}
+      >
+        <option value="">-- Seleccionar --</option>
+        <option value="bodega_2_agua">💧 Agua - Bodega 2</option>
+        <option value="bodega_4_agua">💧 Agua - Bodega 4</option>
+        <option value="bodega_1_energia">⚡ Energía - Bodega 1</option>
+        <option value="bodega_3_energia">⚡ Energía - Bodega 3</option>
+      </select>
+    </div>
 
-        <select
-          value={bodegaSeleccionada}
-          onChange={(e) => setBodegaSeleccionada(e.target.value)}
-          className={`w-full mt-1 p-3 rounded-xl border text-sm font-semibold ${colores.input}`}
-        >
-          <option value="">-- Seleccionar --</option>
-
-          <option value="bodega_2_agua">💧 Agua - Bodega 2</option>
-          <option value="bodega_4_agua">💧 Agua - Bodega 4</option>
-
-          <option value="bodega_1_energia">⚡ Energía - Bodega 1</option>
-          <option value="bodega_3_energia">⚡ Energía - Bodega 3</option>
-        </select>
-      </div>
-
-      {/* CUADRO LECTURA */}
-      <div className={`${colores.tarjeta} w-full max-w-sm p-4 rounded-xl shadow-lg`}>
-        {modoManual ? (
-          <input
-            type="tel"
-            placeholder="Lectura…"
-            value={lectura}
-            onChange={handleLecturaInput}
-            className={`w-full text-center text-3xl font-mono outline-none p-2 rounded-xl ${colores.input}`}
-          />
-        ) : (
-          <p className="text-center text-3xl font-mono">{lectura || "—"}</p>
-        )}
-      </div>
-
-      {/* CÁMARA */}
-      {!modoManual && !mostrarFiltros && (
-        <div className="w-full max-w-sm mt-5">
-          <div className="relative w-full h-64 rounded-xl overflow-hidden shadow-lg border border-white bg-black">
-            {!streamActivo && (
-              <div className="absolute inset-0 flex items-center justify-center text-white opacity-70">
-                Cámara apagada
-              </div>
-            )}
-
-            <video ref={videoRef} autoPlay playsInline muted className="w-full h-full object-cover" />
-          </div>
-
-          {streamActivo && (
-            <button
-              onClick={toggleFlash}
-              className="w-full mt-3 p-3 rounded-xl bg-yellow-500 text-white flex justify-center gap-2"
-            >
-              <Zap size={22} />
-              Flash {flashActivo ? "ON" : "OFF"}
-            </button>
-          )}
-        </div>
+    {/* ================== LECTURA ================== */}
+    <div
+      className={`${colores.tarjeta} w-full max-w-sm p-4 rounded-xl shadow-lg text-center`}
+    >
+      {modoManual ? (
+        <input
+          type="tel"
+          placeholder="Lectura…"
+          value={lectura}
+          onChange={handleLecturaInput}
+          className={`w-full text-center text-3xl font-mono outline-none p-2 rounded-xl ${colores.input}`}
+        />
+      ) : (
+        <p className="text-3xl font-mono">{lectura || "—"}</p>
       )}
 
-      {/* BOTONES */}
-      <div className="flex gap-4 mt-6 w-full max-w-sm justify-center">
-        <button
-          onClick={iniciarCamara}
-          className={`${colores.botones} w-24 py-3 rounded-xl shadow-lg flex flex-col items-center`}
-        >
-          <Camera size={26} className="text-red-600" />
-          <span className="text-sm font-bold">Escanear</span>
-        </button>
+      {/* ESTADOS OCR */}
+      {cargandoOCR && (
+        <p className="mt-2 text-sm text-yellow-400">
+          🔍 Analizando imagen…
+        </p>
+      )}
 
-        <button
-          onClick={escanearContador}
-          className="bg-green-600 text-white w-24 py-3 rounded-xl shadow-lg flex flex-col items-center"
-        >
-          <Camera size={26} />
-          <span className="text-sm font-bold">Tomar</span>
-        </button>
+      {confianza !== null && (
+        <p className="mt-1 text-xs text-green-400">
+          Confianza OCR: {(confianza * 100).toFixed(1)}%
+        </p>
+      )}
 
-        <button
-          onClick={() => setModoManual(true)}
-          className={`${colores.botones} w-24 py-3 rounded-xl shadow-lg flex flex-col items-center`}
-        >
-          <Pencil size={26} className="text-red-600" />
-          <span className="text-sm font-bold">Manual</span>
-        </button>
-      </div>
-
-      {/* BOTÓN GUARDAR */}
-     <button
-  onClick={guardarLectura}
-  disabled={!bodegaSeleccionada || !lectura}
-  className={`mt-10 w-full max-w-sm py-4 rounded-xl shadow-lg text-xl
-    flex justify-center items-center gap-3
-    ${colores.rojo}
-    disabled:opacity-50 disabled:cursor-not-allowed
-  `}
->
-  <Save size={28} />
-  Guardar Lectura
-</button>
-      {streamActivo && (
-        <button onClick={detenerCamara} className="mt-4 text-red-500 underline">
-          Apagar cámara
-        </button>
+      {errorOCR && (
+        <p className="mt-2 text-sm text-red-400">❌ {errorOCR}</p>
       )}
     </div>
-  );
+
+    {/* ================== CÁMARA ================== */}
+    {!modoManual && !mostrarFiltros && (
+      <div className="w-full max-w-sm mt-5">
+        <div className="relative w-full h-64 rounded-xl overflow-hidden shadow-lg border border-white bg-black">
+          {!streamActivo && (
+            <div className="absolute inset-0 flex items-center justify-center text-white opacity-70">
+              Cámara apagada
+            </div>
+          )}
+
+          <video
+            ref={videoRef}
+            autoPlay
+            playsInline
+            muted
+            className="w-full h-full object-cover"
+          />
+
+          {/* 🎯 OVERLAY GUÍA */}
+          {streamActivo && (
+            <div className="absolute inset-0 flex items-center justify-center pointer-events-none">
+              <div className="w-3/4 h-1/3 border-2 border-dashed border-green-400 rounded-lg opacity-80" />
+            </div>
+          )}
+        </div>
+
+        {streamActivo && (
+          <button
+            onClick={toggleFlash}
+            className="w-full mt-3 p-3 rounded-xl bg-yellow-500 text-white flex justify-center gap-2"
+          >
+            <Zap size={22} />
+            Flash {flashActivo ? "ON" : "OFF"}
+          </button>
+        )}
+      </div>
+    )}
+
+    {/* ================== BOTONES ================== */}
+    <div className="flex gap-4 mt-6 w-full max-w-sm justify-center">
+      <button
+        onClick={iniciarCamara}
+        className={`${colores.botones} w-24 py-3 rounded-xl shadow-lg flex flex-col items-center`}
+      >
+        <Camera size={26} className="text-red-600" />
+        <span className="text-sm font-bold">Escanear</span>
+      </button>
+
+      <button
+        onClick={escanearContador}
+        disabled={cargandoOCR}
+        className="bg-green-600 text-white w-24 py-3 rounded-xl shadow-lg flex flex-col items-center disabled:opacity-50"
+      >
+        <Camera size={26} />
+        <span className="text-sm font-bold">Tomar</span>
+      </button>
+
+      <button
+        onClick={() => setModoManual(true)}
+        className={`${colores.botones} w-24 py-3 rounded-xl shadow-lg flex flex-col items-center`}
+      >
+        <Pencil size={26} className="text-red-600" />
+        <span className="text-sm font-bold">Manual</span>
+      </button>
+    </div>
+
+    {/* ================== GUARDAR ================== */}
+    <button
+      onClick={guardarLectura}
+      disabled={!bodegaSeleccionada || !lectura}
+      className={`mt-10 w-full max-w-sm py-4 rounded-xl shadow-lg text-xl
+        flex justify-center items-center gap-3
+        ${colores.rojo}
+        disabled:opacity-50 disabled:cursor-not-allowed
+      `}
+    >
+      <Save size={28} />
+      Guardar Lectura
+    </button>
+
+    {streamActivo && (
+      <button
+        onClick={detenerCamara}
+        className="mt-4 text-red-500 underline"
+      >
+        Apagar cámara
+      </button>
+    )}
+  </div>
+);
+
+
 }

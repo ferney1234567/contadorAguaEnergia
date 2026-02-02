@@ -141,53 +141,129 @@ const DashboardInicio: FC<Props> = ({ modoNoche }) => {
   /* ==============================
      DATOS DE LAS GRÁFICAS
   ============================== */
-  const dataAgua = {
-    labels: meses,
-    datasets: [{
+ const dataAgua = {
+  labels: meses,
+  datasets: [
+    {
       label: "Consumo Agua (L)",
       data: consumoAguaMensual,
-      backgroundColor: colores.agua,
-      borderRadius: 10,
-    }],
-  };
+      backgroundColor: consumoAguaMensual.map((valor, i) => {
+        const meta = metasAguaMensual[i] ?? 0;
 
-  const dataEnergia = {
-    labels: meses,
-    datasets: [{
+        if (meta > 0 && valor > meta) {
+          return "#ef4444"; // 🔴 MAL
+        }
+
+        return "#0ea5e9"; // 🔵 BIEN
+      }),
+      borderRadius: 10,
+    },
+  ],
+};
+
+
+
+ const dataEnergia = {
+  labels: meses,
+  datasets: [
+    {
       label: "Consumo Energía (kWh)",
       data: consumoEnergiaMensual,
-      backgroundColor: colores.energia,
-      borderRadius: 10,
-    }],
-  };
+      backgroundColor: consumoEnergiaMensual.map((valor, i) => {
+        const meta = metasEnergiaMensual[i] ?? 0;
 
-  const dataAreaAgua = {
-    labels: meses,
-    datasets: [{
-      label: "Agua total (L)",
+        if (meta > 0 && valor > meta) {
+          return "#ef4444"; // 🔴 MAL
+        }
+
+        return "#facc15"; // 🟡 BIEN
+      }),
+      borderRadius: 10,
+    },
+  ],
+};
+
+
+
+const dataAreaAgua = {
+  labels: meses,
+  datasets: [
+    // 🔵 CONSUMO REAL
+    {
+      label: "Consumo Agua (L)",
       data: consumoAguaMensual,
       borderColor: colores.agua,
       backgroundColor: colores.aguaGradient,
       tension: 0.4,
       fill: true,
-      pointRadius: 4,
-      pointBackgroundColor: colores.agua
-    }]
-  };
 
-  const dataAreaEnergia = {
-    labels: meses,
-    datasets: [{
-      label: "Energía total (kWh)",
+      pointRadius: 5,
+      pointHoverRadius: 7,
+
+      pointBackgroundColor: consumoAguaMensual.map((v, i) =>
+        metasAguaMensual[i] > 0 && v > metasAguaMensual[i]
+          ? "#ef4444" // 🔴 MAL
+          : "#0ea5e9" // 🔵 BIEN
+      ),
+
+      pointBorderColor: "#ffffff",
+      pointBorderWidth: 2,
+    },
+
+    // ⚫ META
+    {
+      label: "Meta Agua",
+      data: metasAguaMensual,
+      borderColor: "#64748b",
+      borderWidth: 2,
+      borderDash: [6, 6], // línea punteada
+      pointRadius: 3,
+      pointBackgroundColor: "#64748b",
+      fill: false,
+    },
+  ],
+};
+
+
+ const dataAreaEnergia = {
+  labels: meses,
+  datasets: [
+    // 🟡 CONSUMO REAL
+    {
+      label: "Consumo Energía (kWh)",
       data: consumoEnergiaMensual,
       borderColor: colores.energia,
       backgroundColor: colores.energiaGradient,
       tension: 0.4,
       fill: true,
-      pointRadius: 4,
-      pointBackgroundColor: colores.energia
-    }]
-  };
+
+      pointRadius: 5,
+      pointHoverRadius: 7,
+
+      pointBackgroundColor: consumoEnergiaMensual.map((v, i) =>
+        metasEnergiaMensual[i] > 0 && v > metasEnergiaMensual[i]
+          ? "#ef4444" // 🔴 MAL
+          : "#facc15" // 🟡 BIEN
+      ),
+
+      pointBorderColor: "#ffffff",
+      pointBorderWidth: 2,
+    },
+
+    // ⚫ META
+    {
+      label: "Meta Energía",
+      data: metasEnergiaMensual,
+      borderColor: "#64748b",
+      borderWidth: 2,
+      borderDash: [6, 6],
+      pointRadius: 3,
+      pointBackgroundColor: "#64748b",
+      fill: false,
+    },
+  ],
+};
+
 
   const dataMetaAgua = {
     labels: ["Agua"],
@@ -248,40 +324,39 @@ const DashboardInicio: FC<Props> = ({ modoNoche }) => {
     cargarEnergia();
   }, [anio]);
 
-  useEffect(() => {
-    const cargarMetas = async () => {
-      try {
-        const res = await fetch(`http://127.0.0.1:8000/metas/${anio}`);
-        const data = await res.json();
+ useEffect(() => {
+  const cargarMetasMensuales = async () => {
+    const agua = [];
+    const energia = [];
 
-        const agua = Array(12).fill(0);
-        const energia = Array(12).fill(0);
+    for (let mes = 1; mes <= 12; mes++) {
+      // 💧 Agua
+      const resAgua = await fetch(
+        `http://127.0.0.1:8000/metas?tipo=agua&anio=${anio}&mes=${mes}`
+      );
+      const dataAgua = await resAgua.json();
+      agua.push(dataAgua?.meta ?? 0);
 
-        // 🔵 AGUA
-        if (data?.agua?.meta_mensual) {
-          agua.fill(Number(data.agua.meta_mensual));
-        }
+      // ⚡ Energía
+      const resEnergia = await fetch(
+        `http://127.0.0.1:8000/metas?tipo=energia&anio=${anio}&mes=${mes}`
+      );
+      const dataEnergia = await resEnergia.json();
+      energia.push(dataEnergia?.meta ?? 0);
+    }
 
-        // 🟡 ENERGÍA
-        if (data?.energia?.meta_mensual) {
-          energia.fill(Number(data.energia.meta_mensual));
-        }
+    setMetasAguaMensual(agua);
+    setMetasEnergiaMensual(energia);
 
-        setMetasAguaMensual(agua);
-        setMetasEnergiaMensual(energia);
+    // 👉 meta actual = mes actual
+    const mesActual = new Date().getMonth();
+    setMetaAgua(agua[mesActual] ?? 0);
+    setMetaEnergia(energia[mesActual] ?? 0);
+  };
 
-        setMetaAgua(data?.agua?.meta_mensual ?? 0);
-        setMetaEnergia(data?.energia?.meta_mensual ?? 0);
+  cargarMetasMensuales();
+}, [anio]);
 
-      } catch (error) {
-        console.error("Error cargando metas", error);
-        setMetasAguaMensual(Array(12).fill(0));
-        setMetasEnergiaMensual(Array(12).fill(0));
-      }
-    };
-
-    cargarMetas();
-  }, [anio]);
 
 
 
@@ -582,6 +657,9 @@ const DashboardInicio: FC<Props> = ({ modoNoche }) => {
         <div className={`p-6 rounded-xl shadow-lg border ${cardBg} ${cardBorder}`}>
           <h3 className={`font-bold text-lg mb-4 flex items-center gap-2 ${textColor}`}>
             <FaWater className="text-blue-500" /> Total Meta de Agua
+             <span className="ml-2 text-sm font-semibold text-blue-400">
+    (Meta: {metaAgua || 0} L)
+  </span>
           </h3>
           <Line data={dataAreaAgua} options={opcionesArea} />
         </div>
@@ -589,6 +667,9 @@ const DashboardInicio: FC<Props> = ({ modoNoche }) => {
         <div className={`p-6 rounded-xl shadow-lg border ${cardBg} ${cardBorder}`}>
           <h3 className={`font-bold text-lg mb-4 flex items-center gap-2 ${textColor}`}>
             <FaBolt className="text-yellow-500" /> Total Meta de Energía
+             <span className="ml-2 text-sm font-semibold text-yellow-400">
+    (Meta: {metaEnergia || 0} kWh)
+  </span>
           </h3>
           <Line data={dataAreaEnergia} options={opcionesArea} />
         </div>

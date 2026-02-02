@@ -52,14 +52,13 @@ const [lecturas, setLecturas] = useState<LecturasPorAnio>({});
   const toast = Swal.mixin({ toast: true, position: "top-end", timerProgressBar: true, didOpen: (toast) => { toast.onmouseenter = Swal.stopTimer; toast.onmouseleave = Swal.resumeTimer; }, });
   /* ================= ESTADOS ================= */
   const [mesSeleccionado, setMesSeleccionado] = useState<number | "todos">(mesActual);
-
+  const [metaMensual, setMetaMensual] = useState<number | null>(null);
   const [ultimaMetaValida, setUltimaMetaValida] = useState<number>(0);
   const [autoSaveTimeout, setAutoSaveTimeout] = useState<NodeJS.Timeout | null>(null);
   const [aniosDisponibles, setAniosDisponibles] = useState<number[]>([]);
   const [anioSeleccionado, setAnioSeleccionado] = useState(anioActual);
   const [filtroDia, setFiltroDia] = useState("");
   const [filtroTipoDia, setFiltroTipoDia] = useState<"todos" | "domingos" | "festivos" | "habiles">("todos");
-  const [metaMensual, setMetaMensual] = useState<number>(0);
   const [energiaDB, setEnergiaDB] = useState<EnergiaDBItem[]>([]);
 
   /* ================= ESTILOS ================= */
@@ -248,22 +247,23 @@ const [lecturas, setLecturas] = useState<LecturasPorAnio>({});
 
 
   useEffect(() => {
-    if (mesSeleccionado === "todos") return;
+  if (mesSeleccionado === "todos") return;
 
-    fetch(
-      `/api/metas?tipo=energia&anio=${anioSeleccionado}&mes=${mesSeleccionado + 1}`,
-      { cache: "no-store" }
-    )
-      .then(res => res.json())
-      .then(data => {
-        if (typeof data?.meta === "number") {
-          setMetaMensual(data.meta);
-          setUltimaMetaValida(data.meta); // ✅ guardar
-        } else {
-          setMetaMensual(ultimaMetaValida); // ✅ reutilizar
-        }
-      });
-  }, [anioSeleccionado, mesSeleccionado]);
+  setMetaMensual(null); // reset
+
+  fetch(
+    `/api/metas?tipo=energia&anio=${anioSeleccionado}&mes=${mesSeleccionado + 1}`,
+    { cache: "no-store" }
+  )
+    .then(res => res.json())
+    .then(data => {
+      if (typeof data?.meta === "number") {
+        setMetaMensual(data.meta);
+      } else {
+        setMetaMensual(null);
+      }
+    });
+}, [anioSeleccionado, mesSeleccionado]);
 
 
   const obtenerUltimaLecturaMesAnterior = (
@@ -314,9 +314,9 @@ const [lecturas, setLecturas] = useState<LecturasPorAnio>({});
     const data = await res.json();
 
     // ✅ NUNCA undefined
-    setMetaMensual(
-      typeof data?.meta === "number" ? data.meta : 0
-    );
+  setMetaMensual(
+  typeof data?.meta === "number" ? data.meta : null
+);
 
     toast.fire({
       icon: "success",
@@ -643,9 +643,9 @@ const [lecturas, setLecturas] = useState<LecturasPorAnio>({});
 
   const handleExportarExcel = () => {
   exportarConsumoEnergiaExcel({
-    lecturas,
+  lecturas,
     anio: anioSeleccionado,
-    metaMensual,
+    metaMensual: metaMensual ?? ultimaMetaValida ?? 0, // ✅ BLINDAJE
     fechaExportacion: fechaColombia.replace(/\//g, "-"),
   });
 };
@@ -671,7 +671,7 @@ const [lecturas, setLecturas] = useState<LecturasPorAnio>({});
 
             <input
               type="number"
-              value={metaMensual}
+             value={metaMensual ?? ""}
               onChange={(e) => setMetaMensual(Number(e.target.value))}
               onKeyDown={(e) => {
                 if (e.key === "Enter") {

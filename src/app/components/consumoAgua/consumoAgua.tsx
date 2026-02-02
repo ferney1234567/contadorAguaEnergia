@@ -26,8 +26,7 @@ interface AguaDBItem {
   updated_at: string;
 
 }
-type LecturasPorAnio = Record<
-  number, // año
+type LecturasPorAnio = Record<number, // año
   Record<
     number, // mes
     Record<number, LecturaDia> // día
@@ -37,27 +36,29 @@ type LecturasPorAnio = Record<
 interface Props {
   modoNoche: boolean;
 }
+
 export default function ConsumoAgua({
   modoNoche,
 }: Props) {
 
-  /* ================= FECHA ================= */
-const [lecturas, setLecturas] = useState<LecturasPorAnio>({});
 
+  
   const hoy = new Date();
   const mesActual = hoy.getMonth();
   const anioActual = hoy.getFullYear();
   const toast = Swal.mixin({ toast: true, position: "top-end", timerProgressBar: true, didOpen: (toast) => { toast.onmouseenter = Swal.stopTimer; toast.onmouseleave = Swal.resumeTimer; }, });
   /* ================= ESTADOS ================= */
+  const [lecturas, setLecturas] = useState<LecturasPorAnio>({});
+  const [cacheMetas, setCacheMetas] = useState<Record<string, number>>({});
+  const [metaMensual, setMetaMensual] = useState<number | null>(null);
+  const [ultimaMetaValida, setUltimaMetaValida] = useState<number | null>(null);
   const [mesSeleccionado, setMesSeleccionado] = useState<number | "todos">(mesActual);
   const FACTOR_CONVERSION = 10; // 10 unidades = 1 m³
-  const [ultimaMetaValida, setUltimaMetaValida] = useState<number>(0);
   const [autoSaveTimeout, setAutoSaveTimeout] = useState<NodeJS.Timeout | null>(null);
   const [aniosDisponibles, setAniosDisponibles] = useState<number[]>([]);
   const [anioSeleccionado, setAnioSeleccionado] = useState(anioActual);
   const [filtroDia, setFiltroDia] = useState("");
   const [filtroTipoDia, setFiltroTipoDia] = useState<"todos" | "domingos" | "festivos" | "habiles">("todos");
-  const [metaMensual, setMetaMensual] = useState<number>(0);
   const [aguaDB, setAguaDB] = useState<AguaDBItem[]>([]);
   /* ================= ESTILOS ================= */
   const colores = {
@@ -114,8 +115,6 @@ const [lecturas, setLecturas] = useState<LecturasPorAnio>({});
       ? "bg-[#121212] text-gray-300"
       : "bg-gray-100 text-gray-800",
   };
-
-  
 
   const mesesARenderizar = mesSeleccionado === "todos" ? meses.map((_, i) => i) : [mesSeleccionado];
   
@@ -177,6 +176,27 @@ const obtenerEstadoConsumo = (
     const d = String(fecha.getDate()).padStart(2, "0");
     return `${y}-${m}-${d}`;
   };
+
+
+ useEffect(() => {
+  if (mesSeleccionado === "todos") return;
+
+  setMetaMensual(null);
+
+  fetch(
+    `/api/metas?tipo=agua&anio=${anioSeleccionado}&mes=${mesSeleccionado + 1}`,
+    { cache: "no-store" }
+  )
+    .then(res => res.json())
+    .then(data => {
+      if (typeof data?.meta === "number") {
+        setMetaMensual(data.meta);
+        setUltimaMetaValida(data.meta);
+      } else {
+        setMetaMensual(null);
+      }
+    });
+}, [anioSeleccionado, mesSeleccionado]);
 
 
   useEffect(() => {
@@ -262,23 +282,8 @@ const obtenerEstadoConsumo = (
       });
     }
   }
-  useEffect(() => {
-    if (mesSeleccionado === "todos") return;
 
-    fetch(
-      `/api/metas?tipo=agua&anio=${anioSeleccionado}&mes=${mesSeleccionado + 1}`,
-      { cache: "no-store" }
-    )
-      .then(res => res.json())
-      .then(data => {
-        if (typeof data?.meta === "number") {
-          setMetaMensual(data.meta);
-          setUltimaMetaValida(data.meta); // ✅ guardar
-        } else {
-          setMetaMensual(ultimaMetaValida); // ✅ reutilizar
-        }
-      });
-  }, [anioSeleccionado, mesSeleccionado]);
+  
 
 
   const obtenerUltimaLecturaMesAnterior = (
@@ -647,13 +652,14 @@ const obtenerEstadoConsumo = (
   };
 
   const handleExportarExcel = () => {
-    exportarConsumoAguaExcel({
-      lecturas,
-      anio: anioSeleccionado,
-      metaMensual,
-      fechaExportacion: fechaColombia.replace(/\//g, "-"),
-    });
-  };
+  exportarConsumoAguaExcel({
+    lecturas,
+    anio: anioSeleccionado,
+    metaMensual: metaMensual ?? ultimaMetaValida ?? 0, // ✅ BLINDAJE
+    fechaExportacion: fechaColombia.replace(/\//g, "-"),
+  });
+};
+
   /* ================= RENDER ================= */
   return (
     <div className={`w-full min-h-screen p-6 ${colores.fondo}`}>
@@ -673,21 +679,20 @@ const obtenerEstadoConsumo = (
               </div>
             </div>
 
-            <input
-              type="number"
-              value={metaMensual}
-              onChange={(e) => setMetaMensual(Number(e.target.value))}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  confirmarYGuardarMeta();
-                }
-              }}
-              className="
-        w-full text-3xl font-bold text-blue-500 tracking-tight
-        bg-transparent outline-none text-center
-      "
-            />
+           <input
+  type="number"
+  value={metaMensual ?? ""}
+  placeholder="Cargando meta..."
+  onChange={(e) => setMetaMensual(Number(e.target.value))}
+  onKeyDown={(e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+      confirmarYGuardarMeta();
+    }
+  }}
+  className="w-full text-3xl font-bold text-blue-500 bg-transparent text-center"
+/>
+
 
             <p className="text-xs mt-1 opacity-60">
               Consumo objetivo del mes (m³)
