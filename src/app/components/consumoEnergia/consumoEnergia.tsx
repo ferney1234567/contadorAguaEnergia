@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import * as XLSX from "xlsx";
+import { useRef } from "react";
 import { useEffect } from "react";
 import Swal from "sweetalert2";
 import { Download, Droplets, Calendar, Filter, CalendarDays, Info, Zap, Tag, Hash, } from "lucide-react";
@@ -51,6 +51,7 @@ const [lecturas, setLecturas] = useState<LecturasPorAnio>({});
   const anioActual = hoy.getFullYear();
   const toast = Swal.mixin({ toast: true, position: "top-end", timerProgressBar: true, didOpen: (toast) => { toast.onmouseenter = Swal.stopTimer; toast.onmouseleave = Swal.resumeTimer; }, });
   /* ================= ESTADOS ================= */
+  const [existeMeta, setExisteMeta] = useState(false);
   const [mesSeleccionado, setMesSeleccionado] = useState<number | "todos">(mesActual);
   const [metaMensual, setMetaMensual] = useState<number | null>(null);
   const [ultimaMetaValida, setUltimaMetaValida] = useState<number>(0);
@@ -203,6 +204,37 @@ const [lecturas, setLecturas] = useState<LecturasPorAnio>({});
 }, [energiaDB]);
 
 
+const navegarConFlechas = (
+  e: React.KeyboardEvent<HTMLInputElement>
+) => {
+  const teclas = ["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"];
+  if (!teclas.includes(e.key)) return;
+
+  e.preventDefault();
+
+  const input = e.currentTarget;
+
+  const mes = Number(input.dataset.mes);
+  const dia = Number(input.dataset.dia);
+  const campo = input.dataset.campo as "bodega2" | "bodega4";
+
+  let nuevoDia = dia;
+  let nuevoCampo = campo;
+
+  if (e.key === "ArrowUp") nuevoDia--;
+  if (e.key === "ArrowDown") nuevoDia++;
+  if (e.key === "ArrowLeft" && campo === "bodega4") nuevoCampo = "bodega2";
+  if (e.key === "ArrowRight" && campo === "bodega2") nuevoCampo = "bodega4";
+
+  const selector = `input[data-mes="${mes}"][data-dia="${nuevoDia}"][data-campo="${nuevoCampo}"]`;
+  const siguiente = document.querySelector<HTMLInputElement>(selector);
+
+  if (siguiente && !siguiente.disabled) {
+    siguiente.focus();
+    siguiente.select();
+  }
+};
+
 
  async function guardarEnergiaEnBD(
   mes: number,
@@ -210,7 +242,8 @@ const [lecturas, setLecturas] = useState<LecturasPorAnio>({});
   data: LecturaDia
 ) {
   if (!data) return;
-  if (!data.bodega2 || !data.bodega4) return;
+  if (!data.bodega2 && !data.bodega4) return;
+
 
   const fechaConsumo = new Date(
     anioSeleccionado,
@@ -246,10 +279,11 @@ const [lecturas, setLecturas] = useState<LecturasPorAnio>({});
 }
 
 
-  useEffect(() => {
+useEffect(() => {
   if (mesSeleccionado === "todos") return;
 
-  setMetaMensual(null); // reset
+  setMetaMensual(null);
+  setExisteMeta(false);
 
   fetch(
     `/api/metas?tipo=energia&anio=${anioSeleccionado}&mes=${mesSeleccionado + 1}`,
@@ -259,11 +293,15 @@ const [lecturas, setLecturas] = useState<LecturasPorAnio>({});
     .then(data => {
       if (typeof data?.meta === "number") {
         setMetaMensual(data.meta);
+        setUltimaMetaValida(data.meta);
+        setExisteMeta(true);   // ✅ EXISTE → EDITAR
       } else {
         setMetaMensual(null);
+        setExisteMeta(false);  // ❌ NO EXISTE → CREAR
       }
     });
 }, [anioSeleccionado, mesSeleccionado]);
+
 
 
   const obtenerUltimaLecturaMesAnterior = (
@@ -326,30 +364,38 @@ const [lecturas, setLecturas] = useState<LecturasPorAnio>({});
 
 
 
-  useEffect(() => {
-    const anioInicio = 2025;   // ajusta si quieres empezar antes
-    const anioFin = 2030;
+useEffect(() => {
+  if (!energiaDB.length) return;
 
-   const aniosBD = energiaDB.map((item) =>
-  new Date(item.fecha + "T00:00:00").getFullYear()
-    );
+  const anioActual = new Date().getFullYear();
+  const anioFuturo = anioActual + 5; // 🔮 proyección automática
 
-    const aniosCompletos = Array.from(
-      new Set([
-        ...aniosBD,
-        ...Array.from(
-          { length: anioFin - anioInicio + 1 },
-          (_, i) => anioInicio + i
-        ),
-      ])
-    ).sort((a, b) => b - a);
+  // 🔹 Años que existen en la BD
+  const aniosBD = energiaDB.map(item =>
+    new Date(item.fecha + "T00:00:00").getFullYear()
+  );
 
-    setAniosDisponibles(aniosCompletos);
+  // 🔹 Año inicial dinámico (el menor entre BD y año actual)
+  const anioInicio = Math.min(...aniosBD, anioActual);
 
-    if (!aniosCompletos.includes(anioSeleccionado)) {
-      setAnioSeleccionado(aniosCompletos[0]);
-    }
-  }, [energiaDB]);
+  // 🔹 Rango automático de años
+  const aniosAutomaticos = Array.from(
+    { length: anioFuturo - anioInicio + 1 },
+    (_, i) => anioInicio + i
+  );
+
+  // 🔹 Unir BD + rango automático
+  const aniosFinales = Array.from(
+    new Set([...aniosBD, ...aniosAutomaticos])
+  ).sort((a, b) => b - a);
+
+  setAniosDisponibles(aniosFinales);
+
+  // 🔒 Blindaje: si el año seleccionado ya no existe
+  if (!aniosFinales.includes(anioSeleccionado)) {
+    setAnioSeleccionado(aniosFinales[0]);
+  }
+}, [energiaDB]);
 
 
 
@@ -499,13 +545,19 @@ const [lecturas, setLecturas] = useState<LecturasPorAnio>({});
 
 
 
-  const guardarAutomatico = (
-    mes: number,
-    dia: number,
-    data: LecturaDia
-  ) => {
-    const b2 = Number(data.bodega2 || 0);
-    const b4 = Number(data.bodega4 || 0);
+ const guardarAutomatico = (
+  mes: number,
+  dia: number,
+  data: LecturaDia
+) => {
+  // ⛔ NO AUTOSAVE SI AMBOS CAMPOS ESTÁN VACÍOS
+  if (!data.bodega2 && !data.bodega4) {
+    return;
+  }
+
+  const b2 = Number(data.bodega2 || 0);
+  const b4 = Number(data.bodega4 || 0);
+
 
     const payload = {
       fecha: new Date(anioSeleccionado, mes, dia)
@@ -539,30 +591,133 @@ const [lecturas, setLecturas] = useState<LecturasPorAnio>({});
     setAutoSaveTimeout(timeout);
   };
 
+  
+  const eliminarBodega = async (
+  mes: number,
+  dia: number,
+  bodega: 1 | 2
+) => {
+  const fecha = new Date(anioSeleccionado, mes, dia)
+    .toISOString()
+    .split("T")[0];
+
+  try {
+    const res = await fetch(
+  `/api/energia?fecha=${fecha}&bodega=${bodega}`,
+  { method: "DELETE" }
+);
+
+// ✅ 404 = ya estaba borrado → NO es error
+if (!res.ok && res.status !== 404) {
+  throw new Error();
+}
 
 
+    // 🔄 Actualizar estado local
+    setLecturas((prev) => {
+      const nuevo = structuredClone(prev);
+      const d = nuevo[anioSeleccionado]?.[mes]?.[dia];
+      if (!d) return prev;
 
-  const confirmarYGuardarMeta = async () => {
-    const confirmado = await Swal.fire({
-      title: "¿Cambiar meta mensual?",
-      text: "Esta acción actualizará la meta del mes",
-      icon: "question",
-      showCancelButton: true,
-      confirmButtonText: "Sí, guardar",
-      cancelButtonText: "Cancelar",
-      confirmButtonColor: "#16a34a",
-      cancelButtonColor: "#dc2626",
+      if (bodega === 1) {
+        d.bodega2 = "";
+        d.total2 = 0;
+      }
+
+      if (bodega === 2) {
+        d.bodega4 = "";
+        d.total4 = 0;
+      }
+
+      // ❌ Si ambas bodegas quedaron vacías → eliminar día
+      if (!d.bodega2 && !d.bodega4) {
+        delete nuevo[anioSeleccionado][mes][dia];
+      }
+
+      return nuevo;
     });
 
-    if (!confirmado.isConfirmed) return;
+    // ✅ TOAST ARRIBA
+    toast.fire({
+      icon: "success",
+      title:
+        bodega === 1
+          ? "Bodega 2 borrada con éxito"
+          : "Bodega 4 borrada con éxito",
+    });
+  } catch {
+    toast.fire({
+      icon: "error",
+      title: "Error al borrar la bodega",
+    });
+  }
+};
 
-    await guardarMetaMensual(); // guarda y actualiza estado
+async function eliminarMetaMensual() {
+  if (mesSeleccionado === "todos") return;
+
+  try {
+    await fetch(
+      `/api/metas?tipo=energia&anio=${anioSeleccionado}&mes=${mesSeleccionado + 1}`,
+      { method: "DELETE" }
+    );
+
+    setMetaMensual(null);
+    setUltimaMetaValida(0);
+    setExisteMeta(false);
 
     toast.fire({
       icon: "success",
-      title: "Meta actualizada",
+      title: "Meta eliminada",
     });
-  };
+  } catch {
+    toast.fire({
+      icon: "error",
+      title: "Error al eliminar la meta",
+    });
+  }
+}
+
+
+
+
+
+ const confirmarYGuardarMeta = async () => {
+  if (metaMensual === null || metaMensual <= 0) {
+    toast.fire({
+      icon: "warning",
+      title: "Ingresa una meta válida",
+    });
+    return;
+  }
+
+  const confirmado = await Swal.fire({
+    title: existeMeta
+      ? "¿Editar meta mensual?"
+      : "¿Crear meta mensual?",
+    text: existeMeta
+      ? "Esta acción actualizará la meta existente"
+      : "Se creará una nueva meta para este mes",
+    icon: "question",
+    showCancelButton: true,
+    confirmButtonText: existeMeta ? "Actualizar" : "Crear",
+    cancelButtonText: "Cancelar",
+    confirmButtonColor: "#16a34a",
+    cancelButtonColor: "#dc2626",
+  });
+
+  if (!confirmado.isConfirmed) return;
+
+  await guardarMetaMensual();
+
+  toast.fire({
+    icon: "success",
+    title: existeMeta ? "Meta actualizada" : "Meta creada",
+  });
+
+  setExisteMeta(true); // 🔒 desde ahora existe
+};
+
 
 
 
@@ -670,20 +825,56 @@ const [lecturas, setLecturas] = useState<LecturasPorAnio>({});
             </div>
 
             <input
-              type="number"
-             value={metaMensual ?? ""}
-              onChange={(e) => setMetaMensual(Number(e.target.value))}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault();
-                  confirmarYGuardarMeta();
-                }
-              }}
-              className="
-        w-full text-3xl font-bold text-yellow-600 tracking-tight
-        bg-transparent outline-none text-center
-      "
-            />
+  type="number"
+  value={metaMensual ?? ""}
+  placeholder={existeMeta ? "Editar meta…" : "Crear meta…"}
+  onChange={(e) => {
+  const value = e.target.value;
+
+  if (value === "") {
+    setMetaMensual(null); // 🔑 CLAVE
+  } else {
+    setMetaMensual(Number(value));
+  }
+}}
+
+  onKeyDown={(e) => {
+  if (e.key !== "Enter") return;
+
+  e.preventDefault();
+
+  // 🔴 VACÍO → ELIMINAR META
+  if (metaMensual === null || metaMensual === undefined) {
+    if (existeMeta) {
+      eliminarMetaMensual();
+    }
+    return;
+  }
+
+  // 🟡 0 o negativo → NO PERMITIDO
+  if (metaMensual <= 0) {
+    toast.fire({
+      icon: "warning",
+      title: "La meta debe ser mayor a 0",
+    });
+    return;
+  }
+
+  // 🟢 CREAR / EDITAR
+  confirmarYGuardarMeta();
+}}
+
+  className="
+    w-full text-3xl font-bold text-yellow-600 tracking-tight
+    bg-transparent outline-none text-center
+  "
+/>
+<p className="text-xs mt-1 opacity-60 text-center">
+  {existeMeta
+    ? "Editando meta existente del mes"
+    : "No hay meta definida, crea una nueva"}
+</p>
+
 
             <p className="text-xs mt-1 opacity-60 text-center">
               Consumo objetivo del mes (kWh)
@@ -1155,64 +1346,96 @@ const [lecturas, setLecturas] = useState<LecturasPorAnio>({});
 
                           {/* BODEGA 2 */}
                           <td className={`border p-2 ${modoNoche ? "border-gray-700" : "border-gray-300"}`}>
-                            <input
-                              value={d.bodega2}
-                              disabled={esBloqueado}
-                              onChange={(e) =>
-                                handleChange(mes, dia, "bodega2", e.target.value)
-                              }
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  e.preventDefault();
-                                  guardarEnergiaEnBD(
-                                    mes,
-                                    dia,
-                                    lecturas[anioSeleccionado]?.[mes]?.[dia]
-                                  );
-                                }
-                              }}
-                              className={`
-                  w-full p-1 text-center rounded border
-                  ${esBloqueado
-                                  ? "bg-gray-300 text-gray-400 cursor-not-allowed"
-                                  : modoNoche
-                                    ? "bg-[#0b0b0b] text-gray-200 border-gray-600"
-                                    : "bg-white text-gray-800 border-gray-300"
-                                }
-                  focus:ring-2 focus:ring-yellow-400 outline-none
-                `}
-                            />
+                          <input
+  value={d.bodega2}
+  disabled={esBloqueado}
+  data-mes={mes}
+  data-dia={dia}
+  data-campo="bodega2"
+  onChange={(e) =>
+    handleChange(mes, dia, "bodega2", e.target.value)
+  }
+  onKeyDown={(e) => {
+    navegarConFlechas(e);
+
+    if (e.key === "Enter") {
+      e.preventDefault();
+
+      const valor = d.bodega2?.trim();
+
+      if (!valor) {
+        eliminarBodega(mes, dia, 1);
+        return;
+      }
+
+      guardarEnergiaEnBD(
+        mes,
+        dia,
+        lecturas[anioSeleccionado]?.[mes]?.[dia]
+      );
+    }
+  }}
+  className={`
+    w-full p-1 text-center rounded border
+    ${esBloqueado
+      ? "bg-gray-300 text-gray-400 cursor-not-allowed"
+      : modoNoche
+        ? "bg-[#0b0b0b] text-gray-200 border-gray-600"
+        : "bg-white text-gray-800 border-gray-300"
+    }
+    focus:ring-2 focus:ring-yellow-400 outline-none
+  `}
+/>
+
+  
+
+
                           </td>
 
                           {/* BODEGA 4 */}
                           <td className={`border p-2 ${modoNoche ? "border-gray-700" : "border-gray-300"}`}>
-                            <input
-                              value={d.bodega4}
-                              disabled={esBloqueado}
-                              onChange={(e) =>
-                                handleChange(mes, dia, "bodega4", e.target.value)
-                              }
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  e.preventDefault();
-                                  guardarEnergiaEnBD(
-                                    mes,
-                                    dia,
-                                    lecturas[anioSeleccionado]?.[mes]?.[dia]
-                                  );
-                                }
-                              }}
-                              className={`
-                  w-full p-1 text-center rounded border
-                  ${esBloqueado
-                                  ? "bg-gray-300 text-gray-400 cursor-not-allowed"
-                                  : modoNoche
-                                    ? "bg-[#0b0b0b] text-gray-200 border-gray-600"
-                                    : "bg-white text-gray-800 border-gray-300"
-                                }
-                  focus:ring-2 focus:ring-yellow-400 outline-none
-                `}
-                            />
+                           <input
+  value={d.bodega4}
+  disabled={esBloqueado}
+  data-mes={mes}
+  data-dia={dia}
+  data-campo="bodega4"
+  onChange={(e) =>
+    handleChange(mes, dia, "bodega4", e.target.value)
+  }
+  onKeyDown={(e) => {
+    navegarConFlechas(e);
+
+    if (e.key === "Enter") {
+      e.preventDefault();
+
+      const valor = d.bodega4?.trim();
+
+      if (!valor) {
+        eliminarBodega(mes, dia, 2);
+        return;
+      }
+
+      guardarEnergiaEnBD(
+        mes,
+        dia,
+        lecturas[anioSeleccionado]?.[mes]?.[dia]
+      );
+    }
+  }}
+  className={`
+    w-full p-1 text-center rounded border
+    ${esBloqueado
+      ? "bg-gray-300 text-gray-400 cursor-not-allowed"
+      : modoNoche
+        ? "bg-[#0b0b0b] text-gray-200 border-gray-600"
+        : "bg-white text-gray-800 border-gray-300"
+    }
+    focus:ring-2 focus:ring-yellow-400 outline-none
+  `}
+/>
+
+
                           </td>
 
                           {/* TOTALES */}

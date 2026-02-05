@@ -1,5 +1,8 @@
-const BACKEND_URL = "http://127.0.0.1:8000";
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL;
 
+if (!BACKEND_URL) {
+  throw new Error("NEXT_PUBLIC_API_URL no está definida");
+}
 /* =========================
    GET
    ?tipo=agua&anio=2026&mes=1
@@ -13,7 +16,6 @@ export async function GET(request) {
 
   let url = `${BACKEND_URL}/metas`;
 
-  // Si vienen filtros → los agrega
   const params = new URLSearchParams();
   if (tipo) params.append("tipo", tipo);
   if (anio) params.append("anio", anio);
@@ -30,14 +32,7 @@ export async function GET(request) {
 }
 
 /* =========================
-   POST  (UPSERT)
-   body:
-   {
-     tipo: "agua",
-     anio: 2026,
-     mes: 1,
-     meta: 41
-   }
+   POST (UPSERT)
 ========================= */
 export async function POST(request) {
   const body = await request.json();
@@ -53,12 +48,7 @@ export async function POST(request) {
 }
 
 /* =========================
-   PUT (opcional)
-   body:
-   {
-     id: 1,
-     meta: 50
-   }
+   PUT
 ========================= */
 export async function PUT(request) {
   const body = await request.json();
@@ -75,15 +65,25 @@ export async function PUT(request) {
 
 /* =========================
    DELETE
-   body:
-   { id: 1 }
 ========================= */
 export async function DELETE(request) {
-  const { id } = await request.json();
+  const { searchParams } = new URL(request.url);
 
-  const res = await fetch(`${BACKEND_URL}/metas/${id}`, {
-    method: "DELETE",
-  });
+  const tipo = searchParams.get("tipo");
+  const anio = searchParams.get("anio");
+  const mes = searchParams.get("mes");
+
+  if (!tipo || !anio || !mes) {
+    return Response.json(
+      { error: "Faltan parámetros para eliminar meta" },
+      { status: 400 }
+    );
+  }
+
+  const res = await fetch(
+    `${BACKEND_URL}/metas?tipo=${tipo}&anio=${anio}&mes=${mes}`,
+    { method: "DELETE" }
+  );
 
   const data = await res.json();
   return Response.json(data);

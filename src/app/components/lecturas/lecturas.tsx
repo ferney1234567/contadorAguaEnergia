@@ -2,6 +2,8 @@
 
 import { useEffect, useRef, useState } from "react";
 import {Camera,Pencil,SlidersHorizontal,Save,X,Zap,Droplets,Flame} from "lucide-react";
+import Swal from "sweetalert2";
+
 
 interface Props {
   modoNoche: boolean;
@@ -113,8 +115,7 @@ const [errorOCR, setErrorOCR] = useState<string | null>(null);
     setErrorOCR(null);
     setLectura("");
 
-    const resp = await fetch(
-      "http://127.0.0.1:8000/ocr/leer_contador",
+    const resp = await fetch("/api/ocr/leer_contador", 
       {
         method: "POST",
         body: form,
@@ -141,16 +142,39 @@ const [errorOCR, setErrorOCR] = useState<string | null>(null);
 };
 
 
- const guardarLectura = async () => {
+const guardarLectura = async () => {
   if (!bodegaSeleccionada || !lectura) {
-    alert("⚠️ Selecciona la bodega e ingresa la lectura.");
+    Swal.fire({
+      icon: "warning",
+      title: "Datos incompletos",
+      text: "Selecciona la bodega e ingresa la lectura.",
+      confirmButtonColor: "#E30613",
+    });
     return;
   }
 
   const tipo = bodegaSeleccionada.includes("agua") ? "agua" : "energia";
 
+  // ✅ FECHA LOCAL REAL (sin UTC)
+  const hoy = new Date();
+  const fechaLocal =
+    hoy.getFullYear() +
+    "-" +
+    String(hoy.getMonth() + 1).padStart(2, "0") +
+    "-" +
+    String(hoy.getDate()).padStart(2, "0");
+
   try {
-    const resp = await fetch("http://127.0.0.1:8000/lecturas/manual", {
+    Swal.fire({
+      title: "Guardando lectura...",
+      text: "Por favor espera",
+      allowOutsideClick: false,
+      didOpen: () => {
+        Swal.showLoading();
+      },
+    });
+
+    const resp = await fetch("/api/lecturas", {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -159,19 +183,33 @@ const [errorOCR, setErrorOCR] = useState<string | null>(null);
         bodega: bodegaSeleccionada,
         lectura: Number(lectura),
         tipo,
-        fecha: new Date().toISOString().split("T")[0],
+        fecha: fechaLocal,
       }),
     });
 
     if (!resp.ok) throw new Error();
 
-    alert("✅ Lectura guardada correctamente");
-    setLectura("");
+    Swal.fire({
+      icon: "success",
+      title: "Lectura guardada",
+      text: `La lectura del ${fechaLocal} fue registrada correctamente.`,
+      confirmButtonColor: "#16a34a",
+    });
 
-  } catch {
-    alert("❌ Error al guardar la lectura");
+    setLectura("");
+    setConfianza(null);
+    setErrorOCR(null);
+
+  } catch (error) {
+    Swal.fire({
+      icon: "error",
+      title: "Error al guardar",
+      text: "No se pudo registrar la lectura. Intenta nuevamente.",
+      confirmButtonColor: "#E30613",
+    });
   }
 };
+
 
 
 

@@ -49,6 +49,7 @@ export default function ConsumoAgua({
   const toast = Swal.mixin({ toast: true, position: "top-end", timerProgressBar: true, didOpen: (toast) => { toast.onmouseenter = Swal.stopTimer; toast.onmouseleave = Swal.resumeTimer; }, });
   /* ================= ESTADOS ================= */
   const [lecturas, setLecturas] = useState<LecturasPorAnio>({});
+  const [existeMeta, setExisteMeta] = useState(false);
   const [cacheMetas, setCacheMetas] = useState<Record<string, number>>({});
   const [metaMensual, setMetaMensual] = useState<number | null>(null);
   const [ultimaMetaValida, setUltimaMetaValida] = useState<number | null>(null);
@@ -178,10 +179,11 @@ const obtenerEstadoConsumo = (
   };
 
 
- useEffect(() => {
+useEffect(() => {
   if (mesSeleccionado === "todos") return;
 
   setMetaMensual(null);
+  setExisteMeta(false);
 
   fetch(
     `/api/metas?tipo=agua&anio=${anioSeleccionado}&mes=${mesSeleccionado + 1}`,
@@ -192,11 +194,14 @@ const obtenerEstadoConsumo = (
       if (typeof data?.meta === "number") {
         setMetaMensual(data.meta);
         setUltimaMetaValida(data.meta);
+        setExisteMeta(true);   // ✅ EXISTE → EDITAR
       } else {
         setMetaMensual(null);
+        setExisteMeta(false);  // ❌ NO EXISTE → CREAR
       }
     });
 }, [anioSeleccionado, mesSeleccionado]);
+
 
 
   useEffect(() => {
@@ -248,7 +253,8 @@ const obtenerEstadoConsumo = (
     data: LecturaDia
   ) {
     if (!data) return;
-    if (!data.bodega2 || !data.bodega4) return;
+   if (!data.bodega2 && !data.bodega4) return;
+
 
     const fechaConsumo = new Date(
       anioSeleccionado,
@@ -284,6 +290,45 @@ const obtenerEstadoConsumo = (
   }
 
   
+const navegarConFlechas = (
+  e: React.KeyboardEvent<HTMLInputElement>
+) => {
+  const key = e.key;
+  if (!["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(key)) {
+    return;
+  }
+
+  e.preventDefault();
+
+  const input = e.currentTarget;
+
+  const dia = Number(input.dataset.dia);
+  const mes = Number(input.dataset.mes);
+  const campo = input.dataset.campo as "bodega2" | "bodega4";
+
+  let nuevoDia = dia;
+  let nuevoCampo = campo;
+
+  if (key === "ArrowUp") nuevoDia = dia - 1;
+  if (key === "ArrowDown") nuevoDia = dia + 1;
+
+  if (key === "ArrowLeft") {
+    if (campo === "bodega4") nuevoCampo = "bodega2";
+  }
+
+  if (key === "ArrowRight") {
+    if (campo === "bodega2") nuevoCampo = "bodega4";
+  }
+
+  // 🔒 Buscar el siguiente input válido
+  const selector = `input[data-mes="${mes}"][data-dia="${nuevoDia}"][data-campo="${nuevoCampo}"]`;
+  const siguiente = document.querySelector<HTMLInputElement>(selector);
+
+  if (siguiente && !siguiente.disabled) {
+    siguiente.focus();
+    siguiente.select();
+  }
+};
 
 
   const obtenerUltimaLecturaMesAnterior = (
@@ -342,31 +387,63 @@ const obtenerEstadoConsumo = (
   }
 
 
-
   useEffect(() => {
-    const anioInicio = 2025;   // ajusta si quieres empezar antes
-    const anioFin = 2030;
+  if (!aguaDB.length) return;
 
-    const aniosBD = aguaDB.map((item) =>
-      new Date(item.fecha + "T00:00:00").getFullYear()
-    );
+  const anioActual = new Date().getFullYear();
+  const anioFuturo = anioActual + 5;
 
-    const aniosCompletos = Array.from(
-      new Set([
-        ...aniosBD,
-        ...Array.from(
-          { length: anioFin - anioInicio + 1 },
-          (_, i) => anioInicio + i
-        ),
-      ])
-    ).sort((a, b) => b - a);
+  // 🔹 Años existentes en BD
+  const aniosBD = aguaDB.map(item =>
+    new Date(item.fecha + "T00:00:00").getFullYear()
+  );
 
-    setAniosDisponibles(aniosCompletos);
+  // 🔹 Año inicial dinámico
+  const anioInicio = Math.min(...aniosBD, anioActual);
 
-    if (!aniosCompletos.includes(anioSeleccionado)) {
-      setAnioSeleccionado(aniosCompletos[0]);
-    }
-  }, [aguaDB]);
+  // 🔹 Rango automático
+  const aniosAutomaticos = Array.from(
+    { length: anioFuturo - anioInicio + 1 },
+    (_, i) => anioInicio + i
+  );
+
+  const aniosFinales = Array.from(
+    new Set([...aniosBD, ...aniosAutomaticos])
+  ).sort((a, b) => b - a);
+
+  setAniosDisponibles(aniosFinales);
+
+  // 🔒 Blindaje
+  if (!aniosFinales.includes(anioSeleccionado)) {
+    setAnioSeleccionado(aniosFinales[0]);
+  }
+}, [aguaDB]);
+
+
+  // useEffect(() => {
+  //   const anioInicio = 2025;   // ajusta si quieres empezar antes
+  //   const anioFin = 2030;
+
+  //   const aniosBD = aguaDB.map((item) =>
+  //     new Date(item.fecha + "T00:00:00").getFullYear()
+  //   );
+
+  //   const aniosCompletos = Array.from(
+  //     new Set([
+  //       ...aniosBD,
+  //       ...Array.from(
+  //         { length: anioFin - anioInicio + 1 },
+  //         (_, i) => anioInicio + i
+  //       ),
+  //     ])
+  //   ).sort((a, b) => b - a);
+
+  //   setAniosDisponibles(aniosCompletos);
+
+  //   if (!aniosCompletos.includes(anioSeleccionado)) {
+  //     setAnioSeleccionado(aniosCompletos[0]);
+  //   }
+  // }, [aguaDB]);
 
 
 
@@ -549,30 +626,136 @@ const obtenerEstadoConsumo = (
     setAutoSaveTimeout(timeout);
   };
 
+  async function eliminarAgua(
+  mes: number,
+  dia: number,
+  bodega: 1 | 2
+) {
+  const fecha = new Date(
+    anioSeleccionado,
+    mes,
+    dia
+  ).toISOString().split("T")[0];
+
+  try {
+    const res = await fetch(
+      `/api/agua?fecha=${fecha}&bodega=${bodega}`,
+      { method: "DELETE" }
+    );
+
+    const data = await res.json();
+
+    // 🔄 Actualizar estado local
+    setLecturas((prev) => {
+      const copia = structuredClone(prev);
+
+      const diaData =
+        copia?.[anioSeleccionado]?.[mes]?.[dia];
+
+      if (!diaData) return copia;
+
+      if (bodega === 1) {
+        diaData.bodega2 = "";
+        diaData.total2 = 0;
+      }
+
+      if (bodega === 2) {
+        diaData.bodega4 = "";
+        diaData.total4 = 0;
+      }
+
+      // ❌ Si ambas quedaron en cero → borrar día completo
+      if (
+        !diaData.bodega2 &&
+        !diaData.bodega4
+      ) {
+        delete copia[anioSeleccionado][mes][dia];
+      }
+
+      return copia;
+    });
+
+   toast.fire({
+  icon: data?.deleted === "all" ? "success" : "success",
+  title:
+    data?.deleted === "all"
+      ? "Registro eliminado completamente"
+      : "Bodega eliminada",
+});
+
+  } catch {
+    toast.fire({
+      icon: "error",
+      title: "Error eliminando consumo de agua",
+    });
+  }
+}
+
+
+async function eliminarMetaMensualAgua() {
+  if (mesSeleccionado === "todos") return;
+
+  try {
+    await fetch(
+      `/api/metas?tipo=agua&anio=${anioSeleccionado}&mes=${mesSeleccionado + 1}`,
+      { method: "DELETE" }
+    );
+
+    setMetaMensual(null);
+    setUltimaMetaValida(null);
+    setExisteMeta(false);
+
+    toast.fire({
+      icon: "success",
+      title: "Meta de agua eliminada",
+    });
+  } catch {
+    toast.fire({
+      icon: "error",
+      title: "Error al eliminar la meta de agua",
+    });
+  }
+}
+
 
 
 
   const confirmarYGuardarMeta = async () => {
-    const confirmado = await Swal.fire({
-      title: "¿Cambiar meta mensual?",
-      text: "Esta acción actualizará la meta del mes",
-      icon: "question",
-      showCancelButton: true,
-      confirmButtonText: "Sí, guardar",
-      cancelButtonText: "Cancelar",
-      confirmButtonColor: "#16a34a",
-      cancelButtonColor: "#dc2626",
-    });
-
-    if (!confirmado.isConfirmed) return;
-
-    await guardarMetaMensual(); // guarda y actualiza estado
-
+  if (metaMensual === null || metaMensual <= 0) {
     toast.fire({
-      icon: "success",
-      title: "Meta actualizada",
+      icon: "warning",
+      title: "Ingresa una meta válida",
     });
-  };
+    return;
+  }
+
+  const confirmado = await Swal.fire({
+    title: existeMeta
+      ? "¿Editar meta mensual?"
+      : "¿Crear meta mensual?",
+    text: existeMeta
+      ? "Esta acción actualizará la meta existente"
+      : "Se creará una nueva meta para este mes",
+    icon: "question",
+    showCancelButton: true,
+    confirmButtonText: existeMeta ? "Actualizar" : "Crear",
+    cancelButtonText: "Cancelar",
+    confirmButtonColor: "#16a34a",
+    cancelButtonColor: "#dc2626",
+  });
+
+  if (!confirmado.isConfirmed) return;
+
+  await guardarMetaMensual();
+
+  toast.fire({
+    icon: "success",
+    title: existeMeta ? "Meta actualizada" : "Meta creada",
+  });
+
+  setExisteMeta(true); // 🔒 desde ahora existe
+};
+
 
 
 
@@ -679,19 +862,53 @@ const obtenerEstadoConsumo = (
               </div>
             </div>
 
-           <input
+ <input
   type="number"
   value={metaMensual ?? ""}
-  placeholder="Cargando meta..."
-  onChange={(e) => setMetaMensual(Number(e.target.value))}
-  onKeyDown={(e) => {
-    if (e.key === "Enter") {
-      e.preventDefault();
-      confirmarYGuardarMeta();
+  placeholder={existeMeta ? "Editar meta…" : "Crear meta…"}
+  onChange={(e) => {
+  const value = e.target.value;
+
+  if (value === "") {
+    setMetaMensual(null); // 🔑 permite borrar
+  } else {
+    setMetaMensual(Number(value));
+  }
+}}
+
+ onKeyDown={(e) => {
+  if (e.key !== "Enter") return;
+
+  e.preventDefault();
+
+  // ❌ VACÍO → BORRAR META
+  if (metaMensual === null) {
+    if (existeMeta) {
+      eliminarMetaMensualAgua();
     }
-  }}
+    return;
+  }
+
+  // 🚫 0 o negativo → NO PERMITIDO
+  if (metaMensual <= 0) {
+    toast.fire({
+      icon: "warning",
+      title: "La meta debe ser mayor a 0",
+    });
+    return;
+  }
+
+  // ✅ CREAR / EDITAR
+  confirmarYGuardarMeta();
+}}
+
   className="w-full text-3xl font-bold text-blue-500 bg-transparent text-center"
 />
+<p className="text-xs mt-1 opacity-60">
+  {existeMeta
+    ? "Editando meta existente del mes"
+    : "No hay meta definida, crea una nueva"}
+</p>
 
 
             <p className="text-xs mt-1 opacity-60">
@@ -1153,20 +1370,37 @@ const obtenerEstadoConsumo = (
 
                           {/* ===== BODEGA 2 ===== */}
                           <td className={`border p-2 ${modoNoche ? "border-gray-700" : "border-gray-300"}`}>
-                            <input
-                              value={d.bodega2}
-                              disabled={esBloqueado}
-                              onChange={(e) =>
-                                handleChange(mes, dia, "bodega2", e.target.value)
-                              }
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  e.preventDefault();
-                                  guardarAguaEnBD(mes, dia, lecturas[anioSeleccionado]?.[mes]?.[dia]
-                                  );
+                           <input
+  value={d.bodega2}
+  disabled={esBloqueado}
+  data-mes={mes}
+  data-dia={dia}
+  data-campo="bodega2"
+  onChange={(e) =>
+    handleChange(mes, dia, "bodega2", e.target.value)
+  }
+  onKeyDown={(e) => {
+    navegarConFlechas(e);
 
-                                }
-                              }}
+    if (e.key === "Enter") {
+      e.preventDefault();
+
+      const valor = d.bodega2?.trim();
+      if (!valor) {
+        eliminarAgua(mes, dia, 1);
+        return;
+      }
+
+      guardarAguaEnBD(
+        mes,
+        dia,
+        lecturas[anioSeleccionado]?.[mes]?.[dia]
+      );
+    }
+  }}
+ 
+
+
                               className={`
                   w-full p-1 text-center rounded border
                   ${esBloqueado
@@ -1182,20 +1416,37 @@ const obtenerEstadoConsumo = (
 
                           {/* ===== BODEGA 4 ===== */}
                           <td className={`border p-2 ${modoNoche ? "border-gray-700" : "border-gray-300"}`}>
-                            <input
-                              value={d.bodega4}
-                              disabled={esBloqueado}
-                              onChange={(e) =>
-                                handleChange(mes, dia, "bodega4", e.target.value)
-                              }
-                              onKeyDown={(e) => {
-                                if (e.key === "Enter") {
-                                  e.preventDefault();
-                                  guardarAguaEnBD(mes, dia, lecturas[anioSeleccionado]?.[mes]?.[dia]
-                                  );
+                           <input
+  value={d.bodega4}
+  disabled={esBloqueado}
+  data-mes={mes}
+  data-dia={dia}
+  data-campo="bodega4"
+  onChange={(e) =>
+    handleChange(mes, dia, "bodega4", e.target.value)
+  }
+  onKeyDown={(e) => {
+    navegarConFlechas(e);
 
-                                }
-                              }}
+    if (e.key === "Enter") {
+      e.preventDefault();
+
+      const valor = d.bodega4?.trim();
+      if (!valor) {
+        eliminarAgua(mes, dia, 2);
+        return;
+      }
+
+      guardarAguaEnBD(
+        mes,
+        dia,
+        lecturas[anioSeleccionado]?.[mes]?.[dia]
+      );
+    }
+  }}
+  
+
+
                               className={`
                   w-full p-1 text-center rounded border
                   ${esBloqueado

@@ -88,8 +88,9 @@ const DashboardInicio: FC<Props> = ({ modoNoche }) => {
   ============================== */
   const cardBg = modoNoche ? "bg-[#1e1e1e]" : "bg-white";
   const cardBorder = modoNoche ? "border-[#3a3a3a]" : "border-gray-200";
-  const textColor = modoNoche ? "text-white" : "text-black";
-  const textSoft = modoNoche ? "text-gray-300" : "text-gray-600";
+  const textColor = modoNoche ? "#ffffff" : "#111827"; // blanco / negro
+  const textSoft  = modoNoche ? "#d1d5db" : "#4b5563"; // gris claro / gris oscuro
+
 
   const colores = {
     agua: "#0ea5e9",
@@ -161,8 +162,6 @@ const DashboardInicio: FC<Props> = ({ modoNoche }) => {
   ],
 };
 
-
-
  const dataEnergia = {
   labels: meses,
   datasets: [
@@ -182,8 +181,6 @@ const DashboardInicio: FC<Props> = ({ modoNoche }) => {
     },
   ],
 };
-
-
 
 const dataAreaAgua = {
   labels: meses,
@@ -289,7 +286,7 @@ const dataAreaAgua = {
   useEffect(() => {
     const cargarEnergia = async () => {
       try {
-        const res = await fetch("http://127.0.0.1:8000/energia");
+        const res = await fetch("/api/energia", { cache: "no-store" });
         const data = await res.json();
 
         const estructurado: any = {};
@@ -332,14 +329,14 @@ const dataAreaAgua = {
     for (let mes = 1; mes <= 12; mes++) {
       // 💧 Agua
       const resAgua = await fetch(
-        `http://127.0.0.1:8000/metas?tipo=agua&anio=${anio}&mes=${mes}`
+       `/api/metas?tipo=agua&anio=${anio}&mes=${mes}`,{ cache: "no-store" }
       );
       const dataAgua = await resAgua.json();
       agua.push(dataAgua?.meta ?? 0);
 
       // ⚡ Energía
       const resEnergia = await fetch(
-        `http://127.0.0.1:8000/metas?tipo=energia&anio=${anio}&mes=${mes}`
+         `/api/metas?tipo=energia&anio=${anio}&mes=${mes}`,{ cache: "no-store" }
       );
       const dataEnergia = await resEnergia.json();
       energia.push(dataEnergia?.meta ?? 0);
@@ -364,7 +361,7 @@ const dataAreaAgua = {
   useEffect(() => {
     const cargarAgua = async () => {
       try {
-        const res = await fetch("http://127.0.0.1:8000/agua");
+        const res = await fetch("/api/agua", { cache: "no-store" });
         const data = await res.json();
 
         const estructurado: any = {};
@@ -411,7 +408,7 @@ const dataAreaAgua = {
       {
         label: "Meta mensual",
         data: metasAguaMensual,
-        backgroundColor: "#e5e7eb",
+        backgroundColor: modoNoche ? "#334155" : "#e5e7eb",
         borderRadius: 6,
         barThickness: 14,
       },

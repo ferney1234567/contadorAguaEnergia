@@ -1,56 +1,75 @@
-const BACKEND_URL = "http://127.0.0.1:8000";
+const BACKEND_URL = process.env.NEXT_PUBLIC_API_URL;
+
+if (!BACKEND_URL) {
+  throw new Error("NEXT_PUBLIC_API_URL no está definida");
+}
 
 /* =========================
-   GET
+   GET · LISTAR ENERGÍA
 ========================= */
 export async function GET() {
-  const res = await fetch(`${BACKEND_URL}/energia`);
-  const data = await res.json();
-  return Response.json(data);
+  try {
+    const res = await fetch(`${BACKEND_URL}/energia`);
+    const data = await res.json();
+    return Response.json(data, { status: res.status });
+  } catch (error) {
+    return Response.json(
+      { error: "Error obteniendo consumo de energía" },
+      { status: 500 }
+    );
+  }
 }
 
 /* =========================
-   POST
+   POST · CREAR / ACTUALIZAR (UPSERT)
 ========================= */
 export async function POST(request) {
-  const body = await request.json();
+  try {
+    const body = await request.json();
 
-  const res = await fetch(`${BACKEND_URL}/energia`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
+    const res = await fetch(`${BACKEND_URL}/energia`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(body),
+    });
 
-  const data = await res.json();
-  return Response.json(data, { status: 201 });
+    const data = await res.json();
+    return Response.json(data, { status: res.status });
+  } catch (error) {
+    return Response.json(
+      { error: "Error guardando consumo de energía" },
+      { status: 500 }
+    );
+  }
 }
 
 /* =========================
-   PUT
-========================= */
-export async function PUT(request) {
-  const body = await request.json();
-
-  const res = await fetch(`${BACKEND_URL}/energia/${body.id}`, {
-    method: "PUT",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(body),
-  });
-
-  const data = await res.json();
-  return Response.json(data);
-}
-
-/* =========================
-   DELETE
+   DELETE · BORRAR POR FECHA + BODEGA
 ========================= */
 export async function DELETE(request) {
-  const { id } = await request.json();
+  try {
+    const { searchParams } = new URL(request.url);
+    const fecha = searchParams.get("fecha");
+    const bodega = searchParams.get("bodega");
 
-  const res = await fetch(`${BACKEND_URL}/energia/${id}`, {
-    method: "DELETE",
-  });
+    if (!fecha || !bodega) {
+      return Response.json(
+        { error: "Faltan parámetros fecha o bodega" },
+        { status: 400 }
+      );
+    }
 
-  const data = await res.json();
-  return Response.json(data);
+    const res = await fetch(
+      `${BACKEND_URL}/energia?fecha=${fecha}&bodega=${bodega}`,
+      { method: "DELETE" }
+    );
+
+    const data = await res.json();
+    return Response.json(data, { status: res.status });
+  } catch (error) {
+    return Response.json(
+      { error: "Error eliminando consumo de energía" },
+      { status: 500 }
+    );
+  }
 }
