@@ -689,7 +689,7 @@ const dataAreaAgua = {
           <h4
             className={`
         text-sm sm:text-base font-semibold
-        mb-4 sm:mb-6
+        mb-4 sm:mb-6npm r
         flex items-center gap-2
         ${textSoft}
       `}
