@@ -1,5 +1,5 @@
 import jsPDF from "jspdf";
-import autoTable from "jspdf-autotable";
+import autoTable, { CellHookData } from "jspdf-autotable";
 
 /* =========================
    TIPOS
@@ -31,15 +31,16 @@ export function exportarDashboardPDF({
   promedioEnergiaReal,
   metaAgua,
   metaEnergia,
-}: ExportarDashboardPDFParams) {
+}: ExportarDashboardPDFParams): void {
   const doc = new jsPDF("p", "mm", "a4");
 
   /* ======================================================
-     🎨 COLORES CORPORATIVOS
+     🎨 COLORES CORPORATIVOS (TIPADOS CORRECTAMENTE)
   ====================================================== */
-  const rojoEnvia = [220, 38, 38];
-  const azulAgua = [14, 165, 233];
-  const amarilloEnergia = [245, 158, 11];
+  const rojoEnvia: [number, number, number] = [220, 38, 38];
+  const azulAgua: [number, number, number] = [14, 165, 233];
+  const amarilloEnergia: [number, number, number] = [245, 158, 11];
+  const verdeOk: [number, number, number] = [22, 163, 74];
 
   /* ======================================================
      📄 PORTADA
@@ -86,10 +87,9 @@ export function exportarDashboardPDF({
   });
 
   /* ======================================================
-     📄 NUEVA PÁGINA – RESUMEN ANUAL
+     📄 RESUMEN ANUAL POR MES
   ====================================================== */
   doc.addPage();
-
   doc.setFontSize(14);
   doc.text("Resumen Anual por Mes", 14, 20);
 
@@ -117,21 +117,23 @@ export function exportarDashboardPDF({
     startY: 30,
     head: [["Mes", "Consumo (L)", "Meta", "Estado"]],
     body: meses.map((mes, i) => {
-      const consumo = consumoAguaMensual[i] || 0;
+      const consumo = consumoAguaMensual[i] ?? 0;
+      const estado = consumo <= metaAgua ? "Dentro de meta" : "Excedido";
+
       return [
         mes,
         consumo.toLocaleString(),
         metaAgua.toLocaleString(),
-        consumo <= metaAgua ? "Dentro de meta" : "Excedido",
+        estado,
       ];
     }),
     theme: "grid",
     styles: { fontSize: 10 },
     headStyles: { fillColor: azulAgua },
-    didParseCell: (data) => {
+    didParseCell: (data: CellHookData) => {
       if (data.section === "body" && data.column.index === 3) {
         data.cell.styles.textColor =
-          data.cell.raw === "Dentro de meta" ? [22, 163, 74] : [220, 38, 38];
+          data.cell.raw === "Dentro de meta" ? verdeOk : rojoEnvia;
       }
     },
   });
@@ -147,21 +149,23 @@ export function exportarDashboardPDF({
     startY: 30,
     head: [["Mes", "Consumo (kWh)", "Meta", "Estado"]],
     body: meses.map((mes, i) => {
-      const consumo = consumoEnergiaMensual[i] || 0;
+      const consumo = consumoEnergiaMensual[i] ?? 0;
+      const estado = consumo <= metaEnergia ? "Dentro de meta" : "Excedido";
+
       return [
         mes,
         consumo.toLocaleString(),
         metaEnergia.toLocaleString(),
-        consumo <= metaEnergia ? "Dentro de meta" : "Excedido",
+        estado,
       ];
     }),
     theme: "grid",
     styles: { fontSize: 10 },
     headStyles: { fillColor: amarilloEnergia },
-    didParseCell: (data) => {
+    didParseCell: (data: CellHookData) => {
       if (data.section === "body" && data.column.index === 3) {
         data.cell.styles.textColor =
-          data.cell.raw === "Dentro de meta" ? [22, 163, 74] : [220, 38, 38];
+          data.cell.raw === "Dentro de meta" ? verdeOk : rojoEnvia;
       }
     },
   });
@@ -170,6 +174,7 @@ export function exportarDashboardPDF({
      📌 PIE DE PÁGINA GLOBAL
   ====================================================== */
   const totalPages = doc.getNumberOfPages();
+
   for (let i = 1; i <= totalPages; i++) {
     doc.setPage(i);
     doc.setFontSize(9);
