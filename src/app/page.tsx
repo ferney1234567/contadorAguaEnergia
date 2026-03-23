@@ -149,14 +149,14 @@ export default function MenuPrincipal() {
 
     if (vistaActual === "comparativoagua") {
       return {
-        titulo: "Comparativo de agua",
+        titulo: "Comparativo agua",
         icono: <FaFaucet size={28} />,
       };
     }
 
     if (vistaActual === "comparativoenergia") {
       return {
-        titulo: "Comparativo de energía",
+        titulo: "Comparativo energía",
         icono: <Plug size={28} />,
       };
     }
@@ -209,7 +209,13 @@ export default function MenuPrincipal() {
 
         </div>
 
-        <h1 className="text-lg md:text-3xl font-extrabold tracking-wide text-center flex-1 flex items-center justify-center gap-3">
+      <h1 className="
+  text-lg md:text-3xl font-extrabold tracking-wide
+  flex items-center gap-2
+  justify-start md:justify-center
+  text-left md:text-center
+  flex-1
+">
           {tituloActual.icono}
           {tituloActual.titulo}
         </h1>

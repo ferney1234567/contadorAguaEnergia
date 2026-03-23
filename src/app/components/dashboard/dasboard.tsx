@@ -170,14 +170,22 @@ const totalEnergiaComparativo = comparativoEnergia.reduce((a,b)=>a+b,0)
       label: "Consumo Agua (L)",
       data: consumoAguaMensual,
       backgroundColor: consumoAguaMensual.map((valor, i) => {
-        const meta = metasAguaMensual[i] ?? 0;
+  const meta = metasAguaMensual[i] ?? 0;
 
-        if (meta > 0 && valor > meta) {
-          return "#ef4444"; // 🔴 MAL
-        }
+  if (meta === 0) return "#94a3b8"; // sin meta
 
-        return "#0ea5e9"; // 🔵 BIEN
-      }),
+  const porcentaje = valor / meta;
+
+  if (porcentaje > 1) {
+    return "#ef4444"; // 🔴 se pasó
+  }
+
+  if (porcentaje >= 0.8) {
+    return "#0369a1"; // 🔵 azul oscuro (advertencia)
+  }
+
+  return "#38bdf8"; // 🔵 azul claro (bien)
+}),
       borderRadius: 10,
     },
   ],
@@ -189,15 +197,23 @@ const totalEnergiaComparativo = comparativoEnergia.reduce((a,b)=>a+b,0)
     {
       label: "Consumo Energía (kWh)",
       data: consumoEnergiaMensual,
-      backgroundColor: consumoEnergiaMensual.map((valor, i) => {
-        const meta = metasEnergiaMensual[i] ?? 0;
+     backgroundColor: consumoEnergiaMensual.map((valor, i) => {
+  const meta = metasEnergiaMensual[i] ?? 0;
 
-        if (meta > 0 && valor > meta) {
-          return "#ef4444"; // 🔴 MAL
-        }
+  if (meta === 0) return "#94a3b8"; // sin meta
 
-        return "#facc15"; // 🟡 BIEN
-      }),
+  const porcentaje = valor / meta;
+
+  if (porcentaje > 1) {
+    return "#ef4444"; // 🔴 se pasó
+  }
+
+  if (porcentaje >= 0.8) {
+    return "#f97316"; // 🟠 naranja oscuro (advertencia)
+  }
+
+  return "#facc15"; // 🟡 normal
+}),
       borderRadius: 10,
     },
   ],
@@ -514,9 +530,17 @@ cargarComparativoAgua();
       {
         label: "Consumo real",
         data: consumoAguaMensual,
-        backgroundColor: consumoAguaMensual.map((v, i) =>
-          v <= metasAguaMensual[i] ? "#38bdf8" : "#ef4444"
-        ),
+       backgroundColor: consumoAguaMensual.map((v, i) => {
+  const meta = metasAguaMensual[i];
+
+  if (meta === 0) return "#94a3b8";
+
+  const porcentaje = v / meta;
+
+  if (porcentaje > 1) return "#ef4444"; // 🔴
+  if (porcentaje >= 0.8) return "#0369a1"; // 🔵 oscuro
+  return "#38bdf8"; // 🔵 claro
+}),
         borderRadius: 6,
         barThickness: 14,
       },
@@ -538,13 +562,17 @@ cargarComparativoAgua();
       {
         label: "Consumo real (kWh)",
         data: consumoEnergiaMensual,
-        backgroundColor: consumoEnergiaMensual.map((v, i) =>
-          metasEnergiaMensual[i] === 0
-            ? "#94a3b8" // sin meta
-            : v <= metasEnergiaMensual[i]
-              ? "#facc15" // dentro de meta
-              : "#f97316" // excedido
-        ),
+        backgroundColor: consumoEnergiaMensual.map((v, i) => {
+  const meta = metasEnergiaMensual[i];
+
+  if (meta === 0) return "#94a3b8";
+
+  const porcentaje = v / meta;
+
+  if (porcentaje > 1) return "#ef4444"; // 🔴
+  if (porcentaje >= 0.8) return "#f97316"; // 🟠
+  return "#facc15"; // 🟡
+}),
         borderRadius: 6,
         barThickness: 14,
       },
@@ -618,6 +646,14 @@ cargarComparativoAgua();
 
         {/* === ACCIONES === */}
         <div className="flex items-center gap-3">
+          <button
+  onClick={() => window.open("https://drive.google.com", "_blank")}
+  className="px-5 py-2.5 rounded-lg text-sm font-semibold
+  bg-blue-600 hover:bg-blue-700
+  text-white shadow-md flex items-center gap-2"
+>
+  ☁️ Ir a Drive
+</button>
         <button
   onClick={() =>
     exportarDashboardPDF({

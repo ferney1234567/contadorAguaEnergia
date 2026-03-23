@@ -385,7 +385,7 @@ useEffect(() => {
   if (!energiaDB.length) return;
 
   const anioActual = new Date().getFullYear();
-  const anioFuturo = anioActual + 5; // 🔮 proyección automática
+  const anioFuturo = anioActual + 9; // 🔮 proyección automática
 
   // 🔹 Años que existen en la BD
   const aniosBD = energiaDB.map(item =>

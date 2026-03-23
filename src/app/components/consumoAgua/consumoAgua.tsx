@@ -408,7 +408,7 @@ const navegarConFlechas = (
   if (!aguaDB.length) return;
 
   const anioActual = new Date().getFullYear();
-  const anioFuturo = anioActual + 5;
+  const anioFuturo = anioActual + 9;
 
   // 🔹 Años existentes en BD
   const aniosBD = aguaDB.map(item =>
