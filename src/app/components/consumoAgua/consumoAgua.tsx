@@ -117,6 +117,23 @@ export default function ConsumoAgua({
       : "bg-gray-100 text-gray-800",
   };
 
+  const obtenerColorConsumoAgua = (valor: number) => {
+
+  if (valor > 2.36) {
+    return modoNoche
+  ? "bg-red-950 text-red-300"
+  : "bg-red-300 text-red-900";
+  }
+
+  if (valor > 0) {
+    return modoNoche
+      ? "bg-emerald-900 text-emerald-200"
+      : "bg-emerald-200 text-emerald-900";
+  }
+
+  return "";
+};
+
   const mesesARenderizar = mesSeleccionado === "todos" ? meses.map((_, i) => i) : [mesSeleccionado];
   
   const obtenerDiasDelMes = (mes: number) => {
@@ -420,30 +437,7 @@ const navegarConFlechas = (
 }, [aguaDB]);
 
 
-  // useEffect(() => {
-  //   const anioInicio = 2025;   // ajusta si quieres empezar antes
-  //   const anioFin = 2030;
-
-  //   const aniosBD = aguaDB.map((item) =>
-  //     new Date(item.fecha + "T00:00:00").getFullYear()
-  //   );
-
-  //   const aniosCompletos = Array.from(
-  //     new Set([
-  //       ...aniosBD,
-  //       ...Array.from(
-  //         { length: anioFin - anioInicio + 1 },
-  //         (_, i) => anioInicio + i
-  //       ),
-  //     ])
-  //   ).sort((a, b) => b - a);
-
-  //   setAniosDisponibles(aniosCompletos);
-
-  //   if (!aniosCompletos.includes(anioSeleccionado)) {
-  //     setAnioSeleccionado(aniosCompletos[0]);
-  //   }
-  // }, [aguaDB]);
+  
 
 
 
@@ -843,6 +837,31 @@ async function eliminarMetaMensualAgua() {
   });
 };
 
+const resumenConsumo = (() => {
+
+  if (mesSeleccionado === "todos") {
+    return { estable: 0, critico: 0 };
+  }
+
+  const lecturasMes = lecturas?.[anioSeleccionado]?.[mesSeleccionado] ?? {};
+
+  let estable = 0;
+  let critico = 0;
+
+  Object.values(lecturasMes).forEach((d) => {
+    const total = d.total2 + d.total4;
+
+    if (total > 2.36) {
+      critico++;
+    } else if (total > 0) {
+      estable++;
+    }
+  });
+
+  return { estable, critico };
+
+})();
+
   /* ================= RENDER ================= */
   return (
     <div className={`w-full min-h-screen p-6 ${colores.fondo}`}>
@@ -937,6 +956,8 @@ async function eliminarMetaMensualAgua() {
             <p className="text-sm opacity-60 mt-1 capitalize">
               {fechaColombia}
             </p>
+
+            
           </div>
 
           {/* Clasificación de días */}
@@ -990,6 +1011,41 @@ async function eliminarMetaMensualAgua() {
                   {resumenDias.NA}
                 </span>
               </div>
+                 {/* CONSUMO ESTABLE 
+<div
+  className={`
+    flex items-center justify-between px-2 py-1.5 rounded-md
+    ${modoNoche ? "bg-emerald-900 text-emerald-200" : "bg-emerald-100 text-emerald-800"}
+  `}
+>
+  <div className="flex items-center gap-2 font-medium">
+    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
+    Consumo estable
+  </div>
+
+  <span className="text-sm font-semibold">
+    {resumenConsumo.estable}
+  </span>
+</div>
+
+
+<div
+  className={`
+    flex items-center justify-between px-2 py-1.5 rounded-md
+    ${modoNoche ? "bg-red-900 text-red-200" : "bg-red-100 text-red-800"}
+  `}
+>
+  <div className="flex items-center gap-2 font-medium">
+    <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
+    Consumo crítico
+  </div>
+
+  <span className="text-sm font-semibold">
+    {resumenConsumo.critico}
+  </span>
+</div>
+          
+*/}
 
             </div>
 
@@ -1242,36 +1298,43 @@ async function eliminarMetaMensualAgua() {
                       </tr>
 
                       {/* ===== FILA CONSUMO POR DÍA ===== */}
-                      <tr>
-                        {diasMes.map(({ dia, tipo }) => {
-                          const color =
-                            tipo === "D"
-                              ? modoNoche
-                                ? "bg-[#161616] text-gray-300"
-                                : "bg-violet-100 text-violet-900"
-                              : tipo === "F"
-                                ? modoNoche
-                                  ? "bg-[#1b1b1b] text-gray-300"
-                                  : "bg-rose-100 text-rose-900"
-                                : modoNoche
-                                  ? "bg-[#0b0b0b] text-gray-200"
-                                  : "bg-white text-gray-800";
+                      {/* ===== FILA CONSUMO POR DÍA ===== */}
+<tr>
+  {diasMes.map(({ dia, tipo }) => {
 
-                          return (
-                            <td
-                              key={dia}
-                              className={`
-                        h-8 text-center text-xs font-medium
-                        border
-                        ${modoNoche ? "border-gray-700" : "border-gray-300"}
-                        ${color}
-                      `}
-                            >
-                              {totalDia(mes, dia) || "—"}
-                            </td>
-                          );
-                        })}
-                      </tr>
+    const d = lecturas?.[anioSeleccionado]?.[mes]?.[dia];
+    const total = d ? d.total2 + d.total4 : 0;
+
+    const colorConsumo = obtenerColorConsumoAgua (total);
+
+    const colorBase =
+      tipo === "D"
+        ? modoNoche
+          ? "bg-[#161616] text-gray-300"
+          : "bg-violet-100 text-violet-900"
+        : tipo === "F"
+        ? modoNoche
+          ? "bg-[#1b1b1b] text-gray-300"
+          : "bg-rose-100 text-rose-900"
+        : modoNoche
+        ? "bg-[#0b0b0b] text-gray-200"
+        : "bg-white text-gray-800";
+
+    return (
+      <td
+        key={dia}
+        className={`
+          h-8 text-center text-xs font-medium
+          border
+          ${modoNoche ? "border-gray-700" : "border-gray-300"}
+          ${total > 0 ? colorConsumo : colorBase}
+        `}
+      >
+        {total > 0 ? total.toFixed(2) : "—"}
+      </td>
+    );
+  })}
+</tr>
 
                     </tbody>
                   </table>

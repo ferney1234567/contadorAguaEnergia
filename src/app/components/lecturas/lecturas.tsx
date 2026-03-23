@@ -22,8 +22,8 @@ export default function Lecturas({ modoNoche }: Props) {
       : "bg-white border border-gray-300",
 
     input: modoNoche
-      ? "bg-[#2a2a2a] text-white border border-gray-600"
-      : "bg-white text-black border border-gray-300",
+      ? "bg-[#242424] text-white border border-gray-600 focus:border-gray-500"
+      : "bg-white text-black border border-gray-300 focus:border-gray-400",
 
     rojo: "bg-[#E30613] hover:bg-[#b8040f] text-white",
   };
@@ -44,9 +44,7 @@ export default function Lecturas({ modoNoche }: Props) {
       return;
     }
 
-    const tipo = bodegaSeleccionada.includes("agua")
-      ? "agua"
-      : "energia";
+    const tipo = bodegaSeleccionada.includes("agua") ? "agua" : "energia";
 
     const hoy = new Date();
     const fechaLocal =
@@ -59,7 +57,6 @@ export default function Lecturas({ modoNoche }: Props) {
     try {
       Swal.fire({
         title: "Guardando lectura...",
-        text: "Por favor espera",
         allowOutsideClick: false,
         didOpen: () => Swal.showLoading(),
       });
@@ -80,7 +77,6 @@ export default function Lecturas({ modoNoche }: Props) {
       Swal.fire({
         icon: "success",
         title: "Lectura guardada",
-        text: `La lectura del ${fechaLocal} fue registrada correctamente.`,
         confirmButtonColor: "#16a34a",
       });
 
@@ -89,7 +85,6 @@ export default function Lecturas({ modoNoche }: Props) {
       Swal.fire({
         icon: "error",
         title: "Error al guardar",
-        text: "No se pudo registrar la lectura.",
         confirmButtonColor: "#E30613",
       });
     }
@@ -98,34 +93,36 @@ export default function Lecturas({ modoNoche }: Props) {
   const esAgua = bodegaSeleccionada.includes("agua");
 
   return (
-    <div className={`w-full min-h-screen flex items-center justify-center p-6 ${colores.fondo}`}>
-      
-      {/* 📱 CONTENEDOR CELULAR */}
-      <div
-        className={`w-[380px] h-[750px] rounded-[40px] shadow-2xl overflow-hidden flex flex-col ${colores.celular}`}
-      >
-        {/* Barra superior tipo notch */}
-        <div className="h-6 flex justify-center items-center mt-3">
-          <div className="w-24 h-2 bg-gray-500 rounded-full opacity-50"></div>
+    <div
+      className={`w-full h-[calc(100vh-90px)] flex items-start justify-center pt-6 px-4 ${colores.fondo}`}
+    >
+      {/* CONTENEDOR */}
+     <div
+  className={`w-full max-w-[390px] min-h-[500px] rounded-[28px] shadow-xl flex flex-col ${colores.celular}`}
+>
+        {/* NOTCH */}
+        <div className="h-5 flex justify-center items-center mt-2">
+          <div className="w-20 h-1.5 bg-gray-400 rounded-full opacity-40"></div>
         </div>
 
         {/* CONTENIDO */}
-        <div className="flex-1 p-6 flex flex-col">
+        <div className="px-5 py-5 flex flex-col gap-3">
 
-          <h1 className="text-2xl font-extrabold text-center mb-6">
+          {/* TITULO */}
+          <h1 className="text-lg font-bold text-center">
             Registro de Lectura
           </h1>
 
           {/* SELECT */}
-          <div className="mb-6">
-            <label className="text-sm font-semibold">
+          <div>
+            <label className="text-xs font-semibold">
               Seleccionar Bodega
             </label>
 
             <select
               value={bodegaSeleccionada}
               onChange={(e) => setBodegaSeleccionada(e.target.value)}
-              className={`w-full mt-2 p-3 rounded-xl ${colores.input}`}
+              className={`w-full mt-1 p-2.5 rounded-lg outline-none ${colores.input}`}
             >
               <option value="">-- Seleccionar --</option>
               <option value="bodega_2_agua">💧 Agua - Bodega 2</option>
@@ -135,39 +132,40 @@ export default function Lecturas({ modoNoche }: Props) {
             </select>
           </div>
 
-          {/* TARJETA */}
-          <div className="flex-1 flex flex-col justify-center">
+          {/* ICONO */}
+          <div className="flex justify-center py-1">
+            {esAgua ? (
+              <Droplets size={30} className="text-blue-500" />
+            ) : (
+              <Zap size={30} className="text-yellow-500" />
+            )}
+          </div>
 
-            <div className="text-center mb-6">
-              {esAgua ? (
-                <Droplets size={48} className="mx-auto text-blue-500" />
-              ) : (
-                <Zap size={48} className="mx-auto text-yellow-500" />
-              )}
-            </div>
-
+          {/* INPUT */}
+          <div className="flex flex-col gap-1">
             <input
               type="tel"
               placeholder="000000"
               value={lectura}
               onChange={handleLecturaInput}
-              className={`w-full text-center text-5xl font-mono p-4 rounded-2xl outline-none ${colores.input}`}
+              className={`w-full text-center text-3xl font-mono p-2.5 rounded-lg outline-none tracking-widest ${colores.input}`}
             />
 
-            <p className="text-center text-xs mt-3 opacity-60">
+            <p className="text-center text-[11px] opacity-60">
               Solo números permitidos
             </p>
           </div>
 
-          {/* BOTÓN */}
+          {/* BOTON */}
           <button
             onClick={guardarLectura}
             disabled={!bodegaSeleccionada || !lectura}
-            className={`mt-6 py-4 rounded-2xl shadow-lg text-lg flex justify-center items-center gap-3 ${colores.rojo} disabled:opacity-50`}
+            className={`mt-2 py-2.5 rounded-lg shadow-md text-sm flex justify-center items-center gap-2 ${colores.rojo} disabled:opacity-50`}
           >
-            <Save size={22} />
+            <Save size={18} />
             Guardar
           </button>
+
         </div>
       </div>
     </div>

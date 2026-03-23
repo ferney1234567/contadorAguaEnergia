@@ -118,6 +118,23 @@ const [lecturas, setLecturas] = useState<LecturasPorAnio>({});
       : "bg-gray-100 text-gray-800",
   };
 
+  const obtenerColorConsumoDia = (valor: number) => {
+
+  if (valor > 63.32) {
+    return modoNoche
+      ? "bg-red-950 text-red-300"
+      : "bg-red-300 text-red-900";
+  }
+
+  if (valor > 0) {
+    return modoNoche
+      ? "bg-emerald-900 text-emerald-200"
+      : "bg-emerald-200 text-emerald-900";
+  }
+
+  return "";
+};
+
 
   const mesesARenderizar = mesSeleccionado === "todos" ? meses.map((_, i) => i) : [mesSeleccionado];
 
@@ -1178,7 +1195,7 @@ async function eliminarMetaMensual() {
                         >
                           {meses[mes]} {anioSeleccionado} · Total consumido:{" "}
                           <span className="font-bold">
-                            {totalMes(mes)} m³
+                            {totalMes(mes)} kWh
                           </span>
                         </td>
                       </tr>
@@ -1216,36 +1233,43 @@ async function eliminarMetaMensual() {
                       </tr>
 
                       {/* ===== FILA CONSUMO POR DÍA ===== */}
-                      <tr>
-                        {diasMes.map(({ dia, tipo }) => {
-                          const color =
-                            tipo === "D"
-                              ? modoNoche
-                                ? "bg-[#161616] text-gray-300"
-                                : "bg-violet-100 text-violet-900"
-                              : tipo === "F"
-                                ? modoNoche
-                                  ? "bg-[#1b1b1b] text-gray-300"
-                                  : "bg-rose-100 text-rose-900"
-                                : modoNoche
-                                  ? "bg-[#0b0b0b] text-gray-200"
-                                  : "bg-white text-gray-800";
+                     {/* ===== FILA CONSUMO POR DÍA ===== */}
+<tr>
+  {diasMes.map(({ dia, tipo }) => {
 
-                          return (
-                            <td
-                              key={dia}
-                              className={`
-                        h-8 text-center text-xs font-medium
-                        border
-                        ${modoNoche ? "border-gray-700" : "border-gray-300"}
-                        ${color}
-                      `}
-                            >
-                              {totalDia(mes, dia) || "—"}
-                            </td>
-                          );
-                        })}
-                      </tr>
+    const d = lecturas?.[anioSeleccionado]?.[mes]?.[dia];
+    const total = d ? d.total2 + d.total4 : 0;
+
+    const colorConsumo = obtenerColorConsumoDia(total);
+
+    const colorBase =
+      tipo === "D"
+        ? modoNoche
+          ? "bg-[#161616] text-gray-300"
+          : "bg-violet-100 text-violet-900"
+        : tipo === "F"
+        ? modoNoche
+          ? "bg-[#1b1b1b] text-gray-300"
+          : "bg-rose-100 text-rose-900"
+        : modoNoche
+        ? "bg-[#0b0b0b] text-gray-200"
+        : "bg-white text-gray-800";
+
+    return (
+      <td
+        key={dia}
+        className={`
+          h-8 text-center text-xs font-medium
+          border
+          ${modoNoche ? "border-gray-700" : "border-gray-300"}
+          ${total > 0 ? colorConsumo : colorBase}
+        `}
+      >
+        {total > 0 ? total.toFixed(2) : "—"}
+      </td>
+    );
+  })}
+</tr>
 
                     </tbody>
                   </table>

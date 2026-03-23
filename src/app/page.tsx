@@ -9,57 +9,86 @@ import {
   Sun,
   Moon,
   Menu,
+  Plug
 } from "lucide-react";
+
 import Image from "next/image";
+import { FaFaucet } from "react-icons/fa";
 
 import DashboardInicio from "./components/dashboard/dasboard";
 import ConsumoAgua from "./components/consumoAgua/consumoAgua";
 import ConsumoEnergia from "./components/consumoEnergia/consumoEnergia";
 import Lecturas from "./components/lecturas/lecturas";
-
-
+import ComparativoAgua from "./components/comparativoAgua/comparativoAgua";
+import ComparativoEnergia from "./components/comparativoEnergia/comparativoEnergia";
 
 export default function MenuPrincipal() {
-  /* ================= ESTADOS GENERALES ================= */
+
+  /* ================= ESTADOS ================= */
+
   const [sidebarAbierto, setSidebarAbierto] = useState(false);
   const [esMovil, setEsMovil] = useState(false);
   const [vistaActual, setVistaActual] = useState("inicio");
   const [modoNoche, setModoNoche] = useState(false);
-
   const [anioActual, setAnioActual] = useState(new Date().getFullYear());
 
   /* ================= DETECTAR MÓVIL ================= */
+
   useEffect(() => {
-    const verificarTamano = () => setEsMovil(window.innerWidth < 768);
+
+    const verificarTamano = () => {
+      setEsMovil(window.innerWidth < 768);
+    };
+
     verificarTamano();
     window.addEventListener("resize", verificarTamano);
+
     return () => window.removeEventListener("resize", verificarTamano);
+
   }, []);
 
   /* ================= ACTUALIZAR AÑO ================= */
+
   useEffect(() => {
+
     const intervalo = setInterval(() => {
+
       const anioSistema = new Date().getFullYear();
-      setAnioActual((prev) => (prev !== anioSistema ? anioSistema : prev));
-    }, 60 * 60 * 1000);
+
+      setAnioActual(prev =>
+        prev !== anioSistema ? anioSistema : prev
+      );
+
+    }, 3600000);
+
     return () => clearInterval(intervalo);
+
   }, []);
 
   /* ================= MODO NOCHE ================= */
+
   useEffect(() => {
+
     if (localStorage.getItem("modoNoche") === "true") {
       setModoNoche(true);
     }
+
   }, []);
 
   const toggleModoNoche = () => {
+
     const nuevo = !modoNoche;
+
     setModoNoche(nuevo);
+
     localStorage.setItem("modoNoche", nuevo.toString());
+
   };
 
   /* ================= COLORES ================= */
+
   const colores = {
+
     header: modoNoche
       ? "bg-[#1e1e1e] text-white"
       : "bg-[#C40000] text-white",
@@ -79,57 +108,127 @@ export default function MenuPrincipal() {
     contenido: modoNoche
       ? "bg-[#121212] text-white"
       : "bg-[#f5f5f5] text-black",
+
   };
 
   /* ================= MENÚ ================= */
+
   const opciones = [
-    { nombre: "Inicio", icono: <Home size={26} /> },
-    { nombre: "Agua", icono: <Droplet size={26} /> },
-    { nombre: "Energía", icono: <Zap size={26} /> },
-    { nombre: "Lecturas", icono: <BookOpen size={26} /> },
+
+    { id: "inicio", nombre: "Inicio", icono: <Home size={28} /> },
+
+    { id: "agua", nombre: "Agua", icono: <Droplet size={28} /> },
+
+    { id: "energía", nombre: "Energía", icono: <Zap size={28} /> },
+
+    { id: "comparativoagua", nombre: "Comparativo ", icono: <FaFaucet size={28} /> },
+
+    { id: "comparativoenergia", nombre: "Comparativo ", icono: <Plug size={28} /> },
+
+    { id: "lecturas", nombre: "Lecturas", icono: <BookOpen size={28} /> },
+
   ];
+
+  /* ================= TITULOS ================= */
+
+  const obtenerTitulo = () => {
+
+    if (vistaActual === "agua") {
+      return {
+        titulo: "Consumo de agua",
+        icono: <Droplet size={28} />,
+      };
+    }
+
+    if (vistaActual === "energía") {
+      return {
+        titulo: "Consumo de energía",
+        icono: <Zap size={28} />,
+      };
+    }
+
+    if (vistaActual === "comparativoagua") {
+      return {
+        titulo: "Comparativo de agua",
+        icono: <FaFaucet size={28} />,
+      };
+    }
+
+    if (vistaActual === "comparativoenergia") {
+      return {
+        titulo: "Comparativo de energía",
+        icono: <Plug size={28} />,
+      };
+    }
+
+    if (vistaActual === "lecturas") {
+      return {
+        titulo: "Registrar lecturas",
+        icono: <BookOpen size={28} />,
+      };
+    }
+
+    return {
+      titulo: `Consumo de agua y energía ${anioActual}`,
+      icono: null,
+    };
+
+  };
+
+  const tituloActual = obtenerTitulo();
 
   const handleClickOpcion = () => {
     if (esMovil) setSidebarAbierto(false);
   };
 
   /* ================= RENDER ================= */
+
   return (
+
     <div className={`w-full flex flex-col ${colores.contenido}`}>
-      {/* ================= HEADER ================= */}
-      <header
-        className={`w-full flex items-center justify-between px-4 md:px-6 py-4 shadow-lg ${colores.header}`}
-      >
+
+      {/* HEADER */}
+
+      <header className={`w-full flex items-center justify-between px-4 md:px-6 py-4 shadow-lg ${colores.header}`}>
+
         <div className="flex items-center gap-3">
-          <Image src="/img/envia3.png" alt="Envia logo" width={60} height={40} />
+
+          <Image
+            src="/img/envia3.png"
+            alt="Envia logo"
+            width={60}
+            height={40}
+          />
 
           <button
             onClick={() => setSidebarAbierto(!sidebarAbierto)}
-            className={`p-2 md:p-3 rounded transition ${
-              modoNoche ? "hover:bg-[#333]" : "hover:bg-[#c10510]"
-            }`}
+            className={`p-2 md:p-3 rounded transition ${modoNoche ? "hover:bg-[#333]" : "hover:bg-[#c10510]"}`}
           >
             <Menu size={30} />
           </button>
+
         </div>
 
-        <h1 className="text-xl md:text-3xl font-extrabold tracking-wide text-center flex-1">
-          Consumo de agua y energía {anioActual}
+        <h1 className="text-lg md:text-3xl font-extrabold tracking-wide text-center flex-1 flex items-center justify-center gap-3">
+          {tituloActual.icono}
+          {tituloActual.titulo}
         </h1>
 
         <button
           onClick={toggleModoNoche}
-          className={`p-2 md:p-3 rounded transition ${
-            modoNoche ? "hover:bg-[#333]" : "hover:bg-[#c10510]"
-          }`}
+          className={`p-2 md:p-3 rounded transition ${modoNoche ? "hover:bg-[#333]" : "hover:bg-[#c10510]"}`}
         >
           {modoNoche ? <Sun size={30} /> : <Moon size={30} />}
         </button>
+
       </header>
 
-      {/* ================= CONTENEDOR ================= */}
+      {/* CONTENEDOR */}
+
       <div className="flex w-full h-full relative">
-        {/* ================= SIDEBAR ================= */}
+
+        {/* SIDEBAR */}
+
         <aside
           className={`
             absolute md:static top-0 left-0 min-h-full z-40
@@ -146,15 +245,19 @@ export default function MenuPrincipal() {
             }
           `}
         >
+
           <nav className="flex flex-col space-y-8 px-2">
+
             {opciones.map((op, i) => {
-              const activa = vistaActual === op.nombre.toLowerCase();
+
+              const activa = vistaActual === op.id;
 
               return (
+
                 <button
                   key={i}
                   onClick={() => {
-                    setVistaActual(op.nombre.toLowerCase());
+                    setVistaActual(op.id);
                     handleClickOpcion();
                   }}
                   className={`
@@ -163,36 +266,44 @@ export default function MenuPrincipal() {
                     ${activa ? colores.sidebarActivo : colores.sidebarHover}
                   `}
                 >
-                  <div className="w-8 flex justify-center">{op.icono}</div>
+
+                  <div className="w-10 flex justify-center items-center">
+                    {op.icono}
+                  </div>
+
                   {sidebarAbierto && (
                     <span className="ml-4 text-lg font-medium">
                       {op.nombre}
                     </span>
                   )}
+
                 </button>
+
               );
+
             })}
+
           </nav>
+
         </aside>
 
-        {/* ================= CONTENIDO ================= */}
+        {/* CONTENIDO */}
+
         <main className={`flex-1 p-5 md:p-10 ${colores.contenido}`}>
-          {vistaActual === "inicio" && (
-            <DashboardInicio modoNoche={modoNoche} />
-          )}
+
+          {vistaActual === "inicio" && <DashboardInicio modoNoche={modoNoche} />}
 
           {vistaActual === "agua" && <ConsumoAgua modoNoche={modoNoche} />}
 
-          {vistaActual === "energía" && (
-            <ConsumoEnergia modoNoche={modoNoche} />
-          )}
+          {vistaActual === "energía" && <ConsumoEnergia modoNoche={modoNoche} />}
 
-          {vistaActual === "lecturas" && (
-            <Lecturas modoNoche={modoNoche} />
-          )}
+          {vistaActual === "comparativoagua" && <ComparativoAgua modoNoche={modoNoche} />}
 
+          {vistaActual === "comparativoenergia" && <ComparativoEnergia modoNoche={modoNoche} />}
 
-            <footer
+          {vistaActual === "lecturas" && <Lecturas modoNoche={modoNoche} />}
+
+                    <footer
   className={`
     mt-12 py-6
     border-t
@@ -237,7 +348,7 @@ export default function MenuPrincipal() {
 
       <div>
         <span className="font-semibold">Versión</span><br />
-        v1.0 · Producción
+        v2.0 · Producción
       </div>
     </div>
 
@@ -252,12 +363,13 @@ export default function MenuPrincipal() {
     </div>
   </div>
 </footer>
+
         </main>
+
       </div>
+
     </div>
+
   );
+
 }
-
-        
-
-      

@@ -6,6 +6,7 @@ import { FC, useState, useEffect } from "react";
 import { exportarDashboardExcel } from "../../utils/exportadorgeneral";
 import {FaWater,FaBolt,FaChartLine,FaClipboardList,FaTint,FaLightbulb,} from "react-icons/fa";
 import { exportarDashboardPDF } from "../../utils/exportadorDashboardPDF";
+import {  Doughnut } from "react-chartjs-2";
 
 ChartJS.register(ArcElement,BarElement,CategoryScale,LinearScale,PointElement,LineElement,Tooltip,Legend);
 
@@ -76,13 +77,18 @@ const DashboardInicio: FC<Props> = ({ modoNoche }) => {
   const totalAguaAnual = totalAnual(lecturasAgua);
   const promedioAguaReal = promedioDiario(lecturasAgua);
   const [aniosDisponibles, setAniosDisponibles] = useState<number[]>([]);
-
   const [metaAgua, setMetaAgua] = useState(0);
   const [metaEnergia, setMetaEnergia] = useState(0);
   const [metaMensualAgua, setMetaMensualAgua] = useState(0);
   const [metaMensualEnergia, setMetaMensualEnergia] = useState(0);
   const [metasAguaMensual, setMetasAguaMensual] = useState<number[]>(Array(12).fill(0));
   const [metasEnergiaMensual, setMetasEnergiaMensual] = useState<number[]>(Array(12).fill(0));
+  const [comparativoEnergia, setComparativoEnergia] = useState<number[]>(Array(12).fill(0));
+const [comparativoAgua, setComparativoAgua] = useState<number[]>(Array(12).fill(0));
+
+const totalAguaComparativo = comparativoAgua.reduce((a,b)=>a+b,0)
+const totalEnergiaComparativo = comparativoEnergia.reduce((a,b)=>a+b,0)
+
   /* ==============================
      PALETA
   ============================== */
@@ -99,6 +105,21 @@ const DashboardInicio: FC<Props> = ({ modoNoche }) => {
     energiaGradient: "rgba(245,158,11,0.25)",
     fondo: modoNoche ? "bg-[#121212] text-white" : "bg-white text-black"
   };
+
+  const coloresMeses = [
+  "#3b82f6", // Ene
+  "#0ea5e9", // Feb
+  "#22c55e", // Mar
+  "#84cc16", // Abr
+  "#eab308", // May
+  "#f59e0b", // Jun
+  "#f97316", // Jul
+  "#ef4444", // Ago
+  "#ec4899", // Sep
+  "#a855f7", // Oct
+  "#6366f1", // Nov
+  "#14b8a6"  // Dic
+];
 
   /* ==============================
      OPCIONES DE GRÁFICAS
@@ -282,6 +303,84 @@ const dataAreaAgua = {
       },
     ],
   };
+
+
+ useEffect(() => {
+
+const cargarComparativoEnergia = async () => {
+
+try{
+
+const res = await fetch("/api/comparativoEnergia/");
+const data = await res.json();
+
+const mesesEnergia = new Array(12).fill(0);
+
+data.forEach((item:any)=>{
+
+if(Number(item.anio) === Number(anio)){
+
+const mesIndex = Number(item.mes) - 1;
+
+if(mesIndex >= 0 && mesIndex < 12){
+mesesEnergia[mesIndex] += Number(item.kw_consumidos || 0);
+}
+
+}
+
+});
+
+setComparativoEnergia(mesesEnergia);
+
+}catch(error){
+
+console.error("Error cargando comparativo energia",error);
+
+}
+
+};
+
+cargarComparativoEnergia();
+
+},[anio]);
+
+
+useEffect(() => {
+
+const cargarComparativoAgua = async () => {
+
+try{
+
+const res = await fetch("/api/comparativoAgua/");
+const data = await res.json();
+
+const mesesAgua = new Array(12).fill(0);
+
+data.forEach((item:any)=>{
+
+if(item.anio === anio){
+
+const mesIndex = item.mes - 1;
+
+mesesAgua[mesIndex] += Number(item.m3_consumidos);
+
+}
+
+});
+
+setComparativoAgua(mesesAgua);
+
+}catch(error){
+
+console.error("Error cargando comparativo agua",error);
+
+}
+
+};
+
+cargarComparativoAgua();
+
+},[anio]);
 
   useEffect(() => {
     const cargarEnergia = async () => {
@@ -594,10 +693,10 @@ const dataAreaAgua = {
           <div className="flex justify-between items-center mb-3">
             <h3 className={`font-bold text-lg ${textColor}`}>Promedio Diario Agua</h3>
             <div className={`p-3 rounded-full ${modoNoche ? "bg-green-900/40" : "bg-green-100"}`}>
-              <FaChartLine className="text-green-500 text-xl" />
+              <FaChartLine className="text-blue-500 text-xl" />
             </div>
           </div>
-          <p className="text-3xl font-bold text-green-500">
+          <p className="text-3xl font-bold text-blue-700">
             {promedioAguaReal}
 
           </p>
@@ -609,10 +708,10 @@ const dataAreaAgua = {
           <div className="flex justify-between items-center mb-3">
             <h3 className={`font-bold text-lg ${textColor}`}>Promedio Diario Energía</h3>
             <div className={`p-3 rounded-full ${modoNoche ? "bg-red-900/40" : "bg-red-100"}`}>
-              <FaClipboardList className="text-red-500 text-xl" />
+              <FaClipboardList className="text-orange-500 text-xl" />
             </div>
           </div>
-          <p className="text-3xl font-bold text-red-500">
+          <p className="text-3xl font-bold text-orange-500">
             {promedioEnergiaReal}
 
           </p>
@@ -675,80 +774,225 @@ const dataAreaAgua = {
 
 
 
-      {/* === DIFERENCIA VS META · MENSUAL === */}
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8 lg:gap-10 mt-10">
 
-        {/* ================= AGUA ================= */}
-        <div
-          className={`
-      p-4 sm:p-6 lg:p-8
-      rounded-xl shadow-lg border
-      ${cardBg} ${cardBorder}
-    `}
-        >
-          <h4
-            className={`
-        text-sm sm:text-base font-semibold
-        mb-4 sm:mb-6npm r
-        flex items-center gap-2
-        ${textSoft}
-      `}
-          >
-            <FaWater className="text-blue-500 text-base sm:text-lg" />
-            Diferencia vs Meta · Agua (Mensual)
-          </h4>
+     {/* === DIFERENCIA VS META · MENSUAL === */}
+<div className="grid grid-cols-1 lg:grid-cols-2 gap-6 md:gap-8 lg:gap-10 mt-10">
 
-          <div className="h-[260px] sm:h-[300px] lg:h-[360px]">
-            <Bar
-              data={dataDiferenciaAguaMensual}
-              options={{
-                ...opcionesBarras,
-                maintainAspectRatio: false,
-              }}
-            />
-          </div>
-        </div>
+  {/* AGUA */}
+  <div className={`p-4 sm:p-6 lg:p-8 rounded-xl shadow-lg border ${cardBg} ${cardBorder}`}>
+    <h4 className={`text-sm sm:text-base font-semibold mb-4 sm:mb-6 flex items-center gap-2 ${textSoft}`}>
+      <FaWater className="text-blue-500 text-base sm:text-lg" />
+      Diferencia vs Meta · Agua (Mensual)
+    </h4>
 
-        {/* ================= ENERGÍA ================= */}
-        <div
-          className={`
-      p-4 sm:p-6 lg:p-8
-      rounded-xl shadow-lg border
-      ${cardBg} ${cardBorder}
-    `}
-        >
-          <h4
-            className={`
-        text-sm sm:text-base font-semibold
-        mb-4 sm:mb-6
-        flex items-center gap-2
-        ${textSoft}
-      `}
-          >
-            <FaBolt className="text-yellow-500 text-base sm:text-lg" />
-            Diferencia vs Meta · Energía (Mensual)
-          </h4>
-
-          <div className="h-[260px] sm:h-[300px] lg:h-[360px]">
-            <Bar
-              data={dataDiferenciaEnergiaMensual}
-              options={{
-                ...opcionesBarras,
-                maintainAspectRatio: false,
-              }}
-            />
-          </div>
-        </div>
-
-
-
-
-      </div>
-
-
-
-
+    <div className="h-[320px] lg:h-[380px]">
+      <Bar
+        data={dataDiferenciaAguaMensual}
+        options={{ ...opcionesBarras, maintainAspectRatio: false }}
+      />
     </div>
+  </div>
+
+  {/* ENERGÍA */}
+  <div className={`p-4 sm:p-6 lg:p-8 rounded-xl shadow-lg border ${cardBg} ${cardBorder}`}>
+    <h4 className={`text-sm sm:text-base font-semibold mb-4 sm:mb-6 flex items-center gap-2 ${textSoft}`}>
+      <FaBolt className="text-yellow-500 text-base sm:text-lg" />
+      Diferencia vs Meta · Energía (Mensual)
+    </h4>
+
+    <div className="h-[320px] lg:h-[380px]">
+      <Bar
+        data={dataDiferenciaEnergiaMensual}
+        options={{ ...opcionesBarras, maintainAspectRatio: false }}
+      />
+    </div>
+  </div>
+
+</div>
+
+{/* ================= COMPARATIVO ================= */}
+
+<div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-10">
+
+{/* ================= AGUA ================= */}
+
+<div className={`p-6 rounded-xl shadow-lg border ${cardBg} ${cardBorder}`}>
+
+<h3 className={`font-bold text-lg mb-6 flex items-center gap-2 ${textColor}`}>
+<FaTint className="text-blue-500"/>
+Comparativo de Agua por Mes
+</h3>
+
+{/* LEYENDA DE MESES */}
+<div className="grid grid-cols-6 gap-3 mb-6">
+
+{meses.map((mes,i)=>(
+<div key={i} className="flex items-center gap-2 text-xs font-semibold">
+
+<div
+className="w-4 h-4 rounded"
+style={{backgroundColor:coloresMeses[i]}}
+/>
+
+<span style={{color:textColor}}>
+{mes}
+</span>
+
+</div>
+))}
+
+</div>
+
+{/* GRAFICA */}
+
+<div className="flex justify-center items-center h-[320px]">
+
+<div className="relative w-[320px] h-[320px]">
+
+<Doughnut
+data={{
+labels:meses,
+datasets:[
+{
+label:"Consumo Agua",
+data:comparativoAgua.map(v=>v || 0.0001),
+backgroundColor:coloresMeses,
+borderWidth:3,
+borderColor:"#ffffff",
+hoverOffset:15
+}
+]
+}}
+
+options={{
+responsive:true,
+maintainAspectRatio:false,
+cutout:"55%",
+plugins:{
+legend:{display:false},
+tooltip:{
+callbacks:{
+label:(context:any)=>{
+return `${context.label}: ${comparativoAgua[context.dataIndex]} L`
+}
+}
+}
+}
+}}
+/>
+<div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+
+<span className="text-2xl font-bold text-blue-500">
+{totalAguaComparativo.toLocaleString()}
+</span>
+
+<span className="text-xs text-gray-400">
+Total anual
+</span>
+
+</div>
+</div>
+
+</div>
+
+</div>
+
+{/* ================= ENERGIA ================= */}
+
+<div className={`p-6 rounded-xl shadow-lg border ${cardBg} ${cardBorder}`}>
+
+<h3 className={`font-bold text-lg mb-6 flex items-center gap-2 ${textColor}`}>
+<FaLightbulb className="text-yellow-500"/>
+Comparativo de Energía por Mes
+</h3>
+
+{/* LEYENDA MESES */}
+
+<div className="grid grid-cols-6 gap-3 mb-6">
+
+{meses.map((mes,i)=>(
+<div key={i} className="flex items-center gap-2 text-xs font-semibold">
+
+<div
+className="w-4 h-4 rounded"
+style={{backgroundColor:coloresMeses[i]}}
+/>
+
+<span style={{color:textColor}}>
+{mes}
+</span>
+
+</div>
+))}
+
+</div>
+
+{/* GRAFICA */}
+
+<div className="flex justify-center items-center h-[320px]">
+
+<div className="relative w-[320px] h-[320px]">
+
+<Doughnut
+data={{
+labels:meses,
+datasets:[
+{
+label:"Consumo Energía",
+data:comparativoEnergia.map(v=>v || 0.0001),
+backgroundColor:coloresMeses,
+borderWidth:3,
+borderColor:"#ffffff",
+hoverOffset:15
+}
+]
+}}
+
+options={{
+responsive:true,
+maintainAspectRatio:false,
+cutout:"55%",
+plugins:{
+legend:{display:false},
+tooltip:{
+callbacks:{
+label:(context:any)=>{
+return `${context.label}: ${comparativoEnergia[context.dataIndex]} kWh`
+}
+}
+}
+}
+}}
+/>
+<div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
+
+<span className="text-2xl font-bold text-yellow-500">
+{totalEnergiaComparativo.toLocaleString()}
+</span>
+
+<span className="text-xs text-gray-400">
+Total anual
+</span>
+
+</div>
+
+</div>
+
+</div>
+
+</div>
+
+
+
+</div>
+
+</div>
+
+
+
+
+
+
 
 
   );
