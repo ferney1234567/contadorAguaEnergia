@@ -113,7 +113,7 @@ const [lecturas, setLecturas] = useState<LecturasPorAnio>({});
     F: modoNoche
       ? "bg-[#1f1f1f] text-rose-300"
       : "bg-rose-100 text-rose-800",
-    NA: modoNoche
+    H: modoNoche
       ? "bg-[#121212] text-gray-300"
       : "bg-gray-100 text-gray-800",
   };
@@ -143,12 +143,12 @@ const [lecturas, setLecturas] = useState<LecturasPorAnio>({});
     return Array.from({ length: totalDiasMes }, (_, i) => {
       const dia = i + 1;
       const fecha = new Date(anioSeleccionado, mes, dia);
-      const tipo: "D" | "F" | "NA" =
+      const tipo: "D" | "F" | "H" =
         fecha.getDay() === 0
           ? "D"
           : festivos.includes(formatearFechaLocal(fecha))
             ? "F"
-            : "NA";
+            : "H";
 
       return { dia, tipo };
     });
@@ -163,7 +163,7 @@ const [lecturas, setLecturas] = useState<LecturasPorAnio>({});
     for (let d = diaActual - 1; d >= 1; d--) {
       const info = diasMes.find((x) => x.dia === d);
 
-      if (info?.tipo === "NA" && lecturasMes[d]) {
+      if (info?.tipo === "H" && lecturasMes[d]) {
         return lecturasMes[d];
       }
     }
@@ -423,7 +423,7 @@ useEffect(() => {
       if (filtroDia && Number(filtroDia) !== dia) return false;
       if (filtroTipoDia === "domingos" && tipo !== "D") return false;
       if (filtroTipoDia === "festivos" && tipo !== "F") return false;
-      if (filtroTipoDia === "habiles" && tipo !== "NA") return false;
+      if (filtroTipoDia === "habiles" && tipo !== "H") return false;
       return true;
     });
   };
@@ -441,7 +441,7 @@ useEffect(() => {
 
   diasMes.forEach(({ dia, tipo }) => {
     if (dia <= diaInicial) return;
-    if (tipo !== "NA") return;
+    if (tipo !== "H") return;
 
     const actual = lecturasMes[dia];
     if (!actual || !lecturaAnterior) return;
@@ -762,7 +762,7 @@ async function eliminarMetaMensual() {
 
   const resumenDias = (() => {
     if (mesSeleccionado === "todos") {
-      return { D: 0, F: 0, NA: 0 };
+      return { D: 0, F: 0, H: 0 };
     }
 
     const diasMes = obtenerDiasDelMes(mesSeleccionado);
@@ -772,7 +772,7 @@ async function eliminarMetaMensual() {
         acc[d.tipo]++;
         return acc;
       },
-      { D: 0, F: 0, NA: 0 } as Record<"D" | "F" | "NA", number>
+      { D: 0, F: 0, H: 0 } as Record<"D" | "F" | "H", number>
     );
   })();
 
@@ -959,14 +959,14 @@ async function eliminarMetaMensual() {
               </div>
 
               <div
-                className={`flex items-center justify-between px-2 py-1.5 rounded-md ${coloresDias.NA}`}
+                className={`flex items-center justify-between px-2 py-1.5 rounded-md ${coloresDias.H}`}
               >
                 <div className="flex items-center gap-2 font-medium">
                   <span className="w-2.5 h-2.5 rounded-full bg-gray-400" />
-                  Hábiles
+                  Hábiles (H)
                 </div>
                 <span className="text-sm font-semibold">
-                  {resumenDias.NA}
+                  {resumenDias.H}
                 </span>
               </div>
 
@@ -1163,7 +1163,7 @@ async function eliminarMetaMensual() {
             if (filtroDia && Number(filtroDia) !== dia) return false;
             if (filtroTipoDia === "domingos" && tipo !== "D") return false;
             if (filtroTipoDia === "festivos" && tipo !== "F") return false;
-            if (filtroTipoDia === "habiles" && tipo !== "NA") return false;
+            if (filtroTipoDia === "habiles" && tipo !== "H") return false;
             return true;
           });
 

@@ -112,7 +112,7 @@ export default function ConsumoAgua({
     F: modoNoche
       ? "bg-[#1f1f1f] text-rose-300"
       : "bg-rose-100 text-rose-800",
-    NA: modoNoche
+    H: modoNoche
       ? "bg-[#121212] text-gray-300"
       : "bg-gray-100 text-gray-800",
   };
@@ -141,12 +141,12 @@ export default function ConsumoAgua({
     return Array.from({ length: totalDiasMes }, (_, i) => {
       const dia = i + 1;
       const fecha = new Date(anioSeleccionado, mes, dia);
-      const tipo: "D" | "F" | "NA" =
+      const tipo: "D" | "F" | "H" =
         fecha.getDay() === 0
           ? "D"
           : festivos.includes(formatearFechaLocal(fecha))
             ? "F"
-            : "NA";
+            : "H";
 
       return { dia, tipo };
     });
@@ -182,7 +182,7 @@ const obtenerEstadoConsumo = (
     for (let d = diaActual - 1; d >= 1; d--) {
       const info = diasMes.find((x) => x.dia === d);
 
-      if (info?.tipo === "NA" && lecturasMes[d]) {
+      if (info?.tipo === "H" && lecturasMes[d]) {
         return lecturasMes[d];
       }
     }
@@ -448,7 +448,7 @@ const navegarConFlechas = (
       if (filtroDia && Number(filtroDia) !== dia) return false;
       if (filtroTipoDia === "domingos" && tipo !== "D") return false;
       if (filtroTipoDia === "festivos" && tipo !== "F") return false;
-      if (filtroTipoDia === "habiles" && tipo !== "NA") return false;
+      if (filtroTipoDia === "habiles" && tipo !== "H") return false;
       return true;
     });
   };
@@ -466,7 +466,7 @@ const navegarConFlechas = (
 
     diasMes.forEach(({ dia, tipo }) => {
       if (dia <= diaInicial) return;
-      if (tipo !== "NA") return;
+      if (tipo !== "H") return;
 
       const actual = lecturasMes[dia];
       if (!actual || !lecturaAnterior) return;
@@ -777,7 +777,7 @@ async function eliminarMetaMensualAgua() {
 
   const resumenDias = (() => {
     if (mesSeleccionado === "todos") {
-      return { D: 0, F: 0, NA: 0 };
+      return { D: 0, F: 0, H: 0 };
     }
 
     const diasMes = obtenerDiasDelMes(mesSeleccionado);
@@ -787,7 +787,7 @@ async function eliminarMetaMensualAgua() {
         acc[d.tipo]++;
         return acc;
       },
-      { D: 0, F: 0, NA: 0 } as Record<"D" | "F" | "NA", number>
+      { D: 0, F: 0, H: 0 } as Record<"D" | "F" | "H", number>
     );
   })();
 
@@ -1001,51 +1001,17 @@ const resumenConsumo = (() => {
 
               {/* HÁBILES */}
               <div
-                className={`flex items-center justify-between px-2 py-1.5 rounded-md ${coloresDias.NA}`}
+                className={`flex items-center justify-between px-2 py-1.5 rounded-md ${coloresDias.H}`}
               >
                 <div className="flex items-center gap-2 font-medium">
                   <span className="w-2.5 h-2.5 rounded-full bg-gray-400" />
-                  Hábiles 
-                </div>
+                  Hábiles  (H)
+                </div> 
                 <span className="text-sm font-semibold">
-                  {resumenDias.NA}
+                  {resumenDias.H}
                 </span>
               </div>
-                 {/* CONSUMO ESTABLE 
-<div
-  className={`
-    flex items-center justify-between px-2 py-1.5 rounded-md
-    ${modoNoche ? "bg-emerald-900 text-emerald-200" : "bg-emerald-100 text-emerald-800"}
-  `}
->
-  <div className="flex items-center gap-2 font-medium">
-    <span className="w-2.5 h-2.5 rounded-full bg-emerald-500" />
-    Consumo estable
-  </div>
 
-  <span className="text-sm font-semibold">
-    {resumenConsumo.estable}
-  </span>
-</div>
-
-
-<div
-  className={`
-    flex items-center justify-between px-2 py-1.5 rounded-md
-    ${modoNoche ? "bg-red-900 text-red-200" : "bg-red-100 text-red-800"}
-  `}
->
-  <div className="flex items-center gap-2 font-medium">
-    <span className="w-2.5 h-2.5 rounded-full bg-red-500" />
-    Consumo crítico
-  </div>
-
-  <span className="text-sm font-semibold">
-    {resumenConsumo.critico}
-  </span>
-</div>
-          
-*/}
 
             </div>
 
@@ -1230,7 +1196,7 @@ const resumenConsumo = (() => {
             if (filtroDia && Number(filtroDia) !== dia) return false;
             if (filtroTipoDia === "domingos" && tipo !== "D") return false;
             if (filtroTipoDia === "festivos" && tipo !== "F") return false;
-            if (filtroTipoDia === "habiles" && tipo !== "NA") return false;
+            if (filtroTipoDia === "habiles" && tipo !== "H") return false;
             return true;
           });
 
