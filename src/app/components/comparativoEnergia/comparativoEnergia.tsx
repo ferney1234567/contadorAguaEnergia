@@ -59,43 +59,58 @@ const nuevosDatos = [...nuevaFila.datos];
 
 const cargarDatos = async () => {
 
-    try {
-      const res = await fetch("/api/comparativoEnergia");
-      const data = await res.json();
-      const mapa: any = {};
-      data.forEach((item: any) => {
-        const key = item.nombre;
-        if (!mapa[key]) {
-          mapa[key] = {
-            id: item.id,
-            nombre: item.nombre,
-            ubicacion: item.ubicacion || "",
-            cuenta: item.cuenta,
-            anio: item.anio,
-            datos: Array.from({ length: 12 }, () => ({
-              kWh: 0,
-              valor: 0,
-              cumple: true
-            }))
-          };
-        }
-        mapa[key].datos[item.mes - 1] = {
-          kWh: item.kw_consumidos ?? 0,
-          valor: item.valor_consumo_energia ?? 0,
-          cumple: item.cumple ?? true
+  try {
+    const res = await fetch("/api/comparativoEnergia");
+    const data = await res.json();
+
+    const mapa: any = {};
+
+    data.forEach((item: any) => {
+
+      // 🔥 CLAVE ÚNICA (NOMBRE + AÑO)
+      const key = `${item.nombre}_${item.anio}`;
+
+      if (!mapa[key]) {
+        mapa[key] = {
+          id: item.id,
+          nombre: item.nombre,
+          ubicacion: item.ubicacion || "",
+          cuenta: item.cuenta || "",
+          anio: item.anio,
+          datos: Array.from({ length: 12 }, () => ({
+            kWh: 0,
+            valor: 0,
+            cumple: true
+          }))
         };
-      });
-      setDatosEnergia(Object.values(mapa));
+      }
 
-    } catch (error) {
-      console.error("Error cargando datos:", error);
-      Swal.fire({
-        icon: "error",
-        title: "Error cargando datos"
-      });
-    }
+      // 🔥 LLENAR MES CORRECTO
+      mapa[key].datos[item.mes - 1] = {
+        kWh: Number(item.kw_consumidos ?? 0),
+        valor: Number(item.valor_consumo_energia ?? 0),
+        cumple: item.cumple ?? true
+      };
 
-  };
+    });
+
+    // 🔥 ORDENAR POR AÑO (OPCIONAL PRO 🔥)
+    const resultado = Object.values(mapa).sort(
+      (a: any, b: any) => b.anio - a.anio
+    );
+
+    setDatosEnergia(resultado);
+
+  } catch (error) {
+    console.error("Error cargando datos:", error);
+
+    Swal.fire({
+      icon: "error",
+      title: "Error cargando datos"
+    });
+  }
+
+};
 
   const agregarFila = () => {
     const nuevaFila = {
@@ -212,32 +227,33 @@ const datosFiltrados = datosEnergia.filter((d) => {
 
   const texto = busqueda.toLowerCase();
 
-  // 🔍 FILTRO SOLO POR NOMBRE Y UBICACIÓN
   const matchBusqueda =
     (d.nombre || "").toLowerCase().includes(texto) ||
     (d.ubicacion || "").toLowerCase().includes(texto);
 
-  // 📅 MES
   const matchMes =
     mes === "" ||
-    (d.datos[Number(mes)]?.kWh ?? 0) > 0;
+    (d.datos?.[Number(mes)]?.M3 ?? 0) > 0;
 
-  // 💧 CONSUMO
   const matchConsumo =
     consumoMin === "" ||
-    d.datos.some((m: any) => (m.kWh ?? 0) >= Number(consumoMin));
+    d.datos.some((m: any) => (m.M3 ?? 0) >= Number(consumoMin));
 
-  // 📆 AÑO
   const matchAnio =
     anio === "" ||
-    d.anio?.toString() === anio;
+    Number(d.anio) === Number(anio);
 
-    const matchSede =
-  sedeSeleccionada === "" ||
-  d.nombre === sedeSeleccionada;
+  const matchSede =
+    sedeSeleccionada === "" ||
+    d.nombre === sedeSeleccionada;
 
-return matchBusqueda && matchMes && matchConsumo && matchAnio && matchSede;
+  // 🔥 IMPORTANTE: si hay año seleccionado, SOLO filtra por año y sede
+  if (anio !== "") {
+    return matchAnio && matchSede;
+  }
 
+  // 🔥 si NO hay año, aplica todo
+  return matchBusqueda && matchMes && matchConsumo && matchSede;
 });
 
   const crearRegistro = async () => {
@@ -606,72 +622,127 @@ idx === (inicio+j)
 ))}
 
 {/* NUEVA FILA */}
-<tr className={`${modoNoche ? "bg-[#1c1c1c]" : "bg-gray-50"}`}>
-<td className={`border p-2`}>
-<input
-value={nuevaFila.nombre}
-placeholder="Nombre sede"
-className={`w-full rounded px-2 py-1 ${modoNoche ? "bg-[#2a2a2a] border-[#444] text-white" : "bg-white border-gray-300"}`}
-onChange={(e)=>editarNuevaFila("nombre",e.target.value)}
-/>
-</td>
+<tr
+  className={`${
+    modoNoche ? "bg-[#202020]" : "bg-yellow-50"
+  }`}
+>
+  <td className="border border-gray-300 p-3">
+    <input
+      value={nuevaFila.nombre}
+      placeholder="Nombre sede"
+      className={`w-full rounded-md px-3 py-2 border ${
+        modoNoche
+          ? "bg-[#2a2a1f] border-gray-600 text-white placeholder-gray-400"
+          : "bg-white border-gray-300 text-gray-700"
+      }`}
+      onChange={(e) => editarNuevaFila("nombre", e.target.value)}
+    />
+  </td>
 
-<td className={`border p-2`}>
-<input
-value={nuevaFila.ubicacion}
-placeholder="Ubicación"
-className={`w-full rounded px-2 py-1 ${modoNoche ? "bg-[#2a2a2a] border-[#444] text-white" : "bg-white border-gray-300"}`}
-onChange={(e)=>editarNuevaFila("ubicacion",e.target.value)}
-/>
-</td>
+  <td className="border border-gray-300 p-3">
+    <input
+      value={nuevaFila.ubicacion}
+      placeholder="Ubicación"
+      className={`w-full rounded-md px-3 py-2 border ${
+        modoNoche
+          ? "bg-[#2a2a1f] border-gray-600 text-white placeholder-gray-400"
+          : "bg-white border-gray-300 text-gray-700"
+      }`}
+      onChange={(e) => editarNuevaFila("ubicacion", e.target.value)}
+    />
+  </td>
 
-<td className={`border p-2 text-center`}>
-<input
-value={nuevaFila.cuenta}
-placeholder="Cuenta"
-className={`w-full rounded px-2 py-1 text-center ${modoNoche ? "bg-[#2a2a2a] border-[#444] text-white" : "bg-white border-gray-300"}`}
-onChange={(e)=>editarNuevaFila("cuenta",e.target.value)}
-onKeyDown={(e)=>{
-if(e.key==="Enter"){
-crearRegistro()
-}
-}}
-/>
-</td>
+  <td className="border border-gray-300 p-3 text-center">
+    <input
+      value={nuevaFila.cuenta}
+      placeholder="Cuenta"
+      className={`w-full rounded-md px-3 py-2 text-center border ${
+        modoNoche
+          ? "bg-[#2a2a1f] border-gray-600 text-white placeholder-gray-400"
+          : "bg-white border-gray-300 text-gray-700"
+      }`}
+      onChange={(e) => editarNuevaFila("cuenta", e.target.value)}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          crearRegistro();
+        }
+      }}
+    />
+  </td>
 </tr>
 
 {/* TOTAL PRINCIPAL */}
 {mostrarTotales && (
-<tr className={`${modoNoche ? "bg-green-900 text-green-200" : "bg-green-100 text-green-800"} font-bold`}>
-<td colSpan={2} className="border p-2">TOTAL SEDE PRINCIPAL</td>
+<tr
+  className={`font-bold ${
+    modoNoche
+      ? "bg-[#202020] text-yellow-200"
+      : "bg-yellow-50 text-yellow-800"
+  }`}
+>
+  <td
+    colSpan={3}
+    className="border border-gray-300 p-3 text-left"
+  >
+    TOTAL SEDE PRINCIPAL
+  </td>
 
-{meses.slice(inicio,fin).map((_,i)=>(
-<td key={i} colSpan={3} className="border text-center">
-{datosEnergia
-.filter(d => d.nombre?.toUpperCase().includes("SEDE PPAL"))
-.reduce((acc:any,d:any)=>
-acc + Number(d.datos?.[inicio+i]?.kWh || 0)
-,0)
-} m³
-</td>
-))}
+  {meses.slice(inicio, fin).map((_, i) => (
+    <td
+      key={i}
+      colSpan={3}
+      className="border border-gray-300 text-center p-3"
+    >
+      {datosEnergia
+        .filter((d) =>
+          d.nombre?.toUpperCase().includes("SEDE PPAL")
+        )
+        .reduce(
+          (acc: any, d: any) =>
+            acc + Number(d.datos?.[inicio + i]?.kWh || 0),
+          0
+        )}{" "}
+      kWh
+    </td>
+  ))}
 </tr>
 )}
 
 {/* TOTAL RECEPTORIAS */}
-<tr className={`${modoNoche ? "bg-green-800 text-green-200" : "bg-green-50 text-green-700"} font-bold`}>
-<td colSpan={2} className="border p-2">TOTAL SOLO RECEPTORIAS</td>
+<tr
+  className={`font-bold ${
+    modoNoche
+      ? "bg-[#202020] text-yellow-100"
+      : "bg-yellow-100 text-yellow-900"
+  }`}
+>
+  <td
+    colSpan={3}
+    className="border border-gray-300 p-3 text-left"
+  >
+    TOTAL SOLO RECEPTORIAS
+  </td>
 
-{meses.slice(inicio,fin).map((_,i)=>(
-<td key={i} colSpan={3} className="border text-center">
-{datosEnergia
-.filter(d => d.nombre?.toUpperCase().includes("RECEPTORIA"))
-.reduce((acc:any,d:any)=>
-acc + Number(d.datos?.[inicio+i]?.kWh || 0)
-,0)
-} m³
-</td>
-))}
+  {meses.slice(inicio, fin).map((_, i) => (
+    <td
+      key={i}
+      colSpan={3}
+      className="border border-gray-300 text-center p-3"
+    >
+      {datosEnergia
+        .filter((d) =>
+          d.nombre?.toUpperCase().includes("RECEPTORIA")
+        )
+        .reduce(
+          (acc: any, d: any) =>
+            acc + Number(d.datos?.[inicio + i]?.kWh || 0),
+          0
+        )}{" "}
+      kWh
+    </td>
+  ))}
+
 </tr>
 
 </tbody>
@@ -715,7 +786,7 @@ ${card} shadow-lg hover:scale-[1.02] transition`}>
 
 <h2 className="text-3xl font-bold text-yellow-500 mt-2">
 {datosEnergia.reduce((acc, d) => acc +
-d.datos.reduce((a:any,b:any)=>a+b.kWh,0),0)} m³
+d.datos.reduce((a:any,b:any)=>a+b.kWh,0),0)} KwH
 </h2>
 </div>
 
@@ -787,7 +858,7 @@ ${card} shadow-lg hover:scale-[1.02] transition`}>
 
 <div>
 <p className="text-sm opacity-70 flex items-center gap-2">
-⚡ Total agua
+⚡ Total Energía
 </p>
 
 <h2 className="text-3xl font-bold text-yellow-600 mt-2">
@@ -942,7 +1013,7 @@ ${modoNoche
 type="number"
 value={consumoMin}
 onChange={(e)=>setConsumoMin(e.target.value)}
-placeholder="Consumo mínimo (m³)"
+placeholder="Consumo mínimo (KwH)"
 className={`w-full p-3 pl-10 rounded-xl border text-sm transition shadow-sm
 ${modoNoche
 ? "bg-[#1f1f1f] border-[#333] text-white focus:ring-2 focus:ring-yellow-500"

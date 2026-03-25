@@ -1,24 +1,71 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-export const generarReciboPDF = (datosEnergia: any[]) => {
+// ✅ FUNCIÓN PARA CARGAR IMAGEN DESDE PUBLIC
+const cargarImagen = (url: string): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous";
+
+    img.src = url;
+
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+
+      const ctx = canvas.getContext("2d");
+      ctx?.drawImage(img, 0, 0);
+
+      const base64 = canvas.toDataURL("image/png");
+      resolve(base64);
+    };
+
+    img.onerror = reject;
+  });
+};
+
+// ✅ FUNCIÓN PRINCIPAL
+export const generarReciboPDF = async (datosEnergia: any[]) => {
 
   const doc = new jsPDF();
 
-  // 🎨 HEADER
-  doc.setFillColor(0, 150, 255);
-  doc.rect(0, 0, 210, 30, "F");
+  // =========================
+  // 🎨 HEADER ROJO
+  // =========================
+  doc.setFillColor(180, 0, 0);
+  doc.rect(0, 0, 210, 35, "F");
 
+  // =========================
+  // 🖼️ LOGO DESDE PUBLIC
+  // =========================
+  try {
+    const logoBase64 = await cargarImagen("/img/envia3.png");
+    doc.addImage(logoBase64, "PNG", 15, 5, 25, 25);
+  } catch (error) {
+    console.log("Error cargando logo");
+  }
+
+  // =========================
+  // 🧾 TITULOS
+  // =========================
   doc.setTextColor(255, 255, 255);
-  doc.setFontSize(18);
-  doc.text("RECIBO DE AGUA", 105, 18, { align: "center" });
+  doc.setFontSize(16);
+  doc.text("ENVÍA S.A.S", 105, 15, { align: "center" });
 
+  doc.setFontSize(11);
+  doc.text("RECIBO DE AGUA", 105, 25, { align: "center" });
+
+  // =========================
   // 📅 FECHA
-  doc.setTextColor(0, 0, 0);
+  // =========================
+  doc.setTextColor(80);
   doc.setFontSize(10);
-  doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 14, 40);
+  doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 14, 45);
 
+  // =========================
   // 📊 CALCULOS
+  // =========================
   let totalM3 = 0;
   let totalValor = 0;
 
@@ -35,37 +82,68 @@ export const generarReciboPDF = (datosEnergia: any[]) => {
     filas.push([
       d.nombre,
       d.ubicacion,
-      consumo.toFixed(2),
+      consumo.toFixed(2) + " m³",
       `$ ${valor.toLocaleString()}`
     ]);
   });
 
+  // =========================
   // 📋 TABLA
+  // =========================
   autoTable(doc, {
-    startY: 50,
-    head: [["Sede", "Ubicación", "Consumo (m³)", "Valor"]],
+    startY: 55,
+    head: [["Sede", "Ubicación", "Consumo", "Valor"]],
     body: filas,
     styles: {
-      fontSize: 9
+      fontSize: 9,
+      cellPadding: 3
     },
     headStyles: {
-      fillColor: [0, 150, 255],
+      fillColor: [200, 0, 0],
       textColor: 255
+    },
+    alternateRowStyles: {
+      fillColor: [245, 245, 245]
     }
   });
 
   const finalY = (doc as any).lastAutoTable.finalY || 100;
 
-  // 💰 TOTALES
-  doc.setFontSize(12);
-  doc.text(`Consumo total: ${totalM3.toFixed(2)} m³`, 14, finalY + 10);
-  doc.text(`Total a pagar: $ ${totalValor.toLocaleString()}`, 14, finalY + 20);
+  // =========================
+  // ⚡ RESUMEN
+  // =========================
+  doc.setFontSize(11);
+  doc.setTextColor(0);
+  doc.text(`Consumo total: ${totalM3.toFixed(2)} m³`, 14, finalY + 15);
 
-  // 💧 FOOTER
+  // =========================
+  // 💰 CAJA TOTAL
+  // =========================
+  doc.setFillColor(200, 0, 0);
+  doc.roundedRect(130, finalY + 5, 60, 25, 5, 5, "F");
+
+  doc.setTextColor(255, 255, 255);
   doc.setFontSize(10);
-  doc.setTextColor(100);
-  doc.text("Gracias por su pago 💧", 105, finalY + 35, { align: "center" });
+  doc.text("TOTAL A PAGAR", 160, finalY + 15, { align: "center" });
 
+  doc.setFontSize(14);
+  doc.text(`$ ${totalValor.toLocaleString()}`, 160, finalY + 25, { align: "center" });
+
+  // =========================
+  // 📉 LINEA
+  // =========================
+  doc.setDrawColor(200);
+  doc.line(14, finalY + 40, 196, finalY + 40);
+
+  // =========================
+  // 🧾 FOOTER
+  // =========================
+  doc.setFontSize(9);
+  doc.setTextColor(120);
+  doc.text("Gracias por confiar en ENVÍA 💧", 105, finalY + 50, { align: "center" });
+
+  // =========================
   // 📄 DESCARGA
-  doc.save("recibo_agua.pdf");
+  // =========================
+  doc.save("recibo_agua_envia.pdf");
 };

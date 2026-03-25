@@ -1,4 +1,29 @@
 import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+
+// ✅ FUNCIÓN PARA CARGAR IMAGEN DESDE PUBLIC
+const cargarImagen = (url: string): Promise<string> => {
+  return new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = "anonymous"; // 🔥 importante
+
+    img.src = url;
+
+    img.onload = () => {
+      const canvas = document.createElement("canvas");
+      canvas.width = img.width;
+      canvas.height = img.height;
+
+      const ctx = canvas.getContext("2d");
+      ctx?.drawImage(img, 0, 0);
+
+      const base64 = canvas.toDataURL("image/png");
+      resolve(base64);
+    };
+
+    img.onerror = reject;
+  });
+};
 
 // ✅ TIPOS
 type Medicion = {
@@ -7,79 +32,112 @@ type Medicion = {
 };
 
 type Sede = {
+  nombre: string;
+  ubicacion: string;
   datos: Medicion[];
 };
 
-// ✅ FUNCIÓN
-export const generarReciboEnergia = (datosEnergia: Sede[]) => {
+// ✅ FUNCIÓN PRINCIPAL
+export const generarReciboEnergia = async (datosEnergia: Sede[]) => {
 
   const doc = new jsPDF();
 
+  // =========================
   // 🎨 HEADER
-  doc.setFillColor(10, 25, 70);
+  // =========================
+  doc.setFillColor(180, 0, 0);
   doc.rect(0, 0, 210, 35, "F");
 
+  // =========================
+  // 🖼️ LOGO DESDE PUBLIC
+  // =========================
+  try {
+    const logoBase64 = await cargarImagen("/img/envia3.png");
+
+    doc.addImage(logoBase64, "PNG", 15, 5, 25, 25);
+  } catch (error) {
+    console.log("Error cargando logo");
+  }
+
+  // =========================
+  // 🧾 TITULOS
+  // =========================
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(16);
-  doc.text("RECIBO DE ENERGÍA", 105, 18, { align: "center" });
+  doc.text("ENVÍA S.A.S", 105, 15, { align: "center" });
 
-  doc.setFontSize(10);
-  doc.text("Envía S.A.S", 105, 26, { align: "center" });
+  doc.setFontSize(11);
+  doc.text("RECIBO DE ENERGÍA", 105, 25, { align: "center" });
 
+  // =========================
   // 📅 FECHA
-  doc.setTextColor(0, 0, 0);
+  // =========================
+  doc.setTextColor(80);
   doc.setFontSize(10);
   doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 14, 45);
 
+  // =========================
   // 📊 CALCULOS
+  // =========================
   let totalConsumo = 0;
   let totalValor = 0;
 
+  const filas: any[] = [];
+
   datosEnergia.forEach((d) => {
-    totalConsumo += d.datos.reduce((acc, m) => acc + (m.consumo || 0), 0);
-    totalValor += d.datos.reduce((acc, m) => acc + (m.valor || 0), 0);
+    const consumo = d.datos.reduce((acc, m) => acc + (m.consumo || 0), 0);
+    const valor = d.datos.reduce((acc, m) => acc + (m.valor || 0), 0);
+
+    totalConsumo += consumo;
+    totalValor += valor;
+
+    filas.push([
+      d.nombre,
+      d.ubicacion,
+      consumo.toFixed(2) + " kWh",
+      `$ ${valor.toLocaleString()}`
+    ]);
   });
 
-  // 🧾 CONTENEDOR
-  doc.setFillColor(245, 245, 245);
-  doc.roundedRect(14, 60, 182, 60, 5, 5, "F");
+  // =========================
+  // 📋 TABLA
+  // =========================
+  autoTable(doc, {
+    startY: 55,
+    head: [["Sede", "Ubicación", "Consumo", "Valor"]],
+    body: filas,
+    headStyles: {
+      fillColor: [200, 0, 0],
+      textColor: 255
+    },
+    alternateRowStyles: {
+      fillColor: [245, 245, 245]
+    }
+  });
 
-  // 🔹 TITULO
-  doc.setFontSize(12);
-  doc.setTextColor(100);
-  doc.text("RESUMEN DEL CONSUMO", 20, 75);
+  const finalY = (doc as any).lastAutoTable.finalY || 100;
 
-  // ⚡ CONSUMO
-  doc.setFontSize(20);
-  doc.setTextColor(0, 0, 0);
-  doc.text(`${totalConsumo.toFixed(2)} kWh`, 20, 90);
+  // =========================
+  // ⚡ RESUMEN
+  // =========================
+  doc.setFontSize(11);
+  doc.text(`Consumo total: ${totalConsumo.toFixed(2)} kWh`, 14, finalY + 15);
 
+  // =========================
   // 💰 TOTAL
-  doc.setFillColor(10, 25, 70);
-  doc.roundedRect(120, 75, 70, 30, 5, 5, "F");
+  // =========================
+  doc.setFillColor(200, 0, 0);
+  doc.roundedRect(130, finalY + 5, 60, 25, 5, 5, "F");
 
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(10);
-  doc.text("TOTAL A PAGAR", 155, 85, { align: "center" });
+  doc.text("TOTAL A PAGAR", 160, finalY + 15, { align: "center" });
 
-  doc.setFontSize(16);
-  doc.text(`$ ${totalValor.toLocaleString()}`, 155, 95, { align: "center" });
+  doc.setFontSize(14);
+  doc.text(`$ ${totalValor.toLocaleString()}`, 160, finalY + 25, { align: "center" });
 
-  // 📌 INFO EXTRA
-  doc.setTextColor(80);
-  doc.setFontSize(10);
-  doc.text("Periodo facturado:", 20, 110);
-  doc.text("Método de pago: Transferencia", 20, 118);
-
-  // 📉 LINEA
-  doc.setDrawColor(200);
-  doc.line(14, 130, 196, 130);
-
-  // 🧾 FOOTER
-  doc.setFontSize(9);
-  doc.setTextColor(120);
-  doc.text("Gracias por su pago ⚡", 105, 140, { align: "center" });
-
-  // 📄 DESCARGA
-  doc.save("recibo_energia_moderno.pdf");
+  // =========================
+  // 📄 DESCARGAR
+  // =========================
+  doc.save("recibo_energia_envia.pdf");
 };

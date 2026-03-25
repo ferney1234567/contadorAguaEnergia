@@ -1,7 +1,7 @@
-// src/app/layout.tsx
 import type { Metadata } from 'next';
 import { Inter } from 'next/font/google';
 import './globals.css';
+import BotonSubir from '../app/components/BotonSubir';
 
 const inter = Inter({ subsets: ['latin'] });
 
@@ -12,9 +12,10 @@ export const metadata: Metadata = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="es" suppressHydrationWarning>
+    <html lang="es">
       <body className={inter.className}>
-            {children}
+        {children}
+        <BotonSubir /> {/* 👈 AQUÍ */}
       </body>
     </html>
   );
