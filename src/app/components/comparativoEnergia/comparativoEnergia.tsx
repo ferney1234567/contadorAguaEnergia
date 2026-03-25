@@ -60,7 +60,7 @@ const nuevosDatos = [...nuevaFila.datos];
 const cargarDatos = async () => {
 
     try {
-      const res = await fetch(`/api/comparativoEnergia/`);
+      const res = await fetch("/api/comparativoEnergia");
       const data = await res.json();
       const mapa: any = {};
       data.forEach((item: any) => {
@@ -311,7 +311,7 @@ const guardarRegistro = async (fila: any, mesIndex: number, filaIndex?: number) 
       cumple: mesData.cumple,
     };
 
-    const res = await fetch(`/api/comparativoEnergia/`, {
+    const res = await fetch("/api/comparativoEnergia", {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
