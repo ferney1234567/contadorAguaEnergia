@@ -202,10 +202,10 @@ const editarCelda = (filaIndex: number, mesIndex: number, campo: string, valor: 
 
           return {
             ...celda,
-            [campo]:
-              campo === "cumple"
-                ? (valor === true || valor === "true")
-                : Number(valor)
+           [campo]:
+  campo === "cumple"
+    ? (valor === true || valor === "true")
+    : valor === "" ? null : Number(valor)
           };
 
         })
@@ -317,43 +317,41 @@ const guardarRegistro = async (fila: any, mesIndex: number, filaIndex?: number) 
     if (!mesData) return;
 
     const payload = {
+      id: fila.id || null, // 🔥 IMPORTANTE
       nombre: fila.nombre,
       ubicacion: fila.ubicacion,
       cuenta: fila.cuenta,
       anio: Number(anio),
       mes: mesIndex + 1,
-      kw_consumidos: Number(mesData.kWh ?? 0),
-      valor_consumo_energia: Number(mesData.valor ?? 0),
+      kw_consumidos: mesData.kWh === null ? null : Number(mesData.kWh),
+      valor_consumo_energia: mesData.valor === null ? null : Number(mesData.valor),
       cumple: mesData.cumple,
     };
 
-    const res = await fetch("/api/comparativoEnergia", {
-      method: "POST",
+    const res = await fetch("http://localhost:8000/comparativoEnergia", {
+      method: payload.id ? "PUT" : "POST", // 🔥 CLAVE
       headers: {
         "Content-Type": "application/json"
       },
       body: JSON.stringify(payload)
     });
 
-    if (!res.ok) throw new Error("Error guardando");
-
-    // ✅ ACTUALIZAR ESTADO LOCAL (CLAVE)
-    if (filaIndex !== undefined) {
-      setDatosEnergia(prev => {
-        const copia = [...prev];
-        copia[filaIndex] = { ...fila };
-        return copia;
-      });
+    if (!res.ok) {
+      const error = await res.text();
+      console.error("ERROR BACKEND:", error);
+      throw new Error(error);
     }
 
     Swal.fire({
       toast: true,
       position: "top-end",
       icon: "success",
-      title: "Guardado correctamente",
+      title: payload.id ? "Actualizado" : "Guardado",
       showConfirmButton: false,
       timer: 1000
     });
+
+    await cargarDatos();
 
   } catch (error) {
     console.error(error);
@@ -361,6 +359,47 @@ const guardarRegistro = async (fila: any, mesIndex: number, filaIndex?: number) 
     Swal.fire({
       icon: "error",
       title: "Error guardando datos"
+    });
+  }
+};
+
+const eliminarRegistro = async (fila: any) => {
+  try {
+
+    if (!fila.id) {
+      Swal.fire({
+        icon: "warning",
+        title: "No se puede eliminar, no tiene ID"
+      });
+      return;
+    }
+
+    const res = await fetch(`http://localhost:8000/comparativoEnergia/${fila.id}`, {
+      method: "DELETE"
+    });
+
+    if (!res.ok) {
+      const error = await res.text();
+      throw new Error(error);
+    }
+
+    Swal.fire({
+      toast: true,
+      position: "top-end",
+      icon: "success",
+      title: "Eliminado",
+      showConfirmButton: false,
+      timer: 1000
+    });
+
+    await cargarDatos();
+
+  } catch (error) {
+    console.error(error);
+
+    Swal.fire({
+      icon: "error",
+      title: "Error eliminando"
     });
   }
 };
@@ -375,7 +414,7 @@ const renderTabla = (inicio: number, fin: number) => (
 <div className={`overflow-x-auto rounded-xl shadow-sm border 
 ${modoNoche ? "border-[#333]" : "border-gray-300"}`}>
 
-<table className={`w-full text-sm border-collapse
+<table className={`w-full text-xs border-collapse table-auto
 ${modoNoche ? "text-white" : "text-gray-800"}`}>
 
 <thead>
@@ -473,14 +512,20 @@ ${modoNoche
 : "bg-gray-50 hover:bg-yellow-50"}`}>
 
 {/* NOMBRE */}
-<td className={`border p-2 ${modoNoche ? "border-[#333]" : "border-gray-300"}`}>
+<td className={`"border px-2 py-1 min-w-[180px]"${modoNoche ? "border-[#333]" : "border-gray-300"}`}>
 <input
 value={fila.nombre ?? ""}
 ref={(el)=>{
 if(!inputsRef.current[i]) inputsRef.current[i]=[];
 inputsRef.current[i][0]=el;
 }}
-onKeyDown={(e)=>manejarTeclas(e,i,0)}
+onKeyDown={(e)=>{
+manejarTeclas(e,i,0);
+
+if(e.key==="Enter"){
+guardarRegistro(fila,0,i); // 🔥 guarda cambios
+}
+}}
 className={`w-full outline-none font-semibold ${modoNoche ? "bg-transparent text-white" : "bg-transparent text-gray-800"}`}
 onChange={(e)=>editarFila(i,"nombre",e.target.value)}
 />
@@ -490,11 +535,17 @@ onChange={(e)=>editarFila(i,"nombre",e.target.value)}
 <td className={`border p-2 ${modoNoche ? "border-[#333]" : "border-gray-300"}`}>
 <input
 value={fila.ubicacion ?? ""}
-ref={(el) => {
-  if (!inputsRef.current[i]) inputsRef.current[i] = [];
-  inputsRef.current[i][1] = el;
+ref={(el)=>{
+if(!inputsRef.current[i]) inputsRef.current[i]=[];
+inputsRef.current[i][1]=el;
 }}
-onKeyDown={(e)=>manejarTeclas(e,i,1)}
+onKeyDown={(e)=>{
+manejarTeclas(e,i,1);
+
+if(e.key==="Enter"){
+guardarRegistro(fila,0,i);
+}
+}}
 className={`w-full outline-none ${modoNoche ? "bg-transparent text-white" : "bg-transparent text-gray-800"}`}
 onChange={(e)=>editarFila(i,"ubicacion",e.target.value)}
 />
@@ -504,13 +555,13 @@ onChange={(e)=>editarFila(i,"ubicacion",e.target.value)}
 <td className={`border p-2 text-center ${modoNoche ? "border-[#333]" : "border-gray-300"}`}>
 <input
 value={fila.cuenta ?? ""}
-ref={(el) => {
-  if (el) {
-    inputsRef.current[i][2] = el;
-  }
+ref={(el)=>{
+if(!inputsRef.current[i]) inputsRef.current[i]=[];
+inputsRef.current[i][2]=el;
 }}
 onKeyDown={(e)=>{
 manejarTeclas(e,i,2);
+
 if(e.key==="Enter"){
 guardarRegistro(fila,0,i);
 }
@@ -534,15 +585,20 @@ return (
 value={d.kWh ?? ""}
 type="text"
 inputMode="decimal"
-ref={(el) => {
-  if (el) {
-    inputsRef.current[i][colBase] = el;
-  }
+ref={(el)=>{
+if(!inputsRef.current[i]) inputsRef.current[i]=[];
+inputsRef.current[i][colBase]=el;
 }}
 onKeyDown={(e)=>{
 manejarTeclas(e,i,colBase);
+
 if(e.key==="Enter"){
 guardarRegistro(datosEnergia[i],inicio+j,i);
+}
+
+// 🔥 borrar con teclado
+if(e.key==="Delete" || e.key==="Backspace"){
+editarCelda(i, inicio+j, "kWh", "");
 }
 }}
 className={`w-20 text-center rounded-md border outline-none
@@ -560,15 +616,20 @@ editarCelda(i, inicio+j, "kWh", valor);
 value={d.valor ?? ""}
 type="text"
 inputMode="numeric"
-ref={(el) => {
-  if (el) {
-    inputsRef.current[i][colBase+1] = el;
-  }
+ref={(el)=>{
+if(!inputsRef.current[i]) inputsRef.current[i]=[];
+inputsRef.current[i][colBase+1]=el;
 }}
 onKeyDown={(e)=>{
 manejarTeclas(e,i,colBase+1);
+
 if(e.key==="Enter"){
 guardarRegistro(datosEnergia[i],inicio+j,i);
+}
+
+// 🔥 borrar con teclado
+if(e.key==="Delete" || e.key==="Backspace"){
+editarCelda(i, inicio+j, "valor", "");
 }
 }}
 className={`w-24 text-center rounded-md border outline-none
@@ -584,18 +645,21 @@ editarCelda(i, inicio+j, "valor", valor);
 <td className={`border p-1 text-center ${modoNoche ? "border-[#333]" : "border-gray-300"}`}>
 <select
 value={d.cumple ? "true":"false"}
-ref={(el) => {
-  if (el) inputsRef.current[i][colBase+2] = el;
+ref={(el)=>{
+if(!inputsRef.current[i]) inputsRef.current[i]=[];
+inputsRef.current[i][colBase+2]=el;
 }}
 onKeyDown={(e)=>manejarTeclas(e,i,colBase+2)}
 className={`text-lg font-bold cursor-pointer
 ${d.cumple ? "text-green-500":"text-red-500"}
 ${modoNoche ? "bg-[#1f1f1f]" : "bg-white"}`}
 onChange={(e)=>{
+
 const nuevoValor = e.target.value === "true";
 
 editarCelda(i, inicio+j, "cumple", nuevoValor);
 
+// 🔥 guarda automático
 guardarRegistro({
 ...datosEnergia[i],
 datos: datosEnergia[i].datos.map((item:any, idx:number) =>
@@ -604,8 +668,10 @@ idx === (inicio+j)
 : item
 )
 }, inicio+j, i);
+
 }}
 >
+
 <option value="true">✔</option>
 <option value="false">✖</option>
 </select>

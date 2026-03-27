@@ -202,10 +202,10 @@ const editarCelda = (filaIndex: number, mesIndex: number, campo: string, valor: 
 
           return {
             ...celda,
-            [campo]:
-              campo === "cumple"
-                ? (valor === true || valor === "true")
-                : Number(valor)
+           [campo]:
+  campo === "cumple"
+    ? (valor === true || valor === "true")
+    : valor === "" ? null : Number(valor)
           };
 
         })
@@ -312,23 +312,23 @@ const datosFiltrados = datosEnergia.filter((d) => {
   };
 const guardarRegistro = async (fila: any, mesIndex: number, filaIndex?: number) => {
   try {
-
     const mesData = fila.datos?.[mesIndex];
     if (!mesData) return;
 
-    const payload = {
-      nombre: fila.nombre,
-      ubicacion: fila.ubicacion,
-      cuenta: fila.cuenta,
-      anio: Number(anio),
-      mes: mesIndex + 1,
-      m3_consumidos: Number(mesData.M3 ?? 0),
-      valor_consumo_agua: Number(mesData.valor ?? 0),
-      cumple: mesData.cumple,
-    };
+   const payload = {
+  id: fila.id, // 🔥 SIEMPRE USAR ID
+  nombre: fila.nombre,
+  ubicacion: fila.ubicacion,
+  cuenta: fila.cuenta,
+  anio: Number(anio),
+  mes: mesIndex + 1,
+  m3_consumidos: mesData.M3 === null ? null : Number(mesData.M3),
+  valor_consumo_agua: mesData.valor === null ? null : Number(mesData.valor),
+  cumple: mesData.cumple,
+};
 
-    const res = await fetch(`/api/comparativoAgua`, {
-      method: "POST",
+    const res = await fetch(`http://localhost:8000/comparativoAgua`, {
+      method: payload.id ? "PUT" : "POST", // 🔥 CLAVE
       headers: {
         "Content-Type": "application/json"
       },
@@ -337,23 +337,16 @@ const guardarRegistro = async (fila: any, mesIndex: number, filaIndex?: number) 
 
     if (!res.ok) throw new Error("Error guardando");
 
-    // ✅ ACTUALIZAR ESTADO LOCAL (CLAVE)
-    if (filaIndex !== undefined) {
-      setDatosEnergia(prev => {
-        const copia = [...prev];
-        copia[filaIndex] = { ...fila };
-        return copia;
-      });
-    }
-
     Swal.fire({
       toast: true,
       position: "top-end",
       icon: "success",
-      title: "Guardado correctamente",
+      title: payload.id ? "Actualizado" : "Guardado",
       showConfirmButton: false,
       timer: 1000
     });
+
+    await cargarDatos(); // 🔥 refresca datos reales
 
   } catch (error) {
     console.error(error);
@@ -361,6 +354,33 @@ const guardarRegistro = async (fila: any, mesIndex: number, filaIndex?: number) 
     Swal.fire({
       icon: "error",
       title: "Error guardando datos"
+    });
+  }
+};
+
+const eliminarRegistro = async (fila: any, mesIndex: number) => {
+  try {
+    const res = await fetch(`http://localhost:8000/comparativoAgua/${fila.id}`, {
+      method: "DELETE"
+    });
+
+    if (!res.ok) throw new Error("Error eliminando");
+
+    Swal.fire({
+      toast: true,
+      position: "top-end",
+      icon: "success",
+      title: "Dato eliminado",
+      showConfirmButton: false,
+      timer: 1000
+    });
+
+    await cargarDatos();
+
+  } catch (error) {
+    Swal.fire({
+      icon: "error",
+      title: "Error eliminando"
     });
   }
 };
@@ -375,7 +395,7 @@ const renderTabla = (inicio: number, fin: number) => (
 <div className={`overflow-x-auto rounded-xl shadow-sm border 
 ${modoNoche ? "border-[#333]" : "border-gray-300"}`}>
 
-<table className={`w-full text-sm border-collapse
+<table className={`w-full text-xs border-collapse table-auto
 ${modoNoche ? "text-white" : "text-gray-800"}`}>
 
 <thead>
@@ -472,15 +492,23 @@ ${modoNoche
 ? "bg-white hover:bg-blue-50"
 : "bg-gray-50 hover:bg-blue-50"}`}>
 
+
+
 {/* NOMBRE */}
-<td className={`border p-2 ${modoNoche ? "border-[#333]" : "border-gray-300"}`}>
+<td className={`"border px-2 py-1 min-w-[180px]"${modoNoche ? "border-[#333]" : "border-gray-300"}`}>
 <input
 value={fila.nombre ?? ""}
 ref={(el)=>{
 if(!inputsRef.current[i]) inputsRef.current[i]=[];
 inputsRef.current[i][0]=el;
 }}
-onKeyDown={(e)=>manejarTeclas(e,i,0)}
+onKeyDown={(e)=>{
+manejarTeclas(e,i,0);
+
+if(e.key==="Enter"){
+guardarRegistro(fila,0,i);
+}
+}}
 className={`w-full outline-none font-semibold ${modoNoche ? "bg-transparent text-white" : "bg-transparent text-gray-800"}`}
 onChange={(e)=>editarFila(i,"nombre",e.target.value)}
 />
@@ -490,11 +518,17 @@ onChange={(e)=>editarFila(i,"nombre",e.target.value)}
 <td className={`border p-2 ${modoNoche ? "border-[#333]" : "border-gray-300"}`}>
 <input
 value={fila.ubicacion ?? ""}
-ref={(el) => {
-  if (!inputsRef.current[i]) inputsRef.current[i] = [];
-  inputsRef.current[i][1] = el;
+ref={(el)=>{
+if(!inputsRef.current[i]) inputsRef.current[i]=[];
+inputsRef.current[i][1]=el;
 }}
-onKeyDown={(e)=>manejarTeclas(e,i,1)}
+onKeyDown={(e)=>{
+manejarTeclas(e,i,1);
+
+if(e.key==="Enter"){
+guardarRegistro(fila,0,i);
+}
+}}
 className={`w-full outline-none ${modoNoche ? "bg-transparent text-white" : "bg-transparent text-gray-800"}`}
 onChange={(e)=>editarFila(i,"ubicacion",e.target.value)}
 />
@@ -504,13 +538,13 @@ onChange={(e)=>editarFila(i,"ubicacion",e.target.value)}
 <td className={`border p-2 text-center ${modoNoche ? "border-[#333]" : "border-gray-300"}`}>
 <input
 value={fila.cuenta ?? ""}
-ref={(el) => {
-  if (el) {
-    inputsRef.current[i][2] = el;
-  }
+ref={(el)=>{
+if(!inputsRef.current[i]) inputsRef.current[i]=[];
+inputsRef.current[i][2]=el;
 }}
 onKeyDown={(e)=>{
 manejarTeclas(e,i,2);
+
 if(e.key==="Enter"){
 guardarRegistro(fila,0,i);
 }
@@ -530,19 +564,26 @@ return (
 
 {/* M3 */}
 <td className={`border p-1 text-center ${modoNoche ? "border-[#333]" : "border-gray-300"}`}>
+<div className="flex items-center justify-center gap-1">
+
 <input
 value={d.M3 ?? ""}
 type="text"
 inputMode="decimal"
-ref={(el) => {
-  if (el) {
-    inputsRef.current[i][colBase] = el;
-  }
+ref={(el)=>{
+if(!inputsRef.current[i]) inputsRef.current[i]=[];
+inputsRef.current[i][colBase]=el;
 }}
 onKeyDown={(e)=>{
 manejarTeclas(e,i,colBase);
+
 if(e.key==="Enter"){
 guardarRegistro(datosEnergia[i],inicio+j,i);
+}
+
+// 🔥 borrar con teclado
+if(e.key==="Delete" || e.key==="Backspace"){
+editarCelda(i, inicio+j, "M3", "");
 }
 }}
 className={`w-20 text-center rounded-md border outline-none
@@ -552,6 +593,10 @@ const valor = e.target.value.replace(/[^0-9.]/g, "");
 editarCelda(i, inicio+j, "M3", valor);
 }}
 />
+
+
+
+</div>
 </td>
 
 {/* VALOR */}
@@ -560,15 +605,20 @@ editarCelda(i, inicio+j, "M3", valor);
 value={d.valor ?? ""}
 type="text"
 inputMode="numeric"
-ref={(el) => {
-  if (el) {
-    inputsRef.current[i][colBase+1] = el;
-  }
+ref={(el)=>{
+if(!inputsRef.current[i]) inputsRef.current[i]=[];
+inputsRef.current[i][colBase+1]=el;
 }}
 onKeyDown={(e)=>{
 manejarTeclas(e,i,colBase+1);
+
 if(e.key==="Enter"){
 guardarRegistro(datosEnergia[i],inicio+j,i);
+}
+
+// 🔥 borrar con teclado
+if(e.key==="Delete" || e.key==="Backspace"){
+editarCelda(i, inicio+j, "valor", "");
 }
 }}
 className={`w-24 text-center rounded-md border outline-none
@@ -584,10 +634,9 @@ editarCelda(i, inicio+j, "valor", valor);
 <td className={`border p-1 text-center ${modoNoche ? "border-[#333]" : "border-gray-300"}`}>
 <select
 value={d.cumple ? "true":"false"}
-ref={(el) => {
-  if (el) {
-    inputsRef.current[i][colBase+2] = el;
-  }
+ref={(el)=>{
+if(!inputsRef.current[i]) inputsRef.current[i]=[];
+inputsRef.current[i][colBase+2]=el;
 }}
 onKeyDown={(e)=>manejarTeclas(e,i,colBase+2)}
 className={`text-lg font-bold cursor-pointer
@@ -598,6 +647,7 @@ const nuevoValor = e.target.value === "true";
 
 editarCelda(i, inicio+j, "cumple", nuevoValor);
 
+// 🔥 guardar inmediato
 guardarRegistro({
 ...datosEnergia[i],
 datos: datosEnergia[i].datos.map((item:any, idx:number) =>
