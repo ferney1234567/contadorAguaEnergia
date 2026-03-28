@@ -9,7 +9,8 @@ import {
   Sun,
   Moon,
   Menu,
-  Plug
+  Plug,
+  Recycle
 } from "lucide-react";
 
 import Image from "next/image";
@@ -21,6 +22,7 @@ import ConsumoEnergia from "./components/consumoEnergia/consumoEnergia";
 import Lecturas from "./components/lecturas/lecturas";
 import ComparativoAgua from "./components/comparativoAgua/comparativoAgua";
 import ComparativoEnergia from "./components/comparativoEnergia/comparativoEnergia";
+import Inspecciones from "./components/inspecciones/inspecciones";
 
 export default function MenuPrincipal() {
 
@@ -127,8 +129,8 @@ export default function MenuPrincipal() {
 
     { id: "lecturas", nombre: "Lecturas", icono: <BookOpen size={28} /> },
 
+    { id: "inspecciones", nombre: "Inspecciones ", icono: <Recycle size={28} /> },
   ];
-
   /* ================= TITULOS ================= */
 
   const obtenerTitulo = () => {
@@ -165,6 +167,12 @@ export default function MenuPrincipal() {
       return {
         titulo: "Registrar lecturas",
         icono: <BookOpen size={28} />,
+      };
+    }
+     if (vistaActual === "inspecciones") {
+      return {
+        titulo: "Registrar Inspecciones",
+        icono: <Recycle size={28} />,
       };
     }
 
@@ -308,6 +316,8 @@ export default function MenuPrincipal() {
           {vistaActual === "comparativoenergia" && <ComparativoEnergia modoNoche={modoNoche} />}
 
           {vistaActual === "lecturas" && <Lecturas modoNoche={modoNoche} />}
+
+           {vistaActual === "inspecciones" && <Inspecciones modoNoche={modoNoche} />}
 
                     <footer
   className={`
