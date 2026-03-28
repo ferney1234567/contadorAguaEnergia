@@ -9,7 +9,9 @@ type RegistroObservaciones = {[fila: number]: string;};
 interface Props { modoNoche?: boolean;dataBackend: any[];}
 
 export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial }: Props){
-  const [dataBackend, setdataBackend] = useState<any[]>(dataInicial || []);
+  const [dataBackend, setdataBackend] = useState<any[]>(
+  Array.isArray(dataInicial) ? dataInicial : []
+);
   const campos = [
     { key: 1, nombre: "Reciclables", img: "/img/reciclable.png" },
     { key: 2, nombre: "Ordinarios", img: "/img/ordinarios.png" },
@@ -140,6 +142,8 @@ useEffect(() => {
       }
       const [areasRes, inspeccionesRes] = await Promise.all([fetch("/api/area"),fetch("/api/inspecciones-residuos")]);
       const areas = await areasRes.json();
+console.log("AREAS:", areas); // 🔍 DEBUG
+setdataBackend(Array.isArray(areas) ? areas : []);
       const inspeccionesData = await inspeccionesRes.json();
       setdataBackend(areas);
       setInspecciones(inspeccionesData);
@@ -299,11 +303,14 @@ const editarContenedor = (index: number) => {
   return ["Todos", ...aniosOrdenados];
 }, [inspecciones]);
 
-  const mesesDisponibles = useMemo(() => {
-    const setMeses = new Set<string>();
-    dataBackend.forEach((fila) => setMeses.add(obtenerMes(fila)));
-    return ["Todos", ...Array.from(setMeses)];
-  }, [dataBackend]);
+ const mesesDisponibles = useMemo(() => {
+  if (!Array.isArray(dataBackend)) return ["Todos"];
+
+  const setMeses = new Set<string>();
+  dataBackend.forEach((fila) => setMeses.add(obtenerMes(fila)));
+
+  return ["Todos", ...Array.from(setMeses)];
+}, [dataBackend]);
 
   const dataBackendFiltrada = useMemo(() => {
   return dataBackend.filter((fila) => {
@@ -498,19 +505,69 @@ const hayDatosEnMes = inspeccionesFiltradas.length > 0;
       ? "bg-[#222] border border-[#3a3a3a] text-white placeholder:text-gray-400" 
       : "bg-white border border-gray-300 text-gray-800 placeholder:text-gray-400"}`}
     
-    onKeyDown={(e) => {
-      if (e.key === "Enter") {
-        const valor = (e.target as HTMLInputElement).value.trim();
+    onKeyDown={async (e) => {
+  if (e.key === "Enter") {
+    e.preventDefault();
 
-        if (!valor) return;
+    const input = e.target as HTMLInputElement;
+    const valor = input.value.trim();
 
-        console.log("Nueva área:", valor);
+    if (!valor) return;
 
-        // 🔥 AQUÍ LUEGO GUARDAS EN BD O STATE
+    try {
+      // 🔥 guardar en backend
+      const res = await fetch("/api/area", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          nombre: valor,
+        }),
+      });
 
-        (e.target as HTMLInputElement).value = ""; // limpiar input
-      }
-    }}
+      if (!res.ok) throw new Error("Error al guardar");
+
+      const nuevaArea = await res.json();
+
+      // 🔥 actualizar tabla SIN recargar
+      setdataBackend((prev) => [...prev, nuevaArea]);
+
+      // 🔥 alerta bonita
+      Swal.fire({
+  toast: true,
+  position: "top-end", // arriba derecha (en móvil se ve arriba)
+  icon: "success",
+  title: "Área creada",
+  text: valor,
+  showConfirmButton: false,
+  timer: 1500,
+  timerProgressBar: true,
+
+  // 🎨 ESTILO BLANCO
+  background: "#ffffff",
+  color: "#1f2937",
+  width: "280px",
+  
+  // 🔥 bordes suaves y sombra elegante
+  customClass: {
+    popup: "rounded-xl shadow-md",
+  },
+});
+
+      input.value = ""; // limpiar input
+
+    } catch (error) {
+      console.error(error);
+
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "No se pudo crear el área",
+      });
+    }
+  }
+}}
   />
 </div>
           </div>
@@ -797,6 +854,7 @@ Swal.fire({
                 <div className="flex flex-col items-center gap-2">
                   <img src={c.img} className="w-10 h-10 object-contain" />
                   <span className="text-sm">{c.nombre}</span>
+                  
                 </div>
               </th>
             ))}
@@ -816,9 +874,102 @@ Swal.fire({
 
             return (
               <tr key={index} className={estilos.fila}>
-                <td className={`border p-3 text-center font-semibold ${estilos.borde}`}>
-                  <div>{area.nombre}</div>
-                </td>
+               <td className={`border p-3 text-center font-semibold ${estilos.borde}`}>
+
+ <input
+  value={area.nombre || ""}
+  onChange={(e) => {
+    const nuevo = e.target.value;
+
+    setdataBackend((prev) =>
+      prev.map((item) =>
+        item.id === area.id ? { ...item, nombre: nuevo } : item
+      )
+    );
+  }}
+
+  onKeyDown={async (e) => {
+    if (e.key === "Enter") {
+      e.preventDefault();
+
+      const input = e.target as HTMLInputElement;
+      const nuevo = input.value.trim();
+
+      try {
+        // 🗑️ SI ESTÁ VACÍO → ELIMINAR
+        if (!nuevo) {
+  const confirm = await Swal.fire({
+    title: "¿Eliminar área?",
+    icon: "warning",
+    showCancelButton: true,
+    confirmButtonText: "Sí",
+  });
+
+  if (!confirm.isConfirmed) return;
+}
+        if (!nuevo) {
+          await fetch(`/api/area?id=${area.id}`, {
+  method: "DELETE",
+});
+
+          setdataBackend((prev) =>
+            prev.filter((item) => item.id !== area.id)
+          );
+
+          Swal.fire({
+            toast: true,
+            position: "top",
+            icon: "success",
+            title: "Área eliminada",
+            showConfirmButton: false,
+            timer: 1200,
+            background: "#fff",
+          });
+
+          return;
+        }
+
+        // ✏️ SI TIENE TEXTO → ACTUALIZAR
+        await fetch(`/api/area`, {
+  method: "PUT",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    id: area.id,
+    nombre: nuevo,
+  }),
+});
+
+        Swal.fire({
+          toast: true,
+          position: "top",
+          icon: "success",
+          title: "Área actualizada",
+          showConfirmButton: false,
+          timer: 1200,
+          background: "#fff",
+        });
+
+      } catch (error) {
+        console.error(error);
+
+        Swal.fire({
+          toast: true,
+          position: "top",
+          icon: "error",
+          title: "Error",
+          showConfirmButton: false,
+          timer: 1200,
+          background: "#fff",
+        });
+      }
+    }
+  }}
+
+  className={`w-full text-center rounded-lg px-2 py-1 ${estilos.input}`}
+/>
+</td>
 
                 {campos.map((c) => {
 

@@ -13,6 +13,7 @@ export async function GET() {
     const data = await res.json();
 
     return Response.json(data, { status: res.status });
+
   } catch (error) {
     return Response.json(
       { error: "Error obteniendo áreas" },
@@ -40,12 +41,15 @@ export async function POST(request) {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify({
+        nombre: body.nombre,
+      }),
     });
 
     const data = await res.json();
 
     return Response.json(data, { status: res.status });
+
   } catch (error) {
     return Response.json(
       { error: "Error creando área" },
@@ -81,6 +85,7 @@ export async function PUT(request) {
     const data = await res.json();
 
     return Response.json(data, { status: res.status });
+
   } catch (error) {
     return Response.json(
       { error: "Error actualizando área" },
@@ -99,7 +104,7 @@ export async function DELETE(request) {
 
     if (!id) {
       return Response.json(
-        { error: "Falta el parámetro id" },
+        { error: "Falta el id" },
         { status: 400 }
       );
     }
@@ -111,6 +116,7 @@ export async function DELETE(request) {
     const data = await res.json();
 
     return Response.json(data, { status: res.status });
+
   } catch (error) {
     return Response.json(
       { error: "Error eliminando área" },
