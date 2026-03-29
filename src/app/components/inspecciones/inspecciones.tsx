@@ -18,7 +18,6 @@ interface Props {
 export default function Inspecciones({ modoNoche }: Props) {
 
   const [vista, setVista] = useState<"reciclaje" | "agua" | "energia">("reciclaje");
-
   const [dataReciclaje, setDataReciclaje] = useState<any[]>([]);
   const [dataAgua, setDataAgua] = useState<any[]>([]);
   const [dataEnergia, setDataEnergia] = useState<any[]>([]);

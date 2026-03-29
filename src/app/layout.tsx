@@ -13,9 +13,15 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es">
+      
+      {/* 🔥 ESTE ES EL CAMBIO IMPORTANTE */}
+      <head>
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+      </head>
+
       <body className={inter.className}>
         {children}
-        <BotonSubir /> {/* 👈 AQUÍ */}
+        <BotonSubir />
       </body>
     </html>
   );
