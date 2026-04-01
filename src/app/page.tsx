@@ -10,7 +10,9 @@ import {
   Moon,
   Menu,
   Plug,
-  Recycle
+  Recycle,
+  Layers,
+  ClipboardList
 } from "lucide-react";
 
 import Image from "next/image";
@@ -23,6 +25,7 @@ import Lecturas from "./components/lecturas/lecturas";
 import ComparativoAgua from "./components/comparativoAgua/comparativoAgua";
 import ComparativoEnergia from "./components/comparativoEnergia/comparativoEnergia";
 import Inspecciones from "./components/inspecciones/inspecciones";
+import Resmas from "./components/resmas/resmas";
 
 export default function MenuPrincipal() {
 
@@ -130,6 +133,8 @@ export default function MenuPrincipal() {
     { id: "lecturas", nombre: "Lecturas", icono: <BookOpen size={28} /> },
 
     { id: "inspecciones", nombre: "Inspecciones ", icono: <Recycle size={28} /> },
+
+    { id: "resmas", nombre: "Resmas ", icono: <Layers  size={28} /> },
   ];
   /* ================= TITULOS ================= */
 
@@ -173,6 +178,12 @@ export default function MenuPrincipal() {
       return {
         titulo: "Registrar Inspecciones",
         icono: <Recycle size={28} />,
+      };
+    }
+      if (vistaActual === "resmas") {
+      return {
+        titulo: "Registrar Resmas",
+        icono: <ClipboardList   size={28} />,
       };
     }
 
@@ -317,7 +328,9 @@ export default function MenuPrincipal() {
 
           {vistaActual === "lecturas" && <Lecturas modoNoche={modoNoche} />}
 
-           {vistaActual === "inspecciones" && <Inspecciones modoNoche={modoNoche} />}
+          {vistaActual === "inspecciones" && <Inspecciones modoNoche={modoNoche} />}
+
+          {vistaActual === "resmas" && <Resmas modoNoche={modoNoche} />}
 
                     <footer
   className={`

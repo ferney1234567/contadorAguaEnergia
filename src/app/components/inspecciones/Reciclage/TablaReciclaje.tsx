@@ -1,15 +1,9 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import {
-  CalendarDays,
-  Search,
-  User2,
-  Filter,
-  History,
-  Plus,
-} from "lucide-react";
+import { CalendarDays, Search, User2, Filter, Plus } from "lucide-react";
 import Swal from "sweetalert2";
+import MovilReciclaje from "./MovilReciclaje";
 
 type RegistroValores = {
   [fila: number]: { [campo: number]: { c?: string; nc?: string } };
@@ -20,13 +14,9 @@ interface Props {
   dataBackend: any[];
 }
 
-export default function TablaReciclaje({
-  modoNoche,
-  dataBackend: dataInicial,
-}: Props) {
-  const [dataBackend, setdataBackend] = useState<any[]>(
-    Array.isArray(dataInicial) ? dataInicial : [],
-  );
+export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }: Props) {
+
+  const [dataBackend, setdataBackend] = useState<any[]>(Array.isArray(dataInicial) ? dataInicial : [],);
   const campos = [
     { key: 1, nombre: "Reciclables", img: "/img/reciclable.png" },
     { key: 2, nombre: "Ordinarios", img: "/img/ordinarios.png" },
@@ -54,27 +44,25 @@ export default function TablaReciclaje({
   const [fechaActual, setFechaActual] = useState("");
   const [busqueda, setBusqueda] = useState("");
   const [modoNuevaInspeccion, setModoNuevaInspeccion] = useState(false);
-  const obtenerAnioActual = () => {
-    return String(new Date().getFullYear());
-  };
+  const obtenerAnioActual = () => { return String(new Date().getFullYear()); };
   const [anioFiltro, setAnioFiltro] = useState(obtenerAnioActual());
-  const obtenerMesActual = () => {
-    const hoy = new Date();
-    return String(hoy.getMonth() + 1).padStart(2, "0");
-  };
+  const obtenerMesActual = () => { const hoy = new Date(); return String(hoy.getMonth() + 1).padStart(2, "0"); };
   const [mesFiltro, setMesFiltro] = useState(obtenerMesActual());
   const [inspecciones, setInspecciones] = useState<any[]>([]);
   const [responsable, setResponsable] = useState("");
+  const [fechaSesion, setFechaSesion] = useState(new Date().toISOString().split("T")[0],);
 
   useEffect(() => {
     const guardado = localStorage.getItem("responsable");
     if (guardado) setResponsable(guardado);
   }, []);
 
+
   const handleResponsable = (valor: string) => {
-    setModoNuevaInspeccion(false); // 🔥 vuelve a modo normal
+    setModoNuevaInspeccion(false);
     setResponsable(valor);
     localStorage.setItem("responsable", valor);
+    localStorage.removeItem("modo_nueva_inspeccion");
   };
 
   useEffect(() => {
@@ -85,25 +73,33 @@ export default function TablaReciclaje({
     localStorage.setItem("residuos_data", JSON.stringify(data));
   }, [valores, observaciones]);
 
+
   useEffect(() => {
+    if (modoNuevaInspeccion) return; // 🔥 CLAVE
     const data = localStorage.getItem("residuos_data");
     if (data) {
       const parsed = JSON.parse(data);
       setValores(parsed.valores || {});
       setObservaciones(parsed.observaciones || {});
     }
+  }, [modoNuevaInspeccion]);
+
+
+  useEffect(() => {
+    const estado = localStorage.getItem("modo_nueva_inspeccion");
+    if (estado === "true") {
+      setModoNuevaInspeccion(true);
+    }
   }, []);
 
   const finalizarInspeccion = async () => {
-    setModoNuevaInspeccion(true); // 🔥 IMPORTANTE
-
+    setModoNuevaInspeccion(true);
+    localStorage.setItem("modo_nueva_inspeccion", "true"); // 🔥 CLAVE
     localStorage.removeItem("residuos_data");
     setValores({});
     setObservaciones({});
-
-    const res = await fetch("/api/inspecciones-residuos");
-    const data = await res.json();
-    setInspecciones(data);
+    setInspecciones([]);
+    setFechaSesion(new Date().toISOString().split("T")[0]);
 
     Swal.fire({
       icon: "success",
@@ -115,17 +111,19 @@ export default function TablaReciclaje({
 
   useEffect(() => {
     if (!dataBackend.length) return;
-
-    // 🔥 EVITA QUE RELLENE CUANDO ES NUEVA INSPECCIÓN
     if (modoNuevaInspeccion) return;
-
     const nuevosValores: RegistroValores = {};
     const nuevasObservaciones: RegistroObservaciones = {};
-
     dataBackend.forEach((area, index) => {
-      const inspeccion = inspecciones.find((i) => i.area_id === area.id);
+      const inspeccion = inspecciones
+        .filter(
+          (i) =>
+            i.area_id === area.id &&
+            i.responsable === responsable &&
+            i.fecha?.split("T")[0] === fechaSesion,
+        )
+        .slice(-1)[0];
       if (!inspeccion) return;
-
       nuevosValores[index] = {
         1: {
           c: String(inspeccion.reciclables_c || ""),
@@ -144,13 +142,12 @@ export default function TablaReciclaje({
           nc: String(inspeccion.presintos_nc || ""),
         },
       };
-
       nuevasObservaciones[index] = inspeccion.observacion || "";
     });
-
     setValores(nuevosValores);
     setObservaciones(nuevasObservaciones);
-  }, [dataBackend, inspecciones]);
+  }, [dataBackend, inspecciones, responsable, fechaSesion]);
+
 
   useEffect(() => {
     const init = async () => {
@@ -164,7 +161,7 @@ export default function TablaReciclaje({
           setObservaciones(parsed.observaciones || {});
         }
         const [areasRes, inspeccionesRes] = await Promise.all([
-          fetch("/api/area"),
+          fetch("/api/areas"),
           fetch("/api/inspecciones-residuos"),
         ]);
         const areas = await areasRes.json();
@@ -179,6 +176,7 @@ export default function TablaReciclaje({
     };
     init();
   }, []);
+
   const tieneDatos = (index: number) => {
     const valoresFila = valores[index];
     if (!valoresFila) return false;
@@ -208,11 +206,11 @@ export default function TablaReciclaje({
       });
       setFechaActual(fecha.charAt(0).toUpperCase() + fecha.slice(1));
     };
-
     actualizarFecha();
     const interval = setInterval(actualizarFecha, 1000 * 60);
     return () => clearInterval(interval);
   }, []);
+
 
   const handleChange = (
     fila: number,
@@ -233,6 +231,7 @@ export default function TablaReciclaje({
       },
     }));
   };
+
 
   const handleObs = (fila: number, value: string) => {
     setObservaciones((prev) => ({
@@ -294,7 +293,6 @@ export default function TablaReciclaje({
 
   const obtenerMes = (fila: any) => {
     if (fila?.mes) return String(fila.mes);
-
     if (fila?.fecha) {
       const d = new Date(fila.fecha);
       if (!isNaN(d.getTime())) {
@@ -303,76 +301,33 @@ export default function TablaReciclaje({
     }
     return "Sin mes";
   };
-
-  const nombreMes = (mes: string) => {
-    const meses: Record<string, string> = {
-      "01": "Enero",
-      "02": "Febrero",
-      "03": "Marzo",
-      "04": "Abril",
-      "05": "Mayo",
-      "06": "Junio",
-      "07": "Julio",
-      "08": "Agosto",
-      "09": "Septiembre",
-      "10": "Octubre",
-      "11": "Noviembre",
-      "12": "Diciembre",
-      "1": "Enero",
-      "2": "Febrero",
-      "3": "Marzo",
-      "4": "Abril",
-      "5": "Mayo",
-      "6": "Junio",
-      "7": "Julio",
-      "8": "Agosto",
-      "9": "Septiembre",
-    };
-    return meses[mes] || mes;
-  };
-
   const aniosDisponibles = useMemo(() => {
     const setAnios = new Set<string>();
-
     inspecciones.forEach((item) => {
       if (item.fecha) {
         const anio = new Date(item.fecha).getFullYear();
         setAnios.add(String(anio));
       }
     });
-
     const aniosOrdenados = Array.from(setAnios).sort(
       (a, b) => Number(b) - Number(a),
     );
-
     return ["Todos", ...aniosOrdenados];
   }, [inspecciones]);
 
-  const mesesDisponibles = useMemo(() => {
-    if (!Array.isArray(dataBackend)) return ["Todos"];
-
-    const setMeses = new Set<string>();
-    dataBackend.forEach((fila) => setMeses.add(obtenerMes(fila)));
-
-    return ["Todos", ...Array.from(setMeses)];
-  }, [dataBackend]);
 
   const dataBackendFiltrada = useMemo(() => {
     return dataBackend.filter((fila) => {
       const nombre = String(fila?.nombre || "").toLowerCase();
       const textoBusqueda = busqueda.toLowerCase().trim();
       const coincideBusqueda = !textoBusqueda || nombre.includes(textoBusqueda);
-
       const anio = obtenerAnio(fila);
       const mes = obtenerMes(fila);
-
       const coincideAnio = anioFiltro === "Todos" || anio === anioFiltro;
       const coincideMes = mesFiltro === "Todos" || mes === mesFiltro;
-
       return coincideBusqueda && coincideAnio && coincideMes;
     });
   }, [dataBackend, busqueda, anioFiltro, mesFiltro]);
-
   const totalCampoFila = (fila: number, campo: number) => {
     const c = Number(valores?.[fila]?.[campo]?.c || 0);
     const nc = Number(valores?.[fila]?.[campo]?.nc || 0);
@@ -389,7 +344,6 @@ export default function TablaReciclaje({
 
   const totalCampoGeneral = (campo: number) => {
     let total = 0;
-
     Object.keys(valores).forEach((fila) => {
       const c = Number(valores?.[Number(fila)]?.[campo]?.c || 0);
       const nc = Number(valores?.[Number(fila)]?.[campo]?.nc || 0);
@@ -401,7 +355,6 @@ export default function TablaReciclaje({
 
   const totalGeneral = () => {
     let total = 0;
-
     Object.keys(valores).forEach((fila) => {
       campos.forEach((c) => {
         const cVal = Number(valores?.[Number(fila)]?.[c.key]?.c || 0);
@@ -415,14 +368,11 @@ export default function TablaReciclaje({
 
   const inspeccionesPorFecha = useMemo(() => {
     const grupos: Record<string, any[]> = {};
-
     inspecciones.forEach((item) => {
       const clave = `${item.fecha || "sin-fecha"}__${item.responsable || "sin-responsable"}`;
-
       if (!grupos[clave]) grupos[clave] = [];
       grupos[clave].push(item);
     });
-
     return grupos;
   }, [inspecciones]);
 
@@ -431,12 +381,9 @@ export default function TablaReciclaje({
       .filter(([clave]) => {
         const [fechaBase] = clave.split("__");
         const d = new Date(fechaBase);
-
         if (isNaN(d.getTime())) return false;
-
         const mes = String(d.getMonth() + 1).padStart(2, "0");
         const anio = String(d.getFullYear());
-
         return (
           (mesFiltro === "Todos" || mes === mesFiltro) &&
           (anioFiltro === "Todos" || anio === anioFiltro)
@@ -449,101 +396,133 @@ export default function TablaReciclaje({
       });
   }, [inspeccionesPorFecha, mesFiltro, anioFiltro]);
 
-  // 🔥 AQUÍ SÍ
-  const hayDatosEnMes = inspeccionesFiltradas.length > 0;
+
+
+  const obtenerValor = (index: number, campo: number, tipo: "c" | "nc", registro: any) => {
+    const valorLocal = valores?.[index]?.[campo]?.[tipo];
+
+    if (valorLocal !== undefined && valorLocal !== "") {
+      return Number(valorLocal);
+    }
+
+    if (registro) {
+      const key = `${campos.find(c => c.key === campo)?.nombre.toLowerCase()}_${tipo}`;
+      return Number(registro[key] || 0);
+    }
+
+    return 0;
+  };
 
   const guardarFila = async (
     index: number,
     area: any,
-    registro: any, // 🔥 IMPORTANTE
+    registro: any
   ) => {
-    console.log("RESPONSABLE ACTUAL:", responsable);
-
-    // 🔥 RESPONSABLE CORRECTO
-    const responsableFinal = responsable?.trim() || registro?.responsable || "";
-
-    if (!area?.id) return;
-
-    if (!responsableFinal) {
-      Swal.fire({
-        toast: true,
-        position: "top-end",
-        icon: "warning",
-        title: "Falta responsable",
-        timer: 1200,
-        showConfirmButton: false,
-        width: "250px",
-      });
-      return;
-    }
-
-    const body = {
-      // 🔥 FORMATO CORRECTO PARA FASTAPI
-      fecha: new Date().toISOString(),
-
-      responsable: responsableFinal,
-      area_id: area.id,
-
-      reciclables_c: Number(valores?.[index]?.[1]?.c || 0),
-      reciclables_nc: Number(valores?.[index]?.[1]?.nc || 0),
-
-      ordinarios_c: Number(valores?.[index]?.[2]?.c || 0),
-      ordinarios_nc: Number(valores?.[index]?.[2]?.nc || 0),
-
-      peligrosos_c: Number(valores?.[index]?.[3]?.c || 0),
-      peligrosos_nc: Number(valores?.[index]?.[3]?.nc || 0),
-
-      presintos_c: Number(valores?.[index]?.[4]?.c || 0),
-      presintos_nc: Number(valores?.[index]?.[4]?.nc || 0),
-
-      observacion: observaciones[index] || "",
-    };
-
     try {
-      console.log("ENVIANDO:", body);
+      // =========================
+      // 🔒 VALIDACIONES
+      // =========================
+      if (!area || !area.id) return;
 
-      const response = await fetch("/api/inspecciones-residuos/", {
-        method: "POST",
+      const responsableFinal =
+        (typeof responsable === "string" && responsable.trim()) ||
+        registro?.responsable ||
+        "";
+
+      if (!responsableFinal) {
+        Swal.fire({
+          toast: true,
+          position: "top-end",
+          icon: "warning",
+          title: "Falta responsable",
+          timer: 1200,
+          showConfirmButton: false,
+        });
+        return;
+      }
+
+      // =========================
+      // 📦 ARMAR BODY
+      // =========================
+      const body = {
+        id: registro?.id || null,
+        fecha: new Date().toISOString().split("T")[0],
+        responsable: responsableFinal,
+        area_id: area.id,
+
+        reciclables_c: obtenerValor(index, 1, "c", registro),
+        reciclables_nc: obtenerValor(index, 1, "nc", registro),
+
+        ordinarios_c: obtenerValor(index, 2, "c", registro),
+        ordinarios_nc: obtenerValor(index, 2, "nc", registro),
+
+        peligrosos_c: obtenerValor(index, 3, "c", registro),
+        peligrosos_nc: obtenerValor(index, 3, "nc", registro),
+
+        presintos_c: obtenerValor(index, 4, "c", registro),
+        presintos_nc: obtenerValor(index, 4, "nc", registro),
+
+        observacion:
+          observaciones[index] ||
+          registro?.observacion ||
+          "",
+      };
+
+      console.log("📤 ENVIANDO:", body);
+
+      // =========================
+      // 🔥 PETICIÓN (PUT o POST)
+      // =========================
+      const response = await fetch("/api/inspecciones-residuos", {
+        method: body.id ? "PUT" : "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify(body),
       });
 
-      // 🔥 VALIDAR ERROR REAL DEL BACKEND
+      // =========================
+      // ❌ ERROR BACKEND
+      // =========================
       if (!response.ok) {
         const errorText = await response.text();
-        console.error("ERROR BACKEND:", errorText);
+        console.error("❌ ERROR BACKEND:", errorText);
 
         Swal.fire({
           icon: "error",
           title: "Error del servidor",
           text: errorText,
         });
+
         return;
       }
 
-      // 🔥 RECARGAR DATOS
-      const res = await fetch("/api/inspecciones-residuos/");
+      // =========================
+      // 🔄 REFRESCAR DATOS
+      // =========================
+      const res = await fetch("/api/inspecciones-residuos");
       const data = await res.json();
       setInspecciones(data);
 
-      // 🔥 ALERTA PEQUEÑA
+      // =========================
+      // ✅ MENSAJE
+      // =========================
       Swal.fire({
         toast: true,
         position: "top-end",
         icon: "success",
-        title: "Guardado",
+        title: body.id ? "Actualizado correctamente" : "Guardado correctamente",
         timer: 1200,
         showConfirmButton: false,
-        width: "250px",
       });
+
     } catch (error) {
-      console.error(error);
+      console.error("🔥 ERROR GENERAL:", error);
 
       Swal.fire({
         icon: "error",
-        title: "Error al guardar",
+        title: "Error inesperado",
+        text: "No se pudo guardar la información",
       });
     }
   };
@@ -656,11 +635,10 @@ export default function TablaReciclaje({
                 type="text"
                 placeholder="Crear nueva área y presionar Enter..."
                 className={`w-full rounded-xl pl-10 pr-3 py-2.5 text-sm outline-none 
-    ${
-      modoNoche
-        ? "bg-[#222] border border-[#3a3a3a] text-white placeholder:text-gray-400"
-        : "bg-white border border-gray-300 text-gray-800 placeholder:text-gray-400"
-    }`}
+    ${modoNoche
+                    ? "bg-[#222] border border-[#3a3a3a] text-white placeholder:text-gray-400"
+                    : "bg-white border border-gray-300 text-gray-800 placeholder:text-gray-400"
+                  }`}
                 onKeyDown={async (e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
@@ -672,7 +650,7 @@ export default function TablaReciclaje({
 
                     try {
                       // 🔥 guardar en backend
-                      const res = await fetch("/api/area", {
+                      const res = await fetch("/api/areas", {
                         method: "POST",
                         headers: {
                           "Content-Type": "application/json",
@@ -743,285 +721,34 @@ export default function TablaReciclaje({
 
       <>
         {/*------------------ VISTA MOVIL -------------------------*/}
-        <div className="block lg:hidden space-y-4">
-          {/* 🔥 FORMULARIO PARA TODAS LAS ÁREAS */}
-          {dataBackend.map((fila: any) => {
-            const indiceOriginal = dataBackend.indexOf(fila);
-
-            return (
-              <div
-                key={"form-" + indiceOriginal}
-                className={`rounded-2xl p-4 border ${estilos.borde} ${estilos.fila}`}
-              >
-                <h4 className="font-bold text-base mb-4 text-center">
-                  {fila.nombre} 📝
-                </h4>
-
-                <div className="grid grid-cols-1 gap-4">
-                  {campos.map((c) => (
-                    <div
-                      key={c.key}
-                      className={`rounded-xl border p-3 ${estilos.borde}`}
-                    >
-                      <div className="flex items-center gap-2 mb-3">
-                        <img src={c.img} className="w-8 h-8 object-contain" />
-                        <span className="text-sm font-semibold">
-                          {c.nombre}
-                        </span>
-                      </div>
-
-                      <div className="grid grid-cols-2 gap-2">
-                        <input
-                          value={valores?.[indiceOriginal]?.[c.key]?.c || ""}
-                          onChange={(e) =>
-                            handleChange(
-                              indiceOriginal,
-                              c.key,
-                              "c",
-                              e.target.value,
-                            )
-                          }
-                          placeholder="✔ Cumple"
-                          className={`w-full rounded-xl px-3 py-2 text-sm text-center ${estilos.input}`}
-                        />
-
-                        <input
-                          value={valores?.[indiceOriginal]?.[c.key]?.nc || ""}
-                          onChange={(e) =>
-                            handleChange(
-                              indiceOriginal,
-                              c.key,
-                              "nc",
-                              e.target.value,
-                            )
-                          }
-                          placeholder="✖ No cumple"
-                          className={`w-full rounded-xl px-3 py-2 text-sm text-center ${estilos.input}`}
-                        />
-                      </div>
-                    </div>
-                  ))}
-
-                  <textarea
-                    placeholder="Observación..."
-                    onChange={(e) => handleObs(indiceOriginal, e.target.value)}
-                    className={`w-full rounded-lg px-3 py-2 text-sm ${estilos.input}`}
-                  />
-
-                  {/* 🔥 GUARDAR */}
-                  <button
-                    onClick={async () => {
-                      if (!responsable) {
-                        alert("Debes escribir el responsable");
-                        return;
-                      }
-
-                      const body = {
-                        fecha: new Date().toISOString().split("T")[0],
-                        responsable,
-                        area_id: fila.id,
-
-                        reciclables_c: Number(
-                          valores?.[indiceOriginal]?.[1]?.c || 0,
-                        ),
-                        reciclables_nc: Number(
-                          valores?.[indiceOriginal]?.[1]?.nc || 0,
-                        ),
-
-                        ordinarios_c: Number(
-                          valores?.[indiceOriginal]?.[2]?.c || 0,
-                        ),
-                        ordinarios_nc: Number(
-                          valores?.[indiceOriginal]?.[2]?.nc || 0,
-                        ),
-
-                        peligrosos_c: Number(
-                          valores?.[indiceOriginal]?.[3]?.c || 0,
-                        ),
-                        peligrosos_nc: Number(
-                          valores?.[indiceOriginal]?.[3]?.nc || 0,
-                        ),
-
-                        presintos_c: Number(
-                          valores?.[indiceOriginal]?.[4]?.c || 0,
-                        ),
-                        presintos_nc: Number(
-                          valores?.[indiceOriginal]?.[4]?.nc || 0,
-                        ),
-
-                        observacion: observaciones[indiceOriginal] || "",
-                      };
-
-                      await fetch("/api/inspecciones-residuos", {
-                        method: "POST",
-                        headers: { "Content-Type": "application/json" },
-                        body: JSON.stringify(body),
-                      });
-
-                      // 🔥 volver a traer datos
-                      const inspeccionesRes = await fetch(
-                        "/api/inspecciones-residuos",
-                      );
-                      const nuevasInspecciones = await inspeccionesRes.json();
-                      setInspecciones(nuevasInspecciones);
-
-                      // 🔥 limpiar inputs (opcional)
-                      setValores({});
-                      setObservaciones({});
-
-                      // 🔥 alerta bonita
-                      Swal.fire({
-                        icon: "success",
-                        title: "Guardado",
-                        text: "Datos guardados correctamente",
-                        timer: 1500,
-                        showConfirmButton: false,
-                      });
-                    }}
-                    className="w-full bg-blue-600 text-white py-2 rounded-xl"
-                  >
-                    Guardar
-                  </button>
-                  <div className="flex gap-2">
-                    {tieneDatos(indiceOriginal) && (
-                      <button
-                        onClick={() => editarContenedor(indiceOriginal)}
-                        className="bg-yellow-500 text-white px-3 py-1 rounded-lg text-xs"
-                      >
-                        Editar
-                      </button>
-                    )}
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-
-          {/* 🔥 DATOS EXISTENTES */}
-          {inspeccionesFiltradas.length > 0 &&
-            (dataBackendFiltrada || []).map((fila: any) => {
-              const indiceOriginal = dataBackend.indexOf(fila);
-
-              return (
-                <div
-                  key={"data-" + indiceOriginal}
-                  className={`rounded-2xl p-4 border ${estilos.borde} ${estilos.fila}`}
-                >
-                  <div className="flex items-center justify-between mb-4">
-                    <h4 className="font-bold text-base">{fila.nombre}</h4>
-
-                    <div
-                      className={`px-3 py-1 rounded-full text-xs font-semibold
-          ${
-            modoNoche
-              ? "bg-blue-900/40 text-blue-200 border border-blue-800"
-              : "bg-blue-50 text-blue-600 border border-blue-200"
-          }`}
-                    >
-                      {totalFila(indiceOriginal)}
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 gap-4">
-                    {campos.map((c) => (
-                      <div
-                        key={c.key}
-                        className={`rounded-xl border p-3 ${estilos.borde}`}
-                      >
-                        <div className="flex items-center gap-2 mb-3">
-                          <img src={c.img} className="w-8 h-8 object-contain" />
-                          <span className="text-sm font-semibold">
-                            {c.nombre}
-                          </span>
-                        </div>
-
-                        <div className="grid grid-cols-2 gap-2">
-                          <input
-                            value={valores?.[indiceOriginal]?.[c.key]?.c || ""}
-                            onChange={(e) =>
-                              handleChange(
-                                indiceOriginal,
-                                c.key,
-                                "c",
-                                e.target.value,
-                              )
-                            }
-                            className={`w-full rounded-xl px-3 py-2 text-sm text-center ${estilos.input}`}
-                          />
-
-                          <input
-                            value={valores?.[indiceOriginal]?.[c.key]?.nc || ""}
-                            onChange={(e) =>
-                              handleChange(
-                                indiceOriginal,
-                                c.key,
-                                "nc",
-                                e.target.value,
-                              )
-                            }
-                            className={`w-full rounded-xl px-3 py-2 text-sm text-center ${estilos.input}`}
-                          />
-                        </div>
-
-                        <div
-                          className={`mt-3 text-center text-sm font-semibold rounded-lg py-1
-              ${modoNoche ? "bg-gray-800 text-gray-200" : "bg-gray-100 text-gray-700"}`}
-                        >
-                          Total: {totalCampoFila(indiceOriginal, c.key)}
-                        </div>
-                      </div>
-                    ))}
-
-                    <textarea
-                      value={observaciones[indiceOriginal] || ""}
-                      onChange={(e) =>
-                        handleObs(indiceOriginal, e.target.value)
-                      }
-                      className={`w-full rounded-lg px-3 py-2 text-sm ${estilos.input}`}
-                    />
-                  </div>
-                </div>
-              );
-            })}
-
-          {/* TOTAL GENERAL */}
-          <div className={`rounded-2xl p-4 border ${estilos.borde}`}>
-            <h3 className="text-center font-bold mb-3">Total General</h3>
-
-            <div className="grid grid-cols-2 gap-2">
-              {campos.map((c) => (
-                <div
-                  key={c.key}
-                  className={`rounded-xl p-3 text-center
-      ${modoNoche ? "bg-gray-800 text-gray-200" : "bg-gray-100 text-gray-700"}`}
-                >
-                  <div>{c.nombre}</div>
-                  <div className="font-bold text-lg">
-                    {totalCampoGeneral(c.key)}
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            <div className="mt-4 text-center">
-              <div>Total inspección</div>
-              <div className="text-2xl font-bold">{totalGeneral()}</div>
-            </div>
-          </div>
-
-          <button
-            onClick={finalizarInspeccion}
-            className="mt-4 w-full bg-green-600 text-white py-2 rounded-xl"
-          >
-            Finalizar inspección semanal
-          </button>
-        </div>
+        <MovilReciclaje
+          modoNoche={modoNoche}
+          dataBackend={dataBackend}
+          dataBackendFiltrada={dataBackendFiltrada}
+          campos={campos}
+          valores={valores}
+          observaciones={observaciones}
+          responsable={responsable}
+          estilos={estilos}
+          inspeccionesFiltradas={inspeccionesFiltradas}
+          handleChange={handleChange}
+          handleObs={handleObs}
+          totalFila={totalFila}
+          totalCampoFila={totalCampoFila}
+          totalCampoGeneral={totalCampoGeneral}
+          totalGeneral={totalGeneral}
+          tieneDatos={tieneDatos}
+          editarContenedor={editarContenedor}
+          finalizarInspeccion={finalizarInspeccion}
+          setInspecciones={setInspecciones}
+          setValores={setValores}
+          setObservaciones={setObservaciones}
+        />
 
         {/*------------------ VISTA DESKTOP------------------------ */}
         <div
-          className={`hidden lg:block p-4 rounded-2xl ${
-            modoNoche ? "bg-[#0f0f0f]" : "bg-gray-100"
-          }`}
+          className={`hidden lg:block p-4 rounded-2xl ${modoNoche ? "bg-[#0f0f0f]" : "bg-gray-100"
+            }`}
         >
           {inspeccionesFiltradas.map(([clave, registros]) => {
             const [fecha, responsableGrupo] = clave.split("__");
@@ -1029,18 +756,16 @@ export default function TablaReciclaje({
             return (
               <div
                 key={clave}
-                className={`mb-10 rounded-2xl p-5 shadow-sm ${
-                  modoNoche
-                    ? "bg-[#161616] border border-[#2a2a2a]"
-                    : "bg-white border border-gray-200"
-                }`}
+                className={`mb-10 rounded-2xl p-5 shadow-sm ${modoNoche
+                  ? "bg-[#161616] border border-[#2a2a2a]"
+                  : "bg-white border border-gray-200"
+                  }`}
               >
                 {/* HEADER */}
                 <div className="mb-5 text-center">
                   <h2
-                    className={`text-xl font-bold tracking-wide ${
-                      modoNoche ? "text-white" : "text-gray-800"
-                    }`}
+                    className={`text-xl font-bold tracking-wide ${modoNoche ? "text-white" : "text-gray-800"
+                      }`}
                   >
                     {new Date(fecha).toLocaleDateString("es-CO", {
                       weekday: "long",
@@ -1052,21 +777,19 @@ export default function TablaReciclaje({
 
                   <div className="flex justify-center gap-3 mt-3 flex-wrap">
                     <span
-                      className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                        modoNoche
-                          ? "bg-blue-900/30 text-blue-300 border border-blue-800"
-                          : "bg-blue-50 text-blue-600 border border-blue-200"
-                      }`}
+                      className={`px-3 py-1 rounded-full text-xs font-semibold ${modoNoche
+                        ? "bg-blue-900/30 text-blue-300 border border-blue-800"
+                        : "bg-blue-50 text-blue-600 border border-blue-200"
+                        }`}
                     >
                       📊 {registros.length} registros
                     </span>
 
                     <span
-                      className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                        modoNoche
-                          ? "bg-purple-900/30 text-purple-300 border border-purple-800"
-                          : "bg-purple-50 text-purple-600 border border-purple-200"
-                      }`}
+                      className={`px-3 py-1 rounded-full text-xs font-semibold ${modoNoche
+                        ? "bg-purple-900/30 text-purple-300 border border-purple-800"
+                        : "bg-purple-50 text-purple-600 border border-purple-200"
+                        }`}
                     >
                       👤 Responsable:{" "}
                       {responsableGrupo ||
@@ -1078,26 +801,23 @@ export default function TablaReciclaje({
 
                 {/* TABLA */}
                 <div
-                  className={`overflow-auto rounded-2xl border ${
-                    modoNoche
-                      ? "bg-[#1a1a1a] border-[#2f2f2f]"
-                      : "bg-white border-gray-200"
-                  }`}
+                  className={`overflow-auto rounded-2xl border ${modoNoche
+                    ? "bg-[#1a1a1a] border-[#2f2f2f]"
+                    : "bg-white border-gray-200"
+                    }`}
                 >
                   <table className="w-full text-sm border-collapse">
                     {/* HEADER */}
                     <thead>
                       <tr
-                        className={`text-center text-xs uppercase ${
-                          modoNoche
-                            ? "text-gray-300 bg-[#202020]"
-                            : "text-gray-600 bg-gray-50"
-                        }`}
+                        className={`text-center text-xs uppercase ${modoNoche
+                          ? "text-gray-300 bg-[#202020]"
+                          : "text-gray-600 bg-gray-50"
+                          }`}
                       >
                         <th
-                          className={`p-3 border ${
-                            modoNoche ? "border-[#353535]" : "border-gray-200"
-                          }`}
+                          className={`p-3 border ${modoNoche ? "border-[#353535]" : "border-gray-200"
+                            }`}
                         >
                           Área / Puesto
                         </th>
@@ -1105,9 +825,8 @@ export default function TablaReciclaje({
                         {campos.map((c) => (
                           <th
                             key={c.key}
-                            className={`p-3 border ${
-                              modoNoche ? "border-[#353535]" : "border-gray-200"
-                            }`}
+                            className={`p-3 border ${modoNoche ? "border-[#353535]" : "border-gray-200"
+                              }`}
                           >
                             <div className="flex flex-col items-center gap-1">
                               <img src={c.img} className="w-8 h-8 opacity-80" />
@@ -1117,9 +836,8 @@ export default function TablaReciclaje({
                         ))}
 
                         <th
-                          className={`p-3 border ${
-                            modoNoche ? "border-[#353535]" : "border-gray-200"
-                          }`}
+                          className={`p-3 border ${modoNoche ? "border-[#353535]" : "border-gray-200"
+                            }`}
                         >
                           Observaciones
                         </th>
@@ -1136,19 +854,17 @@ export default function TablaReciclaje({
                         return (
                           <tr
                             key={index}
-                            className={`transition ${
-                              modoNoche
-                                ? "bg-[#181818] hover:bg-[#1f1f1f]"
-                                : "bg-white hover:bg-gray-50"
-                            }`}
+                            className={`transition ${modoNoche
+                              ? "bg-[#181818] hover:bg-[#1f1f1f]"
+                              : "bg-white hover:bg-gray-50"
+                              }`}
                           >
                             {/* AREA */}
                             <td
-                              className={`p-3 border ${
-                                modoNoche
-                                  ? "border-[#353535]"
-                                  : "border-gray-200"
-                              }`}
+                              className={`p-3 border ${modoNoche
+                                ? "border-[#353535]"
+                                : "border-gray-200"
+                                }`}
                             >
                               <input
                                 value={area.nombre || ""}
@@ -1162,12 +878,97 @@ export default function TablaReciclaje({
                                     ),
                                   );
                                 }}
-                                onKeyDown={undefined}
-                                className={`w-full text-center font-semibold rounded-xl px-3 py-2 ${
-                                  modoNoche
-                                    ? "bg-[#222] text-white"
-                                    : "bg-gray-50 text-gray-800"
-                                }`}
+                                onKeyDown={async (e) => {
+                                  if (e.key === "Enter") {
+                                    e.preventDefault();
+
+                                    const valor = (area.nombre || "").trim();
+
+                                    try {
+                                      // =========================
+                                      // ❌ ELIMINAR
+                                      // =========================
+                                      if (!valor) {
+                                        const res = await fetch(`/api/areas?id=${area.id}`, {
+                                          method: "DELETE",
+                                        });
+
+                                        if (!res.ok) {
+                                          const errorText = await res.text();
+                                          console.error("ERROR BACKEND:", errorText);
+                                          throw new Error(errorText);
+                                        }
+
+                                        // 🔥 actualizar UI
+                                        setdataBackend((prev) =>
+                                          prev.filter((item) => item.id !== area.id)
+                                        );
+
+                                        Swal.fire({
+                                          toast: true,
+                                          position: "top-end",
+                                          icon: "success",
+                                          title: "Área eliminada",
+                                          timer: 1200,
+                                          showConfirmButton: false,
+                                        });
+
+                                        return;
+                                      }
+
+                                      // =========================
+                                      // ✏️ EDITAR
+                                      // =========================
+                                      const res = await fetch(`/api/areas`, {
+                                        method: "PUT",
+                                        headers: {
+                                          "Content-Type": "application/json",
+                                        },
+                                        body: JSON.stringify({
+                                          id: area.id,
+                                          nombre: valor,
+                                        }),
+                                      });
+
+                                      if (!res.ok) {
+                                        const errorText = await res.text();
+                                        console.error("ERROR BACKEND:", errorText);
+                                        throw new Error(errorText);
+                                      }
+
+                                      // 🔥 actualizar UI local
+                                      setdataBackend((prev) =>
+                                        prev.map((item) =>
+                                          item.id === area.id
+                                            ? { ...item, nombre: valor }
+                                            : item
+                                        )
+                                      );
+
+                                      Swal.fire({
+                                        toast: true,
+                                        position: "top-end",
+                                        icon: "success",
+                                        title: "Área actualizada",
+                                        timer: 1200,
+                                        showConfirmButton: false,
+                                      });
+
+                                    } catch (error) {
+                                      console.error(error);
+
+                                      Swal.fire({
+                                        icon: "error",
+                                        title: "Error",
+                                        text: "No se pudo actualizar/eliminar el área",
+                                      });
+                                    }
+                                  }
+                                }}
+                                className={`w-full text-center font-semibold rounded-xl px-3 py-2 ${modoNoche
+                                  ? "bg-[#222] text-white"
+                                  : "bg-gray-50 text-gray-800"
+                                  }`}
                               />
                             </td>
 
@@ -1186,72 +987,83 @@ export default function TablaReciclaje({
                               return (
                                 <td
                                   key={c.key}
-                                  className={`p-2 border ${
-                                    modoNoche
-                                      ? "border-[#353535]"
-                                      : "border-gray-200"
-                                  }`}
+                                  className={`p-2 border ${modoNoche
+                                    ? "border-[#353535]"
+                                    : "border-gray-200"
+                                    }`}
                                 >
                                   <div
-                                    className={`rounded-xl p-2 ${
-                                      modoNoche ? "bg-[#202020]" : "bg-gray-50"
-                                    }`}
+                                    className={`rounded-xl p-2 ${modoNoche ? "bg-[#202020]" : "bg-gray-50"
+                                      }`}
                                   >
                                     <div className="grid grid-cols-2 gap-2">
                                       <input
                                         value={
-                                          valores?.[index]?.[c.key]?.c || ""
+                                          valores &&
+                                            valores[index] &&
+                                            valores[index][c.key] &&
+                                            valores[index][c.key].c !== undefined
+                                            ? valores[index][c.key].c
+                                            : registro
+                                              ? String(registro[`${c.nombre.toLowerCase()}_c`] || "")
+                                              : ""
                                         }
                                         onChange={(e) =>
                                           handleChange(
                                             index,
                                             c.key,
                                             "c",
-                                            e.target.value,
+                                            e.target.value
                                           )
                                         }
                                         onKeyDown={(e) => {
-                                          if (e.key === "Enter")
+                                          if (e.key === "Enter") {
                                             guardarFila(index, area, registro);
+                                          }
                                         }}
-                                        className={`w-full text-center rounded-lg py-1 border ${
-                                          modoNoche
-                                            ? "bg-[#111] text-white border-[#2f2f2f]"
-                                            : "bg-white text-gray-700 border-gray-200"
-                                        }`}
+                                        className={`w-full text-center rounded-lg py-1 border font-semibold ${modoNoche
+                                          ? "bg-[#111] text-white border-[#2f2f2f]"
+                                          : "bg-white text-gray-700 border-gray-200"
+                                          }`}
                                       />
 
                                       <input
                                         value={
-                                          valores?.[index]?.[c.key]?.nc || ""
+                                          valores &&
+                                            valores[index] &&
+                                            valores[index][c.key] &&
+                                            valores[index][c.key].nc !== undefined
+                                            ? valores[index][c.key].nc
+                                            : registro
+                                              ? String(registro[`${c.nombre.toLowerCase()}_nc`] || "")
+                                              : ""
                                         }
                                         onChange={(e) =>
                                           handleChange(
                                             index,
                                             c.key,
                                             "nc",
-                                            e.target.value,
+                                            e.target.value
                                           )
                                         }
                                         onKeyDown={(e) => {
-                                          if (e.key === "Enter")
+                                          if (e.key === "Enter") {
                                             guardarFila(index, area, registro);
+                                          }
                                         }}
-                                        className={`w-full text-center rounded-lg py-1 border ${
-                                          modoNoche
-                                            ? "bg-[#111] text-white border-[#2f2f2f]"
-                                            : "bg-white text-gray-700 border-gray-200"
-                                        }`}
+                                        className={`w-full text-center rounded-lg py-1 border font-semibold ${modoNoche
+                                          ? "bg-[#111] text-white border-[#2f2f2f]"
+                                          : "bg-white text-gray-700 border-gray-200"
+                                          }`}
                                       />
                                     </div>
 
                                     {/* TOTAL */}
                                     <div
-                                      className={`mt-2 text-center text-xs font-semibold py-1 rounded-lg border ${
-                                        modoNoche
-                                          ? "bg-blue-900/20 text-blue-300 border-blue-800/40"
-                                          : "bg-blue-50 text-blue-700 border-blue-200"
-                                      }`}
+                                      className={`mt-2 text-center text-xs font-semibold py-1 rounded-lg border ${modoNoche
+                                        ? "bg-blue-900/20 text-blue-300 border-blue-800/40"
+                                        : "bg-blue-50 text-blue-700 border-blue-200"
+                                        }`}
                                     >
                                       {total}
                                     </div>
@@ -1262,11 +1074,10 @@ export default function TablaReciclaje({
 
                             {/* OBSERVACIONES */}
                             <td
-                              className={`p-3 border ${
-                                modoNoche
-                                  ? "border-[#353535]"
-                                  : "border-gray-200"
-                              }`}
+                              className={`p-3 border ${modoNoche
+                                ? "border-[#353535]"
+                                : "border-gray-200"
+                                }`}
                             >
                               <div className="flex flex-col gap-2">
                                 <textarea
@@ -1278,31 +1089,21 @@ export default function TablaReciclaje({
                                     if (e.key === "Enter")
                                       guardarFila(index, area, registro);
                                   }}
-                                  className={`w-full p-2 rounded-xl border ${
-                                    modoNoche
-                                      ? "bg-[#222] text-white border-[#2f2f2f]"
-                                      : "bg-gray-50 text-gray-800 border-gray-200"
-                                  }`}
+                                  className={`w-full p-2 rounded-xl border ${modoNoche
+                                    ? "bg-[#222] text-white border-[#2f2f2f]"
+                                    : "bg-gray-50 text-gray-800 border-gray-200"
+                                    }`}
                                 />
 
                                 <div
-                                  className={`text-center text-sm font-semibold py-2 rounded-xl border ${
-                                    modoNoche
-                                      ? "bg-green-900/20 text-green-300 border-green-800/40"
-                                      : "bg-green-50 text-green-700 border-green-200"
-                                  }`}
+                                  className={`text-center text-sm font-semibold py-2 rounded-xl border ${modoNoche
+                                    ? "bg-green-900/20 text-green-300 border-green-800/40"
+                                    : "bg-green-50 text-green-700 border-green-200"
+                                    }`}
                                 >
                                   Total: {registro?.total || 0}
                                 </div>
                               </div>
-                              <button
-                                onClick={() =>
-                                  guardarFila(index, area, registro)
-                                }
-                                className="mt-2 w-full bg-blue-600 text-white py-1 rounded-lg text-xs"
-                              >
-                                Guardar
-                              </button>
                             </td>
                           </tr>
                         );
@@ -1312,20 +1113,18 @@ export default function TablaReciclaje({
                 </div>
                 {/* 🔥 RESUMEN CON MISMO DISEÑO */}
                 <div
-                  className={`mt-6 overflow-auto rounded-2xl border ${
-                    modoNoche
-                      ? "bg-[#1a1a1a] border-[#2f2f2f]"
-                      : "bg-white border-gray-200"
-                  }`}
+                  className={`mt-6 overflow-auto rounded-2xl border ${modoNoche
+                    ? "bg-[#1a1a1a] border-[#2f2f2f]"
+                    : "bg-white border-gray-200"
+                    }`}
                 >
                   <table className="w-full text-sm border-collapse">
                     <thead>
                       <tr
-                        className={`text-center text-xs uppercase ${
-                          modoNoche
-                            ? "text-gray-300 bg-[#202020]"
-                            : "text-gray-600 bg-gray-50"
-                        }`}
+                        className={`text-center text-xs uppercase ${modoNoche
+                          ? "text-gray-300 bg-[#202020]"
+                          : "text-gray-600 bg-gray-50"
+                          }`}
                       >
                         <th
                           className={`p-3 border ${modoNoche ? "border-[#353535]" : "border-gray-200"}`}
@@ -1367,11 +1166,10 @@ export default function TablaReciclaje({
                         return (
                           <tr
                             key={c.key}
-                            className={`${
-                              modoNoche
-                                ? "bg-[#181818] hover:bg-[#1f1f1f]"
-                                : "bg-white hover:bg-gray-50"
-                            }`}
+                            className={`${modoNoche
+                              ? "bg-[#181818] hover:bg-[#1f1f1f]"
+                              : "bg-white hover:bg-gray-50"
+                              }`}
                           >
                             <td
                               className={`p-3 border font-semibold ${modoNoche ? "border-[#353535]" : "border-gray-200"}`}
@@ -1402,9 +1200,8 @@ export default function TablaReciclaje({
 
                       {/* 🔥 TOTAL GENERAL */}
                       <tr
-                        className={`font-bold ${
-                          modoNoche ? "bg-[#222]" : "bg-gray-100"
-                        }`}
+                        className={`font-bold ${modoNoche ? "bg-[#222]" : "bg-gray-100"
+                          }`}
                       >
                         <td
                           className={`p-3 border ${modoNoche ? "border-[#353535]" : "border-gray-200"}`}

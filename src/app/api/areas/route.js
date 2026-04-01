@@ -13,7 +13,6 @@ export async function GET() {
     const data = await res.json();
 
     return Response.json(data, { status: res.status });
-
   } catch (error) {
     return Response.json(
       { error: "Error obteniendo áreas" },
@@ -29,7 +28,7 @@ export async function POST(request) {
   try {
     const body = await request.json();
 
-    if (!body.nombre) {
+    if (!body.nombre || !String(body.nombre).trim()) {
       return Response.json(
         { error: "El nombre es obligatorio" },
         { status: 400 }
@@ -42,14 +41,13 @@ export async function POST(request) {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        nombre: body.nombre,
+        nombre: String(body.nombre).trim(),
       }),
     });
 
     const data = await res.json();
 
     return Response.json(data, { status: res.status });
-
   } catch (error) {
     return Response.json(
       { error: "Error creando área" },
@@ -60,32 +58,37 @@ export async function POST(request) {
 
 /* =========================
    PUT · ACTUALIZAR AREA
+   Se usa así:
+   fetch("/api/areas", {
+     method: "PUT",
+     body: JSON.stringify({ id, nombre })
+   })
 ========================= */
 export async function PUT(request) {
   try {
     const body = await request.json();
 
-    if (!body.id || !body.nombre) {
+    const id = body.id;
+    const nombre = body.nombre ? String(body.nombre).trim() : "";
+
+    if (!id || !nombre) {
       return Response.json(
         { error: "Faltan id o nombre" },
         { status: 400 }
       );
     }
 
-    const res = await fetch(`${BACKEND_URL}/areas/${body.id}`, {
+    const res = await fetch(`${BACKEND_URL}/areas/${id}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        nombre: body.nombre,
-      }),
+      body: JSON.stringify({ nombre }),
     });
 
     const data = await res.json();
 
     return Response.json(data, { status: res.status });
-
   } catch (error) {
     return Response.json(
       { error: "Error actualizando área" },
@@ -96,15 +99,17 @@ export async function PUT(request) {
 
 /* =========================
    DELETE · ELIMINAR AREA
+   Se usa así:
+   fetch(`/api/areas?id=${id}`, { method: "DELETE" })
 ========================= */
 export async function DELETE(request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get("id");
+    const url = new URL(request.url);
+    const id = url.searchParams.get("id");
 
-    if (!id) {
+    if (!id || isNaN(Number(id))) {
       return Response.json(
-        { error: "Falta el id" },
+        { error: "ID inválido o faltante" },
         { status: 400 }
       );
     }
@@ -116,7 +121,6 @@ export async function DELETE(request) {
     const data = await res.json();
 
     return Response.json(data, { status: res.status });
-
   } catch (error) {
     return Response.json(
       { error: "Error eliminando área" },

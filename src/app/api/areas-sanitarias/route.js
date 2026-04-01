@@ -5,36 +5,45 @@ if (!BACKEND_URL) {
 }
 
 /* =========================
-   GET · LISTAR INSPECCIONES
+   GET · LISTAR AREAS SANITARIAS
 ========================= */
 export async function GET() {
   try {
-    const res = await fetch(`${BACKEND_URL}/inspecciones-residuos`);
+    const res = await fetch(`${BACKEND_URL}/areas-sanitarias`);
     const data = await res.json();
 
     return Response.json(data, { status: res.status });
 
   } catch (error) {
     return Response.json(
-      { error: "Error obteniendo inspecciones de residuos" },
+      { error: "Error obteniendo áreas sanitarias" },
       { status: 500 }
     );
   }
 }
 
 /* =========================
-   POST · CREAR INSPECCIÓN
+   POST · CREAR AREA SANITARIA
 ========================= */
 export async function POST(request) {
   try {
     const body = await request.json();
 
-    const res = await fetch(`${BACKEND_URL}/inspecciones-residuos`, {
+    if (!body.nombre) {
+      return Response.json(
+        { error: "El nombre es obligatorio" },
+        { status: 400 }
+      );
+    }
+
+    const res = await fetch(`${BACKEND_URL}/areas-sanitarias`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify(body),
+      body: JSON.stringify({
+        nombre: body.nombre,
+      }),
     });
 
     const data = await res.json();
@@ -43,39 +52,35 @@ export async function POST(request) {
 
   } catch (error) {
     return Response.json(
-      { error: "Error guardando inspección de residuos" },
+      { error: "Error creando área sanitaria" },
       { status: 500 }
     );
   }
 }
 
 /* =========================
-   PUT · ACTUALIZAR INSPECCIÓN
-   ⚠️ IMPORTANTE:
-   Tu backend usa PUT "/" (id en body)
+   PUT · ACTUALIZAR AREA SANITARIA
 ========================= */
 export async function PUT(request) {
   try {
     const body = await request.json();
 
-    if (!body.id) {
+    if (!body.id || !body.nombre) {
       return Response.json(
-        { error: "Falta el id para actualizar" },
+        { error: "Faltan id o nombre" },
         { status: 400 }
       );
     }
 
-    // 🔥 CORREGIDO: SIN /{id}
-    const res = await fetch(
-      `${BACKEND_URL}/inspecciones-residuos`,
-      {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
-      }
-    );
+    const res = await fetch(`${BACKEND_URL}/areas-sanitarias/${body.id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        nombre: body.nombre,
+      }),
+    });
 
     const data = await res.json();
 
@@ -83,14 +88,14 @@ export async function PUT(request) {
 
   } catch (error) {
     return Response.json(
-      { error: "Error actualizando inspección" },
+      { error: "Error actualizando área sanitaria" },
       { status: 500 }
     );
   }
 }
 
 /* =========================
-   DELETE · BORRAR POR ID
+   DELETE · ELIMINAR AREA SANITARIA
 ========================= */
 export async function DELETE(request) {
   try {
@@ -99,17 +104,14 @@ export async function DELETE(request) {
 
     if (!id) {
       return Response.json(
-        { error: "Falta el parámetro id" },
+        { error: "Falta el id" },
         { status: 400 }
       );
     }
 
-    const res = await fetch(
-      `${BACKEND_URL}/inspecciones-residuos/${id}`,
-      {
-        method: "DELETE",
-      }
-    );
+    const res = await fetch(`${BACKEND_URL}/areas-sanitarias/${id}`, {
+      method: "DELETE",
+    });
 
     const data = await res.json();
 
@@ -117,7 +119,7 @@ export async function DELETE(request) {
 
   } catch (error) {
     return Response.json(
-      { error: "Error eliminando inspección" },
+      { error: "Error eliminando área sanitaria" },
       { status: 500 }
     );
   }

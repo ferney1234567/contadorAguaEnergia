@@ -328,7 +328,7 @@ const guardarRegistro = async (fila: any, mesIndex: number, filaIndex?: number) 
       cumple: mesData.cumple,
     };
 
-    const res = await fetch("http://localhost:8000/comparativoEnergia", {
+    const res = await fetch("/api/comparativoEnergia", {
       method: payload.id ? "PUT" : "POST", // 🔥 CLAVE
       headers: {
         "Content-Type": "application/json"
@@ -374,7 +374,7 @@ const eliminarRegistro = async (fila: any) => {
       return;
     }
 
-    const res = await fetch(`http://localhost:8000/comparativoEnergia/${fila.id}`, {
+    const res = await fetch(`/api/comparativoEnergia/${fila.id}`, {
       method: "DELETE"
     });
 

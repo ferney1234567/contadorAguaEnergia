@@ -360,7 +360,7 @@ const guardarRegistro = async (fila: any, mesIndex: number, filaIndex?: number) 
 
 const eliminarRegistro = async (fila: any, mesIndex: number) => {
   try {
-    const res = await fetch(`http://localhost:8000/comparativoAgua/${fila.id}`, {
+    const res = await fetch(`/api/comparativoAgua/${fila.id}`, {
       method: "DELETE"
     });
 

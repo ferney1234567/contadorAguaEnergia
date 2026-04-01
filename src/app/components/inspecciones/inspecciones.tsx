@@ -7,9 +7,9 @@ import {
   Recycle,
 } from "lucide-react";
 
-import TablaReciclaje from "./TablaReciclaje";
-import TablaAgua from "./TablaAgua";
-import TablaEnergia from "./TablaEnergia";
+import TablaReciclaje from "./Reciclage/TablaReciclaje";
+import TablaAgua from "./agua/TablaAgua";
+import TablaEnergia from "./energia/TablaEnergia";
 
 interface Props {
   modoNoche: boolean;
@@ -99,14 +99,14 @@ export default function Inspecciones({ modoNoche }: Props) {
 
           {vista === "agua" && (
             <TablaAgua
-              data={dataAgua}
+              dataBackend={dataAgua}
               modoNoche={modoNoche}
             />
           )}
 
           {vista === "energia" && (
             <TablaEnergia
-              data={dataEnergia}
+              dataBackend={dataEnergia}
               modoNoche={modoNoche}
             />
           )}

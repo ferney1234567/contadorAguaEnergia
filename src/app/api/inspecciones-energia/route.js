@@ -5,31 +5,42 @@ if (!BACKEND_URL) {
 }
 
 /* =========================
-   GET · LISTAR INSPECCIONES
+   GET · LISTAR INSPECCIONES ENERGÍA
 ========================= */
 export async function GET() {
   try {
-    const res = await fetch(`${BACKEND_URL}/inspecciones-residuos`);
-    const data = await res.json();
+    const res = await fetch(`${BACKEND_URL}/inspecciones-energia`);
+
+    const text = await res.text();
+
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      return Response.json(
+        { error: "Respuesta inválida del backend" },
+        { status: 500 }
+      );
+    }
 
     return Response.json(data, { status: res.status });
 
   } catch (error) {
     return Response.json(
-      { error: "Error obteniendo inspecciones de residuos" },
+      { error: "Error obteniendo inspecciones de energía" },
       { status: 500 }
     );
   }
 }
 
 /* =========================
-   POST · CREAR INSPECCIÓN
+   POST · CREAR INSPECCIÓN ENERGÍA
 ========================= */
 export async function POST(request) {
   try {
     const body = await request.json();
 
-    const res = await fetch(`${BACKEND_URL}/inspecciones-residuos`, {
+    const res = await fetch(`${BACKEND_URL}/inspecciones-energia`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
@@ -37,27 +48,40 @@ export async function POST(request) {
       body: JSON.stringify(body),
     });
 
-    const data = await res.json();
+    const text = await res.text();
+
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      return Response.json(
+        { error: "Respuesta inválida del backend" },
+        { status: 500 }
+      );
+    }
+
+    if (!res.ok) {
+      return Response.json(data, { status: res.status });
+    }
 
     return Response.json(data, { status: res.status });
 
   } catch (error) {
     return Response.json(
-      { error: "Error guardando inspección de residuos" },
+      { error: "Error guardando inspección de energía" },
       { status: 500 }
     );
   }
 }
 
 /* =========================
-   PUT · ACTUALIZAR INSPECCIÓN
-   ⚠️ IMPORTANTE:
-   Tu backend usa PUT "/" (id en body)
+   PUT · ACTUALIZAR INSPECCIÓN ENERGÍA
 ========================= */
 export async function PUT(request) {
   try {
     const body = await request.json();
 
+    // 🔒 validar id
     if (!body.id) {
       return Response.json(
         { error: "Falta el id para actualizar" },
@@ -65,9 +89,8 @@ export async function PUT(request) {
       );
     }
 
-    // 🔥 CORREGIDO: SIN /{id}
     const res = await fetch(
-      `${BACKEND_URL}/inspecciones-residuos`,
+      `${BACKEND_URL}/inspecciones-energia/${body.id}`,
       {
         method: "PUT",
         headers: {
@@ -77,20 +100,38 @@ export async function PUT(request) {
       }
     );
 
-    const data = await res.json();
+    const text = await res.text();
+
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      console.error("❌ RESPUESTA NO JSON:", text);
+
+      return Response.json(
+        { error: "Respuesta inválida del backend" },
+        { status: 500 }
+      );
+    }
+
+    if (!res.ok) {
+      return Response.json(data, { status: res.status });
+    }
 
     return Response.json(data, { status: res.status });
 
   } catch (error) {
+    console.error("🔥 ERROR PUT:", error);
+
     return Response.json(
-      { error: "Error actualizando inspección" },
+      { error: "Error actualizando inspección de energía" },
       { status: 500 }
     );
   }
 }
 
 /* =========================
-   DELETE · BORRAR POR ID
+   DELETE · BORRAR INSPECCIÓN
 ========================= */
 export async function DELETE(request) {
   try {
@@ -105,19 +146,29 @@ export async function DELETE(request) {
     }
 
     const res = await fetch(
-      `${BACKEND_URL}/inspecciones-residuos/${id}`,
+      `${BACKEND_URL}/inspecciones-energia/${id}`,
       {
         method: "DELETE",
       }
     );
 
-    const data = await res.json();
+    const text = await res.text();
+
+    let data;
+    try {
+      data = JSON.parse(text);
+    } catch {
+      return Response.json(
+        { error: "Respuesta inválida del backend" },
+        { status: 500 }
+      );
+    }
 
     return Response.json(data, { status: res.status });
 
   } catch (error) {
     return Response.json(
-      { error: "Error eliminando inspección" },
+      { error: "Error eliminando inspección de energía" },
       { status: 500 }
     );
   }
