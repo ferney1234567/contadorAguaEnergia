@@ -736,7 +736,7 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
       <>
         {/*------------------ VISTA MOVIL -------------------------*/}
   <MovilReciclaje
-  modoNoche={modoNoche}   // ✅ CORRECTO
+   modoNoche={modoNoche ?? false}// ✅ CORRECTO
   dataBackend={dataBackend}
   setInspecciones={setInspecciones}
   mostrarModal={mostrarModal}
