@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { CalendarDays, Search, User2, Filter, Plus } from "lucide-react";
 import Swal from "sweetalert2";
-import MovilReciclaje from "./MovilReciclaje";
+import MovilReciclaje from "./modalReciclaje";
 
 type RegistroValores = {
   [fila: number]: { [campo: number]: { c?: string; nc?: string } };
@@ -51,7 +51,8 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
   const [inspecciones, setInspecciones] = useState<any[]>([]);
   const [responsable, setResponsable] = useState("");
   const [fechaSesion, setFechaSesion] = useState(new Date().toISOString().split("T")[0],);
-
+  const [mostrarModal, setMostrarModal] = useState(false);
+  
   useEffect(() => {
     const guardado = localStorage.getItem("responsable");
     if (guardado) setResponsable(guardado);
@@ -376,26 +377,33 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
     return grupos;
   }, [inspecciones]);
 
-  const inspeccionesFiltradas = useMemo(() => {
-    return Object.entries(inspeccionesPorFecha)
-      .filter(([clave]) => {
-        const [fechaBase] = clave.split("__");
-        const d = new Date(fechaBase);
-        if (isNaN(d.getTime())) return false;
-        const mes = String(d.getMonth() + 1).padStart(2, "0");
-        const anio = String(d.getFullYear());
-        return (
-          (mesFiltro === "Todos" || mes === mesFiltro) &&
-          (anioFiltro === "Todos" || anio === anioFiltro)
-        );
-      })
-      .sort((a, b) => {
-        const [fechaA] = a[0].split("__");
-        const [fechaB] = b[0].split("__");
-        return new Date(fechaB).getTime() - new Date(fechaA).getTime();
-      });
-  }, [inspeccionesPorFecha, mesFiltro, anioFiltro]);
+ const inspeccionesFiltradas = useMemo(() => {
+  return Object.entries(inspeccionesPorFecha)
+    .filter(([clave, registros]) => {
+      const [fechaBase] = clave.split("__");
+      const d = new Date(fechaBase);
 
+      if (isNaN(d.getTime())) return false;
+
+      const mes = String(d.getMonth() + 1).padStart(2, "0");
+      const anio = String(d.getFullYear());
+
+      // 🔥 FILTRO REAL
+      const coincideMes =
+        mesFiltro === "Todos" ? true : mes === mesFiltro;
+
+      const coincideAnio =
+        anioFiltro === "Todos" ? true : anio === anioFiltro;
+
+      return coincideMes && coincideAnio;
+    })
+    .sort((a, b) => {
+      const [fechaA] = a[0].split("__");
+      const [fechaB] = b[0].split("__");
+
+      return new Date(fechaB).getTime() - new Date(fechaA).getTime();
+    });
+}, [inspeccionesPorFecha, mesFiltro, anioFiltro]);
 
 
   const obtenerValor = (index: number, campo: number, tipo: "c" | "nc", registro: any) => {
@@ -542,208 +550,198 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
           </p>
         </div>
 
-        {/* FECHA + RESPONSABLE */}
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div
-            className={`rounded-2xl px-4 py-3 flex items-center gap-3 ${estilos.inputSuave}`}
-          >
-            <CalendarDays size={18} />
-            <div className="flex flex-col">
-              <span className="text-[11px] sm:text-xs opacity-80">
-                Fecha de inspección
-              </span>
-              <span className="text-xs sm:text-sm font-semibold">
-                {fechaActual}
-              </span>
-            </div>
-          </div>
+     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
 
-          <div
-            className={`rounded-2xl px-4 py-3 flex items-center gap-3 ${estilos.inputSuave}`}
-          >
-            <User2 size={18} />
-            <div className="flex-1">
-              <label className="block text-[11px] sm:text-xs mb-1 opacity-80">
-                Responsable
-              </label>
-              <input
-                type="text"
-                value={responsable}
-                onChange={(e) => handleResponsable(e.target.value)}
-                placeholder="Nombre del responsable"
-                className={`w-full rounded-xl px-3 py-2 text-sm outline-none ${estilos.input}`}
-              />
-            </div>
-          </div>
-        </div>
+  {/* 📅 FECHA */}
+  <div
+    className={`rounded-2xl px-4 py-3 flex items-center gap-3 ${estilos.inputSuave}`}
+  >
+    <CalendarDays size={18} />
+    <div className="flex flex-col">
+      <span className="text-[11px] sm:text-xs opacity-80">
+        Fecha de inspección
+      </span>
+      <span className="text-xs sm:text-sm font-semibold">
+        {fechaActual}
+      </span>
+    </div>
+  </div>
 
-        {/* FILTROS */}
-        <div className={`rounded-2xl p-3 sm:p-4 ${estilos.inputSuave}`}>
-          <div className="flex items-center gap-2 mb-3">
-            <Filter size={16} />
-            <h3 className="text-sm sm:text-base font-semibold">
-              Filtros de búsqueda
-            </h3>
-          </div>
+  {/* 👤 RESPONSABLE */}
+  <div
+    className={`rounded-2xl px-4 py-3 flex items-center gap-3 ${estilos.inputSuave}`}
+  >
+    <User2 size={18} />
+    <div className="flex-1">
+      <label className="block text-[11px] sm:text-xs mb-1 opacity-80">
+        Responsable
+      </label>
+      <input
+        type="text"
+        value={responsable}
+        onChange={(e) => handleResponsable(e.target.value)}
+        placeholder="Nombre del responsable"
+        className={`w-full rounded-xl px-3 py-2 text-sm outline-none ${estilos.input}`}
+      />
+    </div>
+  </div>
 
-          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
-            <div className="relative">
-              <Search
-                size={16}
-                className="absolute left-3 top-1/2 -translate-y-1/2 opacity-60"
-              />
-              <input
-                type="text"
-                value={busqueda}
-                onChange={(e) => setBusqueda(e.target.value)}
-                placeholder="Buscar por área o puesto"
-                className={`w-full rounded-xl pl-10 pr-3 py-2.5 text-sm outline-none ${estilos.input}`}
-              />
-            </div>
+</div>
 
-            <select
-              value={anioFiltro}
-              onChange={(e) => setAnioFiltro(e.target.value)}
-              className={`rounded-xl px-3 py-2.5 text-sm outline-none ${estilos.input}`}
-            >
-              {aniosDisponibles.map((anio) => (
-                <option key={anio} value={anio}>
-                  Año: {anio}
-                </option>
-              ))}
-            </select>
+{/* 🔥 FILTROS MEJORADOS */}
+<div className={`rounded-2xl p-4 ${estilos.inputSuave}`}>
 
-            <select
-              value={mesFiltro}
-              onChange={(e) => setMesFiltro(e.target.value)}
-              className={`rounded-xl px-3 py-2.5 text-sm outline-none ${estilos.input}`}
-            >
-              {MESES.map((mes) => (
-                <option key={mes.value} value={mes.value}>
-                  Mes: {mes.label}
-                </option>
-              ))}
-            </select>
+  {/* HEADER */}
+  <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+    <div className="flex items-center gap-2">
+      <Filter size={16} />
+      <h3 className="text-sm sm:text-base font-semibold">
+        Filtros de búsqueda
+      </h3>
+    </div>
 
-            <div className="relative w-full">
-              <Plus
-                size={16}
-                className="absolute left-3 top-1/2 -translate-y-1/2 opacity-60"
-              />
+    {/* 🔥 BOTÓN PRO */}
+    <button
+      onClick={() => setMostrarModal(true)}
+      className={`
+        flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition
+        ${modoNoche
+          ? "bg-gradient-to-r from-blue-700 to-blue-500 text-white shadow-md"
+          : "bg-gradient-to-r from-blue-500 to-blue-400 text-white shadow-sm"
+        }
+        hover:scale-105 active:scale-95
+      `}
+    >
+      <Plus size={16} />
+      Nueva inspección
+    </button>
+  </div>
 
-              <input
-                type="text"
-                placeholder="Crear nueva área y presionar Enter..."
-                className={`w-full rounded-xl pl-10 pr-3 py-2.5 text-sm outline-none 
-    ${modoNoche
-                    ? "bg-[#222] border border-[#3a3a3a] text-white placeholder:text-gray-400"
-                    : "bg-white border border-gray-300 text-gray-800 placeholder:text-gray-400"
-                  }`}
-                onKeyDown={async (e) => {
-                  if (e.key === "Enter") {
-                    e.preventDefault();
+  {/* CONTROLES */}
+  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
 
-                    const input = e.target as HTMLInputElement;
-                    const valor = input.value.trim();
+    {/* BUSCAR */}
+    <div className="relative">
+      <Search
+        size={16}
+        className="absolute left-3 top-1/2 -translate-y-1/2 opacity-60"
+      />
+      <input
+        type="text"
+        value={busqueda}
+        onChange={(e) => setBusqueda(e.target.value)}
+        placeholder="Buscar por área"
+        className={`w-full rounded-xl pl-10 pr-3 py-2.5 text-sm outline-none ${estilos.input}`}
+      />
+    </div>
 
-                    if (!valor) return;
+    {/* AÑO */}
+    <select
+      value={anioFiltro}
+      onChange={(e) => setAnioFiltro(e.target.value)}
+      className={`rounded-xl px-3 py-2.5 text-sm outline-none ${estilos.input}`}
+    >
+      {aniosDisponibles.map((anio) => (
+        <option key={anio} value={anio}>
+          Año: {anio}
+        </option>
+      ))}
+    </select>
 
-                    try {
-                      // 🔥 guardar en backend
-                      const res = await fetch("/api/areas", {
-                        method: "POST",
-                        headers: {
-                          "Content-Type": "application/json",
-                        },
-                        body: JSON.stringify({
-                          nombre: valor,
-                        }),
-                      });
+    {/* MES */}
+    <select
+      value={mesFiltro}
+      onChange={(e) => setMesFiltro(e.target.value)}
+      className={`rounded-xl px-3 py-2.5 text-sm outline-none ${estilos.input}`}
+    >
+      {MESES.map((mes) => (
+        <option key={mes.value} value={mes.value}>
+          Mes: {mes.label}
+        </option>
+      ))}
+    </select>
 
-                      if (!res.ok) throw new Error("Error al guardar");
+    {/* CREAR ÁREA */}
+    <div className="relative">
+      <Plus
+        size={16}
+        className="absolute left-3 top-1/2 -translate-y-1/2 opacity-60"
+      />
+      <input
+        type="text"
+        placeholder="Nueva área + Enter"
+        className={`w-full rounded-xl pl-10 pr-3 py-2.5 text-sm outline-none ${estilos.input}`}
+        onKeyDown={async (e) => {
+          if (e.key === "Enter") {
+            e.preventDefault();
 
-                      const nuevaArea = await res.json();
+            const input = e.target as HTMLInputElement;
+            const valor = input.value.trim();
 
-                      // 🔥 actualizar tabla SIN recargar
-                      setdataBackend((prev) => [...prev, nuevaArea]);
+            if (!valor) return;
 
-                      // 🔥 alerta bonita
-                      Swal.fire({
-                        toast: true,
-                        position: "top-end", // arriba derecha (en móvil se ve arriba)
-                        icon: "success",
-                        title: "Área creada",
-                        text: valor,
-                        showConfirmButton: false,
-                        timer: 1500,
-                        timerProgressBar: true,
+            try {
+              const res = await fetch("/api/areas", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ nombre: valor }),
+              });
 
-                        // 🎨 ESTILO BLANCO
-                        background: "#ffffff",
-                        color: "#1f2937",
-                        width: "280px",
+              if (!res.ok) throw new Error();
 
-                        // 🔥 bordes suaves y sombra elegante
-                        customClass: {
-                          popup: "rounded-xl shadow-md",
-                        },
-                      });
+              const nuevaArea = await res.json();
+              setdataBackend((prev) => [...prev, nuevaArea]);
 
-                      input.value = ""; // limpiar input
-                    } catch (error) {
-                      console.error(error);
+              Swal.fire({
+                toast: true,
+                position: "top-end",
+                icon: "success",
+                title: "Área creada",
+                timer: 1200,
+                showConfirmButton: false,
+              });
 
-                      Swal.fire({
-                        icon: "error",
-                        title: "Error",
-                        text: "No se pudo crear el área",
-                      });
-                    }
-                  }
-                }}
-              />
-            </div>
-          </div>
+              input.value = "";
+            } catch {
+              Swal.fire({
+                icon: "error",
+                title: "Error",
+                text: "No se pudo crear el área",
+              });
+            }
+          }
+        }}
+      />
+    </div>
 
-          <div className="mt-3 flex flex-wrap gap-2">
-            <span className={`px-3 py-1 rounded-full text-xs ${estilos.chip}`}>
-              Registros visibles: {inspeccionesFiltradas.length}
-            </span>
-            <span className={`px-3 py-1 rounded-full text-xs ${estilos.chip}`}>
-              Responsable: {responsable || "Sin asignar"}
-            </span>
-            <span className={`px-3 py-1 rounded-full text-xs ${estilos.chip}`}>
-              Fecha: {fechaActual}
-            </span>
-          </div>
+  </div>
+
+  {/* CHIPS */}
+  <div className="mt-4 flex flex-wrap gap-2">
+    <span className={`px-3 py-1 rounded-full text-xs ${estilos.chip}`}>
+      📊 {inspeccionesFiltradas.length} registros
+    </span>
+    <span className={`px-3 py-1 rounded-full text-xs ${estilos.chip}`}>
+      👤 {responsable || "Sin responsable"}
+    </span>
+    <span className={`px-3 py-1 rounded-full text-xs ${estilos.chip}`}>
+      📅 {fechaActual}
+    </span>
+  </div>
+
+
         </div>
       </div>
 
       <>
         {/*------------------ VISTA MOVIL -------------------------*/}
-        <MovilReciclaje
-          modoNoche={modoNoche}
-          dataBackend={dataBackend}
-          dataBackendFiltrada={dataBackendFiltrada}
-          campos={campos}
-          valores={valores}
-          observaciones={observaciones}
-          responsable={responsable}
-          estilos={estilos}
-          inspeccionesFiltradas={inspeccionesFiltradas}
-          handleChange={handleChange}
-          handleObs={handleObs}
-          totalFila={totalFila}
-          totalCampoFila={totalCampoFila}
-          totalCampoGeneral={totalCampoGeneral}
-          totalGeneral={totalGeneral}
-          tieneDatos={tieneDatos}
-          editarContenedor={editarContenedor}
-          finalizarInspeccion={finalizarInspeccion}
-          setInspecciones={setInspecciones}
-          setValores={setValores}
-          setObservaciones={setObservaciones}
-        />
+  <MovilReciclaje
+  modoNoche={modoNoche}   // ✅ CORRECTO
+  dataBackend={dataBackend}
+  setInspecciones={setInspecciones}
+  mostrarModal={mostrarModal}
+  setMostrarModal={setMostrarModal}
+/>
 
         {/*------------------ VISTA DESKTOP------------------------ */}
         <div
@@ -784,6 +782,7 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
                     >
                       📊 {registros.length} registros
                     </span>
+        
 
                     <span
                       className={`px-3 py-1 rounded-full text-xs font-semibold ${modoNoche
@@ -1274,4 +1273,6 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
       </div>
     </div>
   );
+
+  
 }

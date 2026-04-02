@@ -56,18 +56,20 @@ const nuevosDatos = [...nuevaFila.datos];
 
 }, []);
 
+useEffect(() => {
+  cargarDatos();
+}, [anio]);
+
 
 const cargarDatos = async () => {
-
   try {
     const res = await fetch("/api/comparativoEnergia");
     const data = await res.json();
 
     const mapa: any = {};
 
+    // 🔥 1. AGRUPAR NORMAL
     data.forEach((item: any) => {
-
-      // 🔥 CLAVE ÚNICA (NOMBRE + AÑO)
       const key = `${item.nombre}_${item.anio}`;
 
       if (!mapa[key]) {
@@ -85,19 +87,53 @@ const cargarDatos = async () => {
         };
       }
 
-      // 🔥 LLENAR MES CORRECTO
       mapa[key].datos[item.mes - 1] = {
         kWh: Number(item.kw_consumidos ?? 0),
         valor: Number(item.valor_consumo_energia ?? 0),
         cumple: item.cumple ?? true
       };
-
     });
 
-    // 🔥 ORDENAR POR AÑO (OPCIONAL PRO 🔥)
-    const resultado = Object.values(mapa).sort(
-      (a: any, b: any) => b.anio - a.anio
+    let resultado: any[] = Object.values(mapa);
+
+    // ============================================
+    // 🔥 2. CLONAR SEDES SI NO HAY DATOS EN EL AÑO
+    // ============================================
+
+    const anioActual = Number(anio);
+
+    const hayDatosEnAnio = resultado.some(
+      (r) => Number(r.anio) === anioActual
     );
+
+    if (!hayDatosEnAnio && resultado.length > 0) {
+
+      // 🔥 obtener último año con datos
+      const ultimoAnio = Math.max(
+        ...resultado.map((r) => Number(r.anio))
+      );
+
+      const sedesBase = resultado.filter(
+        (r) => Number(r.anio) === ultimoAnio
+      );
+
+      const nuevasFilas = sedesBase.map((sede) => ({
+        ...sede,
+        anio: anioActual,
+        id: null, // 🔥 importante (para que no intente actualizar)
+        datos: Array.from({ length: 12 }, () => ({
+          kWh: 0,
+          valor: 0,
+          cumple: true
+        }))
+      }));
+
+      resultado = [...resultado, ...nuevasFilas];
+    }
+
+    // ============================================
+
+    resultado.sort((a: any, b: any) => b.anio - a.anio);
 
     setDatosEnergia(resultado);
 
@@ -109,7 +145,6 @@ const cargarDatos = async () => {
       title: "Error cargando datos"
     });
   }
-
 };
 
   const agregarFila = () => {
@@ -233,7 +268,7 @@ const datosFiltrados = datosEnergia.filter((d) => {
 
   const matchMes =
     mes === "" ||
-    (d.datos?.[Number(mes)]?.M3 ?? 0) > 0;
+    (d.datos?.[Number(mes)]?.kWh ?? 0)
 
   const matchConsumo =
     consumoMin === "" ||
@@ -310,14 +345,12 @@ const datosFiltrados = datosEnergia.filter((d) => {
       }, 0);
 
   };
-const guardarRegistro = async (fila: any, mesIndex: number, filaIndex?: number) => {
+const guardarRegistro = async (fila: any, mesIndex: number) => {
   try {
-
     const mesData = fila.datos?.[mesIndex];
     if (!mesData) return;
 
     const payload = {
-      id: fila.id || null, // 🔥 IMPORTANTE
       nombre: fila.nombre,
       ubicacion: fila.ubicacion,
       cuenta: fila.cuenta,
@@ -329,7 +362,7 @@ const guardarRegistro = async (fila: any, mesIndex: number, filaIndex?: number) 
     };
 
     const res = await fetch("/api/comparativoEnergia", {
-      method: payload.id ? "PUT" : "POST", // 🔥 CLAVE
+      method: "POST", // 🔥 SIEMPRE POST
       headers: {
         "Content-Type": "application/json"
       },
@@ -339,14 +372,23 @@ const guardarRegistro = async (fila: any, mesIndex: number, filaIndex?: number) 
     if (!res.ok) {
       const error = await res.text();
       console.error("ERROR BACKEND:", error);
-      throw new Error(error);
+
+      Swal.fire({
+        icon: "error",
+        title: "Error backend",
+        text: error || "Error desconocido"
+      });
+
+      return;
     }
+
+    const data = await res.json();
 
     Swal.fire({
       toast: true,
       position: "top-end",
       icon: "success",
-      title: payload.id ? "Actualizado" : "Guardado",
+      title: data.mensaje,
       showConfirmButton: false,
       timer: 1000
     });
@@ -511,175 +553,195 @@ ${modoNoche
 ? "bg-white hover:bg-yellow-50"
 : "bg-gray-50 hover:bg-yellow-50"}`}>
 
-{/* NOMBRE */}
-<td className={`"border px-2 py-1 min-w-[180px]"${modoNoche ? "border-[#333]" : "border-gray-300"}`}>
-<input
-value={fila.nombre ?? ""}
-ref={(el)=>{
-if(!inputsRef.current[i]) inputsRef.current[i]=[];
-inputsRef.current[i][0]=el;
-}}
-onKeyDown={(e)=>{
-manejarTeclas(e,i,0);
+{/* =========================
+   NOMBRE
+========================= */}
+<td className={`border px-3 py-2 min-w-[200px] ${modoNoche ? "border-[#333]" : "border-gray-300"}`}>
+  <input
+    value={fila.nombre ?? ""}
+    ref={(el) => {
+      if (!inputsRef.current[i]) inputsRef.current[i] = [];
+      inputsRef.current[i][0] = el;
+    }}
+    onKeyDown={(e) => {
+      manejarTeclas(e, i, 0);
 
-if(e.key==="Enter"){
-guardarRegistro(fila,0,i); // 🔥 guarda cambios
-}
-}}
-className={`w-full outline-none font-semibold ${modoNoche ? "bg-transparent text-white" : "bg-transparent text-gray-800"}`}
-onChange={(e)=>editarFila(i,"nombre",e.target.value)}
-/>
+      if (e.key === "Enter") {
+        guardarRegistro(fila, 0);
+      }
+    }}
+    className={`w-full outline-none font-semibold text-sm ${
+      modoNoche ? "bg-transparent text-white" : "bg-transparent text-gray-800"
+    }`}
+    onChange={(e) => editarFila(i, "nombre", e.target.value)}
+  />
 </td>
 
-{/* UBICACION */}
-<td className={`border p-2 ${modoNoche ? "border-[#333]" : "border-gray-300"}`}>
-<input
-value={fila.ubicacion ?? ""}
-ref={(el)=>{
-if(!inputsRef.current[i]) inputsRef.current[i]=[];
-inputsRef.current[i][1]=el;
-}}
-onKeyDown={(e)=>{
-manejarTeclas(e,i,1);
+{/* =========================
+   UBICACION
+========================= */}
+<td className={`border px-3 py-2 min-w-[220px] ${modoNoche ? "border-[#333]" : "border-gray-300"}`}>
+  <input
+    value={fila.ubicacion ?? ""}
+    ref={(el) => {
+      if (!inputsRef.current[i]) inputsRef.current[i] = [];
+      inputsRef.current[i][1] = el;
+    }}
+    onKeyDown={(e) => {
+      manejarTeclas(e, i, 1);
 
-if(e.key==="Enter"){
-guardarRegistro(fila,0,i);
-}
-}}
-className={`w-full outline-none ${modoNoche ? "bg-transparent text-white" : "bg-transparent text-gray-800"}`}
-onChange={(e)=>editarFila(i,"ubicacion",e.target.value)}
-/>
+      if (e.key === "Enter") {
+        guardarRegistro(fila, 0);
+      }
+    }}
+    className={`w-full outline-none text-sm ${
+      modoNoche ? "bg-transparent text-white" : "bg-transparent text-gray-800"
+    }`}
+    onChange={(e) => editarFila(i, "ubicacion", e.target.value)}
+  />
 </td>
 
-{/* CUENTA */}
-<td className={`border p-2 text-center ${modoNoche ? "border-[#333]" : "border-gray-300"}`}>
-<input
-value={fila.cuenta ?? ""}
-ref={(el)=>{
-if(!inputsRef.current[i]) inputsRef.current[i]=[];
-inputsRef.current[i][2]=el;
-}}
-onKeyDown={(e)=>{
-manejarTeclas(e,i,2);
+{/* =========================
+   CUENTA
+========================= */}
+<td className={`border px-3 py-2 text-center min-w-[120px] ${modoNoche ? "border-[#333]" : "border-gray-300"}`}>
+  <input
+    value={fila.cuenta ?? ""}
+    ref={(el) => {
+      if (!inputsRef.current[i]) inputsRef.current[i] = [];
+      inputsRef.current[i][2] = el;
+    }}
+    onKeyDown={(e) => {
+      manejarTeclas(e, i, 2);
 
-if(e.key==="Enter"){
-guardarRegistro(fila,0,i);
-}
-}}
-className={`w-full outline-none text-center ${modoNoche ? "bg-transparent text-white" : "bg-transparent text-gray-800"}`}
-onChange={(e)=>editarFila(i,"cuenta",e.target.value)}
-/>
+      if (e.key === "Enter") {
+        guardarRegistro(fila, 0);
+      }
+    }}
+    className={`w-full outline-none text-center text-sm ${
+      modoNoche ? "bg-transparent text-white" : "bg-transparent text-gray-800"
+    }`}
+    onChange={(e) => editarFila(i, "cuenta", e.target.value)}
+  />
 </td>
 
-{fila.datos.slice(inicio,fin).map((d:any,j:number)=>{
+{/* =========================
+   MESES DINÁMICOS
+========================= */}
+{fila.datos.slice(inicio, fin).map((d: any, j: number) => {
 
-const colBase = 3 + j*3;
+  const colBase = 3 + j * 3;
 
-return (
+  return (
+    <React.Fragment key={j}>
 
-<React.Fragment key={j}>
+      {/* =========================
+         kWh
+      ========================= */}
+      <td className={`border p-1 text-center ${modoNoche ? "border-[#333]" : "border-gray-300"}`}>
+        <input
+          value={d.kWh ?? ""}
+          inputMode="decimal"
+          ref={(el) => {
+            if (!inputsRef.current[i]) inputsRef.current[i] = [];
+            inputsRef.current[i][colBase] = el;
+          }}
+          onKeyDown={(e) => {
+            manejarTeclas(e, i, colBase);
 
-{/* kWh */}
-<td className={`border p-1 text-center ${modoNoche ? "border-[#333]" : "border-gray-300"}`}>
-<input
-value={d.kWh ?? ""}
-type="text"
-inputMode="decimal"
-ref={(el)=>{
-if(!inputsRef.current[i]) inputsRef.current[i]=[];
-inputsRef.current[i][colBase]=el;
-}}
-onKeyDown={(e)=>{
-manejarTeclas(e,i,colBase);
+            if (e.key === "Enter") {
+              guardarRegistro(fila, inicio + j);
+            }
 
-if(e.key==="Enter"){
-guardarRegistro(datosEnergia[i],inicio+j,i);
-}
+            if (e.key === "Delete" || e.key === "Backspace") {
+              editarCelda(i, inicio + j, "kWh", "");
+            }
+          }}
+          className={`w-20 text-center rounded-md border text-sm outline-none transition
+          ${modoNoche
+            ? "bg-[#2a2a2a] border-[#444] text-white"
+            : "bg-gray-100 border-gray-300 text-gray-800"}`}
+          onChange={(e) => {
+            const valor = e.target.value.replace(/[^0-9.]/g, "");
+            editarCelda(i, inicio + j, "kWh", valor);
+          }}
+        />
+      </td>
 
-// 🔥 borrar con teclado
-if(e.key==="Delete" || e.key==="Backspace"){
-editarCelda(i, inicio+j, "kWh", "");
-}
-}}
-className={`w-20 text-center rounded-md border outline-none
-${modoNoche ? "bg-[#2a2a2a] border-[#444] text-white" : "bg-gray-100 border-gray-300 text-gray-800"}`}
-onChange={(e)=>{
-const valor = e.target.value.replace(/[^0-9.]/g, "");
-editarCelda(i, inicio+j, "kWh", valor);
-}}
-/>
-</td>
+      {/* =========================
+         VALOR
+      ========================= */}
+      <td className={`border p-1 text-center ${modoNoche ? "border-[#333]" : "border-gray-300"}`}>
+        <input
+          value={d.valor ?? ""}
+          inputMode="numeric"
+          ref={(el) => {
+            if (!inputsRef.current[i]) inputsRef.current[i] = [];
+            inputsRef.current[i][colBase + 1] = el;
+          }}
+          onKeyDown={(e) => {
+            manejarTeclas(e, i, colBase + 1);
 
-{/* VALOR */}
-<td className={`border p-1 text-center ${modoNoche ? "border-[#333]" : "border-gray-300"}`}>
-<input
-value={d.valor ?? ""}
-type="text"
-inputMode="numeric"
-ref={(el)=>{
-if(!inputsRef.current[i]) inputsRef.current[i]=[];
-inputsRef.current[i][colBase+1]=el;
-}}
-onKeyDown={(e)=>{
-manejarTeclas(e,i,colBase+1);
+            if (e.key === "Enter") {
+              guardarRegistro(fila, inicio + j);
+            }
 
-if(e.key==="Enter"){
-guardarRegistro(datosEnergia[i],inicio+j,i);
-}
+            if (e.key === "Delete" || e.key === "Backspace") {
+              editarCelda(i, inicio + j, "valor", "");
+            }
+          }}
+          className={`w-24 text-center rounded-md border text-sm outline-none transition
+          ${modoNoche
+            ? "bg-[#2a2a2a] border-[#444] text-white"
+            : "bg-gray-100 border-gray-300 text-gray-800"}`}
+          onChange={(e) => {
+            const valor = e.target.value.replace(/[^0-9]/g, "");
+            editarCelda(i, inicio + j, "valor", valor);
+          }}
+        />
+      </td>
 
-// 🔥 borrar con teclado
-if(e.key==="Delete" || e.key==="Backspace"){
-editarCelda(i, inicio+j, "valor", "");
-}
-}}
-className={`w-24 text-center rounded-md border outline-none
-${modoNoche ? "bg-[#2a2a2a] border-[#444] text-white" : "bg-gray-100 border-gray-300 text-gray-800"}`}
-onChange={(e)=>{
-const valor = e.target.value.replace(/[^0-9]/g, "");
-editarCelda(i, inicio+j, "valor", valor);
-}}
-/>
-</td>
+      {/* =========================
+         CUMPLE
+      ========================= */}
+      <td className={`border p-1 text-center ${modoNoche ? "border-[#333]" : "border-gray-300"}`}>
+        <select
+          value={d.cumple ? "true" : "false"}
+          ref={(el) => {
+            if (!inputsRef.current[i]) inputsRef.current[i] = [];
+            inputsRef.current[i][colBase + 2] = el;
+          }}
+          onKeyDown={(e) => manejarTeclas(e, i, colBase + 2)}
+          className={`text-lg font-bold cursor-pointer rounded-md px-1
+          ${d.cumple ? "text-green-500" : "text-red-500"}
+          ${modoNoche ? "bg-[#1f1f1f]" : "bg-white"}`}
+          onChange={(e) => {
 
-{/* CUMPLE */}
-<td className={`border p-1 text-center ${modoNoche ? "border-[#333]" : "border-gray-300"}`}>
-<select
-value={d.cumple ? "true":"false"}
-ref={(el)=>{
-if(!inputsRef.current[i]) inputsRef.current[i]=[];
-inputsRef.current[i][colBase+2]=el;
-}}
-onKeyDown={(e)=>manejarTeclas(e,i,colBase+2)}
-className={`text-lg font-bold cursor-pointer
-${d.cumple ? "text-green-500":"text-red-500"}
-${modoNoche ? "bg-[#1f1f1f]" : "bg-white"}`}
-onChange={(e)=>{
+            const nuevoValor = e.target.value === "true";
 
-const nuevoValor = e.target.value === "true";
+            editarCelda(i, inicio + j, "cumple", nuevoValor);
 
-editarCelda(i, inicio+j, "cumple", nuevoValor);
+            guardarRegistro(
+              {
+                ...fila,
+                datos: fila.datos.map((item: any, idx: number) =>
+                  idx === (inicio + j)
+                    ? { ...item, cumple: nuevoValor }
+                    : item
+                )
+              },
+              inicio + j
+            );
+          }}
+        >
+          <option value="true">✔</option>
+          <option value="false">✖</option>
+        </select>
+      </td>
 
-// 🔥 guarda automático
-guardarRegistro({
-...datosEnergia[i],
-datos: datosEnergia[i].datos.map((item:any, idx:number) =>
-idx === (inicio+j)
-? { ...item, cumple: nuevoValor }
-: item
-)
-}, inicio+j, i);
+    </React.Fragment>
+  );
 
-}}
->
-
-<option value="true">✔</option>
-<option value="false">✖</option>
-</select>
-</td>
-
-</React.Fragment>
-
-);
 
 })}
 

@@ -935,50 +935,37 @@ const inspeccionesPorFecha = useMemo(() => {
                                   >
                                     <div className="grid grid-cols-2 gap-2">
                                       <input
-                                        value={
-                                          valores?.[index]?.[c.key]?.c || ""
-                                        }
-                                        onChange={(e) =>
-                                          handleChange(
-                                            index,
-                                            c.key,
-                                            "c",
-                                            e.target.value,
-                                          )
-                                        }
-                                        onKeyDown={(e) => {
-                                          if (e.key === "Enter")
-                                            guardarFila(index, area, registro);
-                                        }}
-                                        className={`w-full text-center rounded-lg py-1 border ${
-                                          modoNoche
-                                            ? "bg-[#111] text-white border-[#2f2f2f]"
-                                            : "bg-white text-gray-700 border-gray-200"
-                                        }`}
-                                      />
+            value={valores?.[index]?.[c.key]?.c ?? ""}
+            onChange={(e) =>
+              handleChange(index, c.key, "c", e.target.value)
+            }
 
-                                      <input
-                                        value={
-                                          valores?.[index]?.[c.key]?.nc || ""
-                                        }
-                                        onChange={(e) =>
-                                          handleChange(
-                                            index,
-                                            c.key,
-                                            "nc",
-                                            e.target.value,
-                                          )
-                                        }
-                                        onKeyDown={(e) => {
-                                          if (e.key === "Enter")
-                                            guardarFila(index, area, registro);
-                                        }}
-                                        className={`w-full text-center rounded-lg py-1 border ${
-                                          modoNoche
-                                            ? "bg-[#111] text-white border-[#2f2f2f]"
-                                            : "bg-white text-gray-700 border-gray-200"
-                                        }`}
-                                      />
+            // 🔥 GUARDADO CORRECTO
+            onBlur={() => guardarFila(index, area, registro)}
+
+            className={`w-full text-center rounded-lg py-1 border ${
+              modoNoche
+                ? "bg-[#111] text-white border-[#2f2f2f]"
+                : "bg-white text-gray-700 border-gray-200"
+            }`}
+          />
+
+          {/* ❌ NO CUMPLE */}
+          <input
+            value={valores?.[index]?.[c.key]?.nc ?? ""}
+            onChange={(e) =>
+              handleChange(index, c.key, "nc", e.target.value)
+            }
+
+            // 🔥 GUARDADO CORRECTO
+            onBlur={() => guardarFila(index, area, registro)}
+
+            className={`w-full text-center rounded-lg py-1 border ${
+              modoNoche
+                ? "bg-[#111] text-white border-[#2f2f2f]"
+                : "bg-white text-gray-700 border-gray-200"
+            }`}
+          />
                                     </div>
 
                                     {/* TOTAL */}
