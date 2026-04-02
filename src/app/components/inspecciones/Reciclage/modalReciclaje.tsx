@@ -58,6 +58,17 @@ const areasFiltradas = dataBackend.filter((a: any) =>
   return () => window.removeEventListener("click", cerrar);
 }, []);
 
+useEffect(() => {
+  const areaExacta = dataBackend.find(
+    (a: any) =>
+      a.nombre.toLowerCase() === busquedaArea.toLowerCase()
+  );
+
+  if (areaExacta) {
+    setAreaId(areaExacta.id);
+  }
+}, [busquedaArea, dataBackend]);
+
   const handleChange = (campo: number, tipo: "c" | "nc", value: string) => {
     const limpio = value.replace(/\D/g, "");
 
@@ -71,83 +82,99 @@ const areasFiltradas = dataBackend.filter((a: any) =>
   };
 
   const guardar = async () => {
-    if (!areaId || !responsable) {
-      Swal.fire({
-        toast: true,
-        position: "top-end",
-        icon: "warning",
-        title: "Faltan datos",
-        timer: 1200,
-        showConfirmButton: false,
-      });
-      return;
-    }
+  if (!areaId || !responsable) {
+    Swal.fire({
+      toast: true,
+      position: "top-end",
+      icon: "warning",
+      title: "Faltan datos",
+      timer: 1200,
+      showConfirmButton: false,
+    });
+    return;
+  }
 
-    if (guardando) return;
-    setGuardando(true);
+  // 🔥 VALIDACIÓN DUPLICADO
+  const yaExiste = dataBackend.some((item: any) => {
+    // soporta ambas estructuras
+    const idBackend =
+      item.area_id || item.area?.id || item.areaId;
 
-    try {
-      const body = {
-        fecha: new Date().toISOString().split("T")[0],
-        responsable,
-        area_id: Number(areaId),
+    return Number(idBackend) === Number(areaId);
+  });
 
-        reciclables_c: Number(valores?.[1]?.c || 0),
-        reciclables_nc: Number(valores?.[1]?.nc || 0),
+  if (yaExiste) {
+    Swal.fire({
+      toast: true,
+      position: "top-end",
+      icon: "warning",
+      title: "⚠️ Ya agregaste datos de esta área",
+      timer: 1500,
+      showConfirmButton: false,
+    });
+    return;
+  }
 
-        ordinarios_c: Number(valores?.[2]?.c || 0),
-        ordinarios_nc: Number(valores?.[2]?.nc || 0),
+  if (guardando) return;
+  setGuardando(true);
 
-        peligrosos_c: Number(valores?.[3]?.c || 0),
-        peligrosos_nc: Number(valores?.[3]?.nc || 0),
+  try {
+    const body = {
+      fecha: new Date().toISOString().split("T")[0],
+      responsable,
+      area_id: Number(areaId),
 
-        presintos_c: Number(valores?.[4]?.c || 0),
-        presintos_nc: Number(valores?.[4]?.nc || 0),
+      reciclables_c: Number(valores?.[1]?.c || 0),
+      reciclables_nc: Number(valores?.[1]?.nc || 0),
 
-        observacion,
-      };
+      ordinarios_c: Number(valores?.[2]?.c || 0),
+      ordinarios_nc: Number(valores?.[2]?.nc || 0),
 
-      await fetch("/api/inspecciones-residuos", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
-      });
+      peligrosos_c: Number(valores?.[3]?.c || 0),
+      peligrosos_nc: Number(valores?.[3]?.nc || 0),
 
-      const res = await fetch("/api/inspecciones-residuos");
-      const data = await res.json();
-      setInspecciones(data);
+      presintos_c: Number(valores?.[4]?.c || 0),
+      presintos_nc: Number(valores?.[4]?.nc || 0),
 
-      // 🔥 LIMPIEZA CONTROLADA (NO TOCA RESPONSABLE)
-      setValores({});
-      setObservacion("");
-      setAreaId("");
+      observacion,
+    };
 
-      // 🔥 ALERTA
-      Swal.fire({
-        toast: true,
-        position: "top-end",
-        icon: "success",
-        title: "Guardado correctamente",
-        timer: 1200,
-        showConfirmButton: false,
-      });
+    await fetch("/api/inspecciones-residuos", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
 
-      // 🔥 FORZAR REFRESH VISUAL DE INPUTS
-      setTimeout(() => {
-        setValores({});
-      }, 50);
+    const res = await fetch("/api/inspecciones-residuos");
+    const data = await res.json();
+    setInspecciones(data);
 
-    } catch (error) {
-      Swal.fire({
-        icon: "error",
-        title: "Error al guardar",
-      });
-    } finally {
-      setGuardando(false);
-    }
-  };
+    // 🔥 LIMPIAR CAMPOS
+    setValores({});
+    setObservacion("");
+    setAreaId("");
+    setBusquedaArea("");
+
+    Swal.fire({
+      toast: true,
+      position: "top-end",
+      icon: "success",
+      title: "Guardado correctamente",
+      timer: 1200,
+      showConfirmButton: false,
+    });
+
+  } catch (error) {
+    Swal.fire({
+      icon: "error",
+      title: "Error al guardar",
+    });
+  } finally {
+    setGuardando(false);
+  }
+};
 
   return (
     <>

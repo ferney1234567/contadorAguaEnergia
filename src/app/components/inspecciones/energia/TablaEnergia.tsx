@@ -5,7 +5,7 @@ import {
   CalendarDays, Search, User2, Filter, Plus,
 } from "lucide-react";
 import Swal from "sweetalert2";
-import MovilEnergia from "./MovilEnergia";
+import MovilEnergia from "./modalEnergia";
 
 type RegistroValores = {
   [fila: number]: { [campo: number]: { c?: string; nc?: string } };
@@ -65,6 +65,9 @@ export default function TablaEnergia({
   const [fechaSesion, setFechaSesion] = useState(
     new Date().toISOString().split("T")[0]
   );
+  const [mostrarModal, setMostrarModal] = useState(false);
+
+
 
   useEffect(() => {
     const guardado = localStorage.getItem("responsable");
@@ -397,49 +400,49 @@ export default function TablaEnergia({
 
 
 
- const obtenerValor = (
-  index: number,
-  campo: number,
-  tipo: "c" | "nc",
-  registro: any
-): number => {
+  const obtenerValor = (
+    index: number,
+    campo: number,
+    tipo: "c" | "nc",
+    registro: any
+  ): number => {
 
-  // =========================
-  // 🔹 1. VALOR LOCAL (INPUT)
-  // =========================
-  const valorLocal = valores?.[index]?.[campo]?.[tipo];
+    // =========================
+    // 🔹 1. VALOR LOCAL (INPUT)
+    // =========================
+    const valorLocal = valores?.[index]?.[campo]?.[tipo];
 
-  if (valorLocal !== undefined && valorLocal !== "") {
-    return Number(valorLocal);
-  }
+    if (valorLocal !== undefined && valorLocal !== "") {
+      return Number(valorLocal);
+    }
 
-  // =========================
-  // 🔹 2. VALOR BACKEND
-  // =========================
-  if (registro) {
-    // 🔥 MAPEO SEGURO POR KEY (MEJOR OPCIÓN)
-    const mapa: Record<number, string> = {
-      1: "bombillas",
-      2: "reflectores",
-      3: "lamparas",
-      4: "aires",
-    };
+    // =========================
+    // 🔹 2. VALOR BACKEND
+    // =========================
+    if (registro) {
+      // 🔥 MAPEO SEGURO POR KEY (MEJOR OPCIÓN)
+      const mapa: Record<number, string> = {
+        1: "bombillas",
+        2: "reflectores",
+        3: "lamparas",
+        4: "aires",
+      };
 
-    const baseKey = mapa[campo];
+      const baseKey = mapa[campo];
 
-    // 🔥 VALIDACIÓN CLAVE
-    if (!baseKey) return 0;
+      // 🔥 VALIDACIÓN CLAVE
+      if (!baseKey) return 0;
 
-    const keyBackend = `${baseKey}_${tipo}`;
+      const keyBackend = `${baseKey}_${tipo}`;
 
-    return Number(registro[keyBackend] ?? 0);
-  }
+      return Number(registro[keyBackend] ?? 0);
+    }
 
-  // =========================
-  // 🔹 3. DEFAULT
-  // =========================
-  return 0;
-};
+    // =========================
+    // 🔹 3. DEFAULT
+    // =========================
+    return 0;
+  };
 
 
   const guardarFila = async (
@@ -613,19 +616,20 @@ export default function TablaEnergia({
           <div
             className={`rounded-2xl px-4 py-3 flex items-center gap-3 ${estilos.inputSuave}`}
           >
-            <User2 size={18} />
-            <div className="flex-1">
-              <label className="block text-[11px] sm:text-xs mb-1 opacity-80">
-                Responsable
-              </label>
-              <input
-                type="text"
-                value={responsable}
-                onChange={(e) => handleResponsable(e.target.value)}
-                placeholder="Nombre del responsable"
-                className={`w-full rounded-xl px-3 py-2 text-sm outline-none ${estilos.input}`}
-              />
-            </div>
+             <button
+            onClick={() => setMostrarModal(true)}
+            className={`
+                            flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition
+                            ${modoNoche
+                ? "bg-gradient-to-r from-blue-700 to-blue-500 text-white shadow-md"
+                : "bg-gradient-to-r from-blue-500 to-blue-400 text-white shadow-sm"
+              }
+                            hover:scale-105 active:scale-95
+                          `}
+          >
+            <Plus size={16} />
+            Nueva inspección de Energia
+          </button>
           </div>
         </div>
 
@@ -774,32 +778,16 @@ export default function TablaEnergia({
       <>
         {/*------------------ VISTA MOVIL -------------------------*/}
         <MovilEnergia
-          modoNoche={modoNoche}
+          modoNoche={modoNoche ?? false}// ✅ CORRECTO
           dataBackend={dataBackend}
-          dataBackendFiltrada={dataBackendFiltrada}
-          campos={campos}
-          valores={valores}
-          observaciones={observaciones}
-          responsable={responsable}
-          estilos={estilos}
-          inspeccionesFiltradas={inspeccionesFiltradas}
-          handleChange={handleChange}
-          handleObs={handleObs}
-          totalFila={totalFila}
-          totalCampoFila={totalCampoFila}
-          totalCampoGeneral={totalCampoGeneral}
-          totalGeneral={totalGeneral}
-          tieneDatos={tieneDatos}
-          editarContenedor={editarContenedor}
-          finalizarInspeccion={finalizarInspeccion}
           setInspecciones={setInspecciones}
-          setValores={setValores}
-          setObservaciones={setObservaciones}
+          mostrarModal={mostrarModal}
+          setMostrarModal={setMostrarModal}
         />
 
         {/*------------------ VISTA DESKTOP------------------------ */}
         <div
-          className={`hidden lg:block p-4 rounded-2xl ${modoNoche ? "bg-[#0f0f0f]" : "bg-gray-100"
+          className={`lg:block p-4 rounded-2xl ${modoNoche ? "bg-[#0f0f0f]" : "bg-gray-100"
             }`}
         >
           {inspeccionesFiltradas.map(([clave, registros]) => {
@@ -809,8 +797,8 @@ export default function TablaEnergia({
               <div
                 key={clave}
                 className={`mb-10 rounded-2xl p-5 shadow-sm ${modoNoche
-                    ? "bg-[#161616] border border-[#2a2a2a]"
-                    : "bg-white border border-gray-200"
+                  ? "bg-[#161616] border border-[#2a2a2a]"
+                  : "bg-white border border-gray-200"
                   }`}
               >
                 {/* HEADER */}
@@ -830,8 +818,8 @@ export default function TablaEnergia({
                   <div className="flex justify-center gap-3 mt-3 flex-wrap">
                     <span
                       className={`px-3 py-1 rounded-full text-xs font-semibold ${modoNoche
-                          ? "bg-blue-900/30 text-blue-300 border border-blue-800"
-                          : "bg-blue-50 text-blue-600 border border-blue-200"
+                        ? "bg-blue-900/30 text-blue-300 border border-blue-800"
+                        : "bg-blue-50 text-blue-600 border border-blue-200"
                         }`}
                     >
                       📊 {registros.length} registros
@@ -839,8 +827,8 @@ export default function TablaEnergia({
 
                     <span
                       className={`px-3 py-1 rounded-full text-xs font-semibold ${modoNoche
-                          ? "bg-purple-900/30 text-purple-300 border border-purple-800"
-                          : "bg-purple-50 text-purple-600 border border-purple-200"
+                        ? "bg-purple-900/30 text-purple-300 border border-purple-800"
+                        : "bg-purple-50 text-purple-600 border border-purple-200"
                         }`}
                     >
                       👤 Responsable:{" "}
@@ -854,8 +842,8 @@ export default function TablaEnergia({
                 {/* TABLA */}
                 <div
                   className={`overflow-auto rounded-2xl border ${modoNoche
-                      ? "bg-[#1a1a1a] border-[#2f2f2f]"
-                      : "bg-white border-gray-200"
+                    ? "bg-[#1a1a1a] border-[#2f2f2f]"
+                    : "bg-white border-gray-200"
                     }`}
                 >
                   <table className="w-full text-sm border-collapse">
@@ -863,8 +851,8 @@ export default function TablaEnergia({
                     <thead>
                       <tr
                         className={`text-center text-xs uppercase ${modoNoche
-                            ? "text-gray-300 bg-[#202020]"
-                            : "text-gray-600 bg-gray-50"
+                          ? "text-gray-300 bg-[#202020]"
+                          : "text-gray-600 bg-gray-50"
                           }`}
                       >
                         <th
@@ -907,15 +895,15 @@ export default function TablaEnergia({
                           <tr
                             key={index}
                             className={`transition ${modoNoche
-                                ? "bg-[#181818] hover:bg-[#1f1f1f]"
-                                : "bg-white hover:bg-gray-50"
+                              ? "bg-[#181818] hover:bg-[#1f1f1f]"
+                              : "bg-white hover:bg-gray-50"
                               }`}
                           >
                             {/* AREA */}
                             <td
                               className={`p-3 border ${modoNoche
-                                  ? "border-[#353535]"
-                                  : "border-gray-200"
+                                ? "border-[#353535]"
+                                : "border-gray-200"
                                 }`}
                             >
 
@@ -1019,8 +1007,8 @@ export default function TablaEnergia({
                                   }
                                 }}
                                 className={`w-full text-center font-semibold rounded-xl px-3 py-2 ${modoNoche
-                                    ? "bg-[#222] text-white"
-                                    : "bg-gray-50 text-gray-800"
+                                  ? "bg-[#222] text-white"
+                                  : "bg-gray-50 text-gray-800"
                                   }`}
                               />
                             </td>
@@ -1041,8 +1029,8 @@ export default function TablaEnergia({
                                 <td
                                   key={c.key}
                                   className={`p-2 border ${modoNoche
-                                      ? "border-[#353535]"
-                                      : "border-gray-200"
+                                    ? "border-[#353535]"
+                                    : "border-gray-200"
                                     }`}
                                 >
                                   <div
@@ -1070,8 +1058,8 @@ export default function TablaEnergia({
                                             guardarFila(index, area, registro);
                                         }}
                                         className={`w-full text-center rounded-lg py-1 border ${modoNoche
-                                            ? "bg-[#111] text-white border-[#2f2f2f]"
-                                            : "bg-white text-gray-700 border-gray-200"
+                                          ? "bg-[#111] text-white border-[#2f2f2f]"
+                                          : "bg-white text-gray-700 border-gray-200"
                                           }`}
                                       />
 
@@ -1095,8 +1083,8 @@ export default function TablaEnergia({
                                             guardarFila(index, area, registro);
                                         }}
                                         className={`w-full text-center rounded-lg py-1 border ${modoNoche
-                                            ? "bg-[#111] text-white border-[#2f2f2f]"
-                                            : "bg-white text-gray-700 border-gray-200"
+                                          ? "bg-[#111] text-white border-[#2f2f2f]"
+                                          : "bg-white text-gray-700 border-gray-200"
                                           }`}
                                       />
                                     </div>
@@ -1104,8 +1092,8 @@ export default function TablaEnergia({
                                     {/* TOTAL */}
                                     <div
                                       className={`mt-2 text-center text-xs font-semibold py-1 rounded-lg border ${modoNoche
-                                          ? "bg-blue-900/20 text-blue-300 border-blue-800/40"
-                                          : "bg-blue-50 text-blue-700 border-blue-200"
+                                        ? "bg-blue-900/20 text-blue-300 border-blue-800/40"
+                                        : "bg-blue-50 text-blue-700 border-blue-200"
                                         }`}
                                     >
                                       {total}
@@ -1118,8 +1106,8 @@ export default function TablaEnergia({
                             {/* OBSERVACIONES */}
                             <td
                               className={`p-3 border ${modoNoche
-                                  ? "border-[#353535]"
-                                  : "border-gray-200"
+                                ? "border-[#353535]"
+                                : "border-gray-200"
                                 }`}
                             >
                               <div className="flex flex-col gap-2">
@@ -1133,15 +1121,15 @@ export default function TablaEnergia({
                                       guardarFila(index, area, registro);
                                   }}
                                   className={`w-full p-2 rounded-xl border ${modoNoche
-                                      ? "bg-[#222] text-white border-[#2f2f2f]"
-                                      : "bg-gray-50 text-gray-800 border-gray-200"
+                                    ? "bg-[#222] text-white border-[#2f2f2f]"
+                                    : "bg-gray-50 text-gray-800 border-gray-200"
                                     }`}
                                 />
 
                                 <div
                                   className={`text-center text-sm font-semibold py-2 rounded-xl border ${modoNoche
-                                      ? "bg-green-900/20 text-green-300 border-green-800/40"
-                                      : "bg-green-50 text-green-700 border-green-200"
+                                    ? "bg-green-900/20 text-green-300 border-green-800/40"
+                                    : "bg-green-50 text-green-700 border-green-200"
                                     }`}
                                 >
                                   Total: {registro?.total || 0}
@@ -1158,16 +1146,16 @@ export default function TablaEnergia({
                 {/* 🔥 RESUMEN CON MISMO DISEÑO */}
                 <div
                   className={`mt-6 overflow-auto rounded-2xl border ${modoNoche
-                      ? "bg-[#1a1a1a] border-[#2f2f2f]"
-                      : "bg-white border-gray-200"
+                    ? "bg-[#1a1a1a] border-[#2f2f2f]"
+                    : "bg-white border-gray-200"
                     }`}
                 >
                   <table className="w-full text-sm border-collapse">
                     <thead>
                       <tr
                         className={`text-center text-xs uppercase ${modoNoche
-                            ? "text-gray-300 bg-[#202020]"
-                            : "text-gray-600 bg-gray-50"
+                          ? "text-gray-300 bg-[#202020]"
+                          : "text-gray-600 bg-gray-50"
                           }`}
                       >
                         <th
@@ -1211,8 +1199,8 @@ export default function TablaEnergia({
                           <tr
                             key={c.key}
                             className={`${modoNoche
-                                ? "bg-[#181818] hover:bg-[#1f1f1f]"
-                                : "bg-white hover:bg-gray-50"
+                              ? "bg-[#181818] hover:bg-[#1f1f1f]"
+                              : "bg-white hover:bg-gray-50"
                               }`}
                           >
                             <td

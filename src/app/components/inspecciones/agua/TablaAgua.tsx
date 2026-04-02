@@ -4,7 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import {CalendarDays,Search,User2,Filter,Plus,
 } from "lucide-react";
 import Swal from "sweetalert2";
-import MovilAgua from "./MovilAgua";
+import MovilAgua from "./modalAgua";
 
 type RegistroValores = {
   [fila: number]: { [campo: number]: { c?: string; nc?: string } };
@@ -64,8 +64,9 @@ const campos = [
   const [inspecciones, setInspecciones] = useState<any[]>([]);
   const [responsable, setResponsable] = useState("");
   const [fechaSesion, setFechaSesion] = useState(
-  new Date().toISOString().split("T")[0]
-);
+  new Date().toISOString().split("T")[0]);
+  const [mostrarModal, setMostrarModal] = useState(false);
+    
 
   useEffect(() => {
     const guardado = localStorage.getItem("responsable");
@@ -568,19 +569,20 @@ const inspeccionesPorFecha = useMemo(() => {
           <div
             className={`rounded-2xl px-4 py-3 flex items-center gap-3 ${estilos.inputSuave}`}
           >
-            <User2 size={18} />
-            <div className="flex-1">
-              <label className="block text-[11px] sm:text-xs mb-1 opacity-80">
-                Responsable
-              </label>
-              <input
-                type="text"
-                value={responsable}
-                onChange={(e) => handleResponsable(e.target.value)}
-                placeholder="Nombre del responsable"
-                className={`w-full rounded-xl px-3 py-2 text-sm outline-none ${estilos.input}`}
-              />
-            </div>
+              <button
+                onClick={() => setMostrarModal(true)}
+                className={`
+                  flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition
+                  ${modoNoche
+                    ? "bg-gradient-to-r from-blue-700 to-blue-500 text-white shadow-md"
+                    : "bg-gradient-to-r from-blue-500 to-blue-400 text-white shadow-sm"
+                  }
+                  hover:scale-105 active:scale-95
+                `}
+              >
+                <Plus size={16} />
+                Nueva inspección de agua
+              </button>
           </div>
         </div>
 
@@ -593,6 +595,7 @@ const inspeccionesPorFecha = useMemo(() => {
             </h3>
           </div>
 
+         
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
             <div className="relative">
               <Search
@@ -729,33 +732,18 @@ const inspeccionesPorFecha = useMemo(() => {
 
       <>
         {/*------------------ VISTA MOVIL -------------------------*/}
-        <MovilAgua
-  modoNoche={modoNoche}
-  dataBackend={dataBackend}
-  dataBackendFiltrada={dataBackendFiltrada}
-  campos={campos}
-  valores={valores}
-  observaciones={observaciones}
-  responsable={responsable}
-  estilos={estilos}
-  inspeccionesFiltradas={inspeccionesFiltradas}
-  handleChange={handleChange}
-  handleObs={handleObs}
-  totalFila={totalFila}
-  totalCampoFila={totalCampoFila}
-  totalCampoGeneral={totalCampoGeneral}
-  totalGeneral={totalGeneral}
-  tieneDatos={tieneDatos}
-  editarContenedor={editarContenedor}
-  finalizarInspeccion={finalizarInspeccion}
-  setInspecciones={setInspecciones}
-  setValores={setValores}
-  setObservaciones={setObservaciones}
-/>
+         {/*------------------ VISTA MOVIL -------------------------*/}
+   <MovilAgua
+    modoNoche={modoNoche ?? false}// ✅ CORRECTO
+   dataBackend={dataBackend}
+   setInspecciones={setInspecciones}
+   mostrarModal={mostrarModal}
+   setMostrarModal={setMostrarModal}
+ />
 
         {/*------------------ VISTA DESKTOP------------------------ */}
         <div
-          className={`hidden lg:block p-4 rounded-2xl ${
+          className={` lg:block p-4 rounded-2xl ${
             modoNoche ? "bg-[#0f0f0f]" : "bg-gray-100"
           }`}
         >

@@ -567,26 +567,32 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
     </div>
   </div>
 
-  {/* 👤 RESPONSABLE */}
-  <div
-    className={`rounded-2xl px-4 py-3 flex items-center gap-3 ${estilos.inputSuave}`}
-  >
-    <User2 size={18} />
-    <div className="flex-1">
-      <label className="block text-[11px] sm:text-xs mb-1 opacity-80">
-        Responsable
-      </label>
-      <input
-        type="text"
-        value={responsable}
-        onChange={(e) => handleResponsable(e.target.value)}
-        placeholder="Nombre del responsable"
-        className={`w-full rounded-xl px-3 py-2 text-sm outline-none ${estilos.input}`}
-      />
-    </div>
+  
+ <div
+  className={`rounded-2xl px-4 py-3 flex items-center gap-3 ${estilos.inputSuave}`}
+>
+  
+
+    {/* 🔥 BOTÓN PRO */}
+    <button
+      onClick={() => setMostrarModal(true)}
+      className={`
+        flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition whitespace-nowrap
+        ${
+          modoNoche
+            ? "bg-gradient-to-r from-blue-700 to-blue-500 text-white shadow-md"
+            : "bg-gradient-to-r from-blue-500 to-blue-400 text-white shadow-sm"
+        }
+        hover:scale-105 active:scale-95
+      `}
+    >
+      <Plus size={16} />
+      Nueva inspección
+    </button>
+
+  </div>
   </div>
 
-</div>
 
 {/* 🔥 FILTROS MEJORADOS */}
 <div className={`rounded-2xl p-4 ${estilos.inputSuave}`}>
@@ -600,21 +606,7 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
       </h3>
     </div>
 
-    {/* 🔥 BOTÓN PRO */}
-    <button
-      onClick={() => setMostrarModal(true)}
-      className={`
-        flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition
-        ${modoNoche
-          ? "bg-gradient-to-r from-blue-700 to-blue-500 text-white shadow-md"
-          : "bg-gradient-to-r from-blue-500 to-blue-400 text-white shadow-sm"
-        }
-        hover:scale-105 active:scale-95
-      `}
-    >
-      <Plus size={16} />
-      Nueva inspección
-    </button>
+    
   </div>
 
   {/* CONTROLES */}
@@ -745,7 +737,7 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
 
         {/*------------------ VISTA DESKTOP------------------------ */}
         <div
-          className={`hidden lg:block p-4 rounded-2xl ${modoNoche ? "bg-[#0f0f0f]" : "bg-gray-100"
+          className={` lg:block p-4 rounded-2xl ${modoNoche ? "bg-[#0f0f0f]" : "bg-gray-100"
             }`}
         >
           {inspeccionesFiltradas.map(([clave, registros]) => {
