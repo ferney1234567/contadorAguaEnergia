@@ -61,12 +61,6 @@ export default function MovilEnergia({
   }, [responsable]);
 
   useEffect(() => {
-    const cerrar = () => setMostrarLista(false);
-    window.addEventListener("click", cerrar);
-    return () => window.removeEventListener("click", cerrar);
-  }, []);
-
-  useEffect(() => {
     const areaExacta = areasFiltradas.find(
       (a: any) =>
         String(a?.nombre || "").toLowerCase().trim() ===
@@ -101,86 +95,114 @@ export default function MovilEnergia({
     Number(valores?.[4]?.nc || 0);
 
   const guardar = async () => {
-    if (!responsable.trim() || !areaId) {
-      Swal.fire({
-        toast: true,
-        position: "top-end",
-        icon: "warning",
-        title: "Debes completar responsable y área",
-        timer: 1500,
-        showConfirmButton: false,
+  if (!responsable.trim() || !areaId) {
+    Swal.fire({
+      toast: true,
+      position: "top-end",
+      icon: "warning",
+      title: "Debes completar responsable y área",
+      timer: 1500,
+      showConfirmButton: false,
+    });
+    return;
+  }
+
+  const hoy = new Date().toISOString().split("T")[0];
+
+  // 🔥 VALIDACIÓN DUPLICADO
+  const yaExiste = await fetch("/api/inspecciones-energia")
+    .then(res => res.json())
+    .then((data) => {
+      return data.some((item: any) => {
+        return (
+          item.area_id === Number(areaId) &&
+          item.responsable === responsable &&
+          item.fecha?.split("T")[0] === hoy
+        );
       });
-      return;
+    });
+
+  if (yaExiste) {
+    Swal.fire({
+      toast: true,
+      position: "top-end",
+      icon: "warning",
+      title: "⚠️ Ya creaste esta área hoy",
+      timer: 1500,
+      showConfirmButton: false,
+    });
+    return;
+  }
+
+  if (guardando) return;
+  setGuardando(true);
+
+  try {
+    const body = {
+      fecha: hoy,
+      responsable: responsable.trim(),
+      area_id: Number(areaId),
+
+      bombillas_c: Number(valores?.[1]?.c || 0),
+      bombillas_nc: Number(valores?.[1]?.nc || 0),
+
+      reflectores_c: Number(valores?.[2]?.c || 0),
+      reflectores_nc: Number(valores?.[2]?.nc || 0),
+
+      lamparas_c: Number(valores?.[3]?.c || 0),
+      lamparas_nc: Number(valores?.[3]?.nc || 0),
+
+      aires_c: Number(valores?.[4]?.c || 0),
+      aires_nc: Number(valores?.[4]?.nc || 0),
+
+      observacion: observacion.trim(),
+      total: totalGeneral,
+    };
+
+    const response = await fetch("/api/inspecciones-energia", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(errorText || "No se pudo guardar");
     }
 
-    if (guardando) return;
-    setGuardando(true);
+    const res = await fetch("/api/inspecciones-energia");
+    const data = await res.json();
+    const dataFinal = Array.isArray(data) ? data : data?.data || [];
+    setInspecciones(dataFinal);
 
-    try {
-      const body = {
-        fecha: new Date().toISOString().split("T")[0],
-        responsable: responsable.trim(),
-        area_id: Number(areaId),
+    setValores({});
+    setObservacion("");
+    setAreaId("");
+    setBusquedaArea("");
 
-        bombillas_c: Number(valores?.[1]?.c || 0),
-        bombillas_nc: Number(valores?.[1]?.nc || 0),
+    Swal.fire({
+      toast: true,
+      position: "top-end",
+      icon: "success",
+      title: "Inspección guardada correctamente",
+      timer: 1400,
+      showConfirmButton: false,
+    });
 
-        reflectores_c: Number(valores?.[2]?.c || 0),
-        reflectores_nc: Number(valores?.[2]?.nc || 0),
+    setMostrarModal(false);
 
-        lamparas_c: Number(valores?.[3]?.c || 0),
-        lamparas_nc: Number(valores?.[3]?.nc || 0),
-
-        aires_c: Number(valores?.[4]?.c || 0),
-        aires_nc: Number(valores?.[4]?.nc || 0),
-
-        observacion: observacion.trim(),
-        total: totalGeneral,
-      };
-
-      const response = await fetch("/api/inspecciones-energia", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
-      });
-
-      if (!response.ok) {
-        const errorText = await response.text();
-        throw new Error(errorText || "No se pudo guardar");
-      }
-
-      const res = await fetch("/api/inspecciones-energia");
-      const data = await res.json();
-      const dataFinal = Array.isArray(data) ? data : data?.data || [];
-      setInspecciones(dataFinal);
-
-      setValores({});
-      setObservacion("");
-      setAreaId("");
-      setBusquedaArea("");
-
-      Swal.fire({
-        toast: true,
-        position: "top-end",
-        icon: "success",
-        title: "Inspección guardada correctamente",
-        timer: 1400,
-        showConfirmButton: false,
-      });
-
-      setMostrarModal(false);
-    } catch (error: any) {
-      Swal.fire({
-        icon: "error",
-        title: "Error al guardar",
-        text: error?.message || "Ocurrió un problema inesperado",
-      });
-    } finally {
-      setGuardando(false);
-    }
-  };
+  } catch (error: any) {
+    Swal.fire({
+      icon: "error",
+      title: "Error al guardar",
+      text: error?.message || "Ocurrió un problema",
+    });
+  } finally {
+    setGuardando(false);
+  }
+};
 
   const campos = [
     {
@@ -260,55 +282,65 @@ export default function MovilEnergia({
         </div>
 
         {/* AREA */}
-        <div
-          className={`relative flex items-center gap-3 px-3 py-3 rounded-xl border transition ${
-            modoNoche
-              ? "bg-[#181818] border-[#2e2e2e]"
-              : "bg-gray-50 border-gray-200"
-          }`}
-        >
-          <MapPin className="text-blue-500" size={18} />
+       <div
+  onClick={(e) => e.stopPropagation()}
+  className={`relative flex items-center gap-3 px-3 py-3 rounded-xl border transition ${
+    modoNoche
+      ? "bg-[#181818] border-[#2e2e2e]"
+      : "bg-gray-50 border-gray-200"
+  }`}
+>
+  <MapPin className="text-blue-500" size={18} />
 
-          <input
-            value={busquedaArea}
-            onChange={(e) => {
-              setBusquedaArea(e.target.value);
-              setMostrarLista(true);
+  <input
+    value={busquedaArea}
+    onChange={(e) => {
+      setBusquedaArea(e.target.value);
+      setMostrarLista(true);
+    }}
+    onFocus={() => setMostrarLista(true)}
+    onBlur={() => {
+      setTimeout(() => setMostrarLista(false), 200);
+    }}
+    placeholder="Buscar o seleccionar área..."
+    className="w-full bg-transparent outline-none text-sm"
+  />
+
+  {mostrarLista && (
+    <div
+      className={`absolute top-full left-0 w-full mt-2 rounded-xl shadow-lg max-h-44 overflow-auto z-50 border ${
+        modoNoche
+          ? "bg-[#1a1a1a] border-[#2e2e2e]"
+          : "bg-white border-gray-200"
+      }`}
+    >
+      {areasFiltradas.length > 0 ? (
+        areasFiltradas.map((a: any) => (
+          <div
+            key={a.id}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              setAreaId(String(a.id));
+              setBusquedaArea(a.nombre);
+              setMostrarLista(false);
             }}
-            onFocus={() => setMostrarLista(true)}
-            placeholder="Buscar o seleccionar área..."
-            className="w-full bg-transparent outline-none text-sm"
-          />
-
-          {mostrarLista && (
-            <div
-              className={`absolute top-full left-0 w-full mt-2 rounded-xl shadow-lg max-h-44 overflow-auto z-50 border ${
-                modoNoche
-                  ? "bg-[#1a1a1a] border-[#2e2e2e]"
-                  : "bg-white border-gray-200"
-              }`}
-            >
-              {areasFiltradas.map((a: any) => (
-                <div
-                  key={a.id}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setAreaId(String(a.id));
-                    setBusquedaArea(a.nombre);
-                    setMostrarLista(false);
-                  }}
-                  className={`px-3 py-2 text-sm cursor-pointer transition ${
-                    modoNoche
-                      ? "hover:bg-[#2a2a2a]"
-                      : "hover:bg-gray-100"
-                  }`}
-                >
-                  {a.nombre}
-                </div>
-              ))}
-            </div>
-          )}
+            className={`px-3 py-2 text-sm cursor-pointer transition ${
+              modoNoche
+                ? "hover:bg-[#2a2a2a]"
+                : "hover:bg-gray-100"
+            }`}
+          >
+            {a.nombre}
+          </div>
+        ))
+      ) : (
+        <div className="px-3 py-2 text-sm opacity-60">
+          Sin resultados
         </div>
+      )}
+    </div>
+  )}
+</div>
 
         {/* CAMPOS */}
         {campos.map((c) => (

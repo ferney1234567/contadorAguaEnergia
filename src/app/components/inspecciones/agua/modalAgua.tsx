@@ -47,11 +47,6 @@ export default function MovilSanitario({
     localStorage.setItem("responsable", responsable);
   }, [responsable]);
 
-  useEffect(() => {
-    const cerrar = () => setMostrarLista(false);
-    window.addEventListener("click", cerrar);
-    return () => window.removeEventListener("click", cerrar);
-  }, []);
 
   useEffect(() => {
     const areaExacta = dataBackend.find(
@@ -74,20 +69,51 @@ export default function MovilSanitario({
   };
 
   const guardar = async () => {
-    if (!areaId || !responsable) {
-      Swal.fire({
-        toast: true,
-        position: "top-end",
-        icon: "warning",
-        title: "Faltan datos",
-        timer: 1200,
-        showConfirmButton: false,
-      });
-      return;
-    }
+  if (!areaId || !responsable) {
+    Swal.fire({
+      toast: true,
+      position: "top-end",
+      icon: "warning",
+      title: "Faltan datos",
+      timer: 1200,
+      showConfirmButton: false,
+    });
+    return;
+  }
 
+  // 🔥 VALIDACIÓN DUPLICADO (PRO)
+  const hoy = new Date().toISOString().split("T")[0];
+
+  const yaExiste = await fetch("/api/inspecciones-sanitarias")
+    .then(res => res.json())
+    .then((data) => {
+      return data.some((item: any) => {
+        return (
+          item.area_id === Number(areaId) &&
+          item.responsable === responsable &&
+          item.fecha?.split("T")[0] === hoy
+        );
+      });
+    });
+
+  if (yaExiste) {
+    Swal.fire({
+      toast: true,
+      position: "top-end",
+      icon: "warning",
+      title: "⚠️ Ya creaste esta área hoy",
+      timer: 1500,
+      showConfirmButton: false,
+    });
+    return;
+  }
+
+  if (guardando) return;
+  setGuardando(true);
+
+  try {
     const body = {
-      fecha: new Date().toISOString().split("T")[0],
+      fecha: hoy,
       responsable,
       area_id: Number(areaId),
 
@@ -109,40 +135,41 @@ export default function MovilSanitario({
       observacion,
     };
 
-    try {
-      await fetch("/api/inspecciones-sanitarias", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
-      });
+    await fetch("/api/inspecciones-sanitarias", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
 
-      const res = await fetch("/api/inspecciones-sanitarias");
-      const data = await res.json();
-      setInspecciones(data);
+    const res = await fetch("/api/inspecciones-sanitarias");
+    const data = await res.json();
+    setInspecciones(data);
 
-      setValores({});
-      setObservacion("");
-      setAreaId("");
-      setBusquedaArea("");
+    setValores({});
+    setObservacion("");
+    setAreaId("");
+    setBusquedaArea("");
 
-      Swal.fire({
-        toast: true,
-        position: "top-end",
-        icon: "success",
-        title: "Guardado correctamente",
-        timer: 1200,
-        showConfirmButton: false,
-      });
+    Swal.fire({
+      toast: true,
+      position: "top-end",
+      icon: "success",
+      title: "Guardado correctamente",
+      timer: 1200,
+      showConfirmButton: false,
+    });
 
-    } catch {
-      Swal.fire({
-        icon: "error",
-        title: "Error al guardar",
-      });
-    }
-  };
+  } catch {
+    Swal.fire({
+      icon: "error",
+      title: "Error al guardar",
+    });
+  } finally {
+    setGuardando(false);
+  }
+};
 
   return (
     <>
@@ -201,62 +228,67 @@ export default function MovilSanitario({
 
         {/* AREA */}
         <div
-          className={`relative flex items-center gap-3 px-3 py-3 rounded-xl border transition
-          ${
-            modoNoche
-              ? "bg-[#181818] border-[#2e2e2e]"
-              : "bg-gray-50 border-gray-200"
-          }`}
-        >
-          <MapPin className="text-blue-500" size={18} />
+  onClick={(e) => e.stopPropagation()}
+  className={`relative flex items-center gap-3 px-3 py-3 rounded-xl border transition
+  ${
+    modoNoche
+      ? "bg-[#181818] border-[#2e2e2e]"
+      : "bg-gray-50 border-gray-200"
+  }`}
+>
+  <MapPin className="text-blue-500" size={18} />
 
-          <input
-            value={busquedaArea}
-            onChange={(e) => {
-              setBusquedaArea(e.target.value);
-              setMostrarLista(true);
+  <input
+    value={busquedaArea}
+    onChange={(e) => {
+      setBusquedaArea(e.target.value);
+      setMostrarLista(true);
+    }}
+    onFocus={() => setMostrarLista(true)}
+    onBlur={() => {
+      setTimeout(() => setMostrarLista(false), 200);
+    }}
+    placeholder="Buscar o seleccionar área..."
+    className="w-full bg-transparent outline-none text-sm"
+  />
+
+  {mostrarLista && (
+    <div
+      className={`absolute top-full left-0 w-full mt-2 rounded-xl shadow-lg max-h-40 overflow-auto z-50 border
+      ${
+        modoNoche
+          ? "bg-[#1a1a1a] border-[#2e2e2e]"
+          : "bg-white border-gray-200"
+      }`}
+    >
+      {areasFiltradas.length > 0 ? (
+        areasFiltradas.map((a: any) => (
+          <div
+            key={a.id}
+            onMouseDown={(e) => {
+              e.preventDefault();
+              setAreaId(a.id);
+              setBusquedaArea(a.nombre);
+              setMostrarLista(false);
             }}
-            placeholder="Buscar o seleccionar área..."
-            className="w-full bg-transparent outline-none text-sm"
-          />
-
-          {/* LISTA */}
-          {mostrarLista && (
-            <div
-              className={`absolute top-full left-0 w-full mt-2 rounded-xl shadow-lg max-h-40 overflow-auto z-50 border
-              ${
-                modoNoche
-                  ? "bg-[#1a1a1a] border-[#2e2e2e]"
-                  : "bg-white border-gray-200"
-              }`}
-            >
-              {areasFiltradas.length > 0 ? (
-                areasFiltradas.map((a: any) => (
-                  <div
-                    key={a.id}
-                    onClick={() => {
-                      setAreaId(a.id);
-                      setBusquedaArea(a.nombre);
-                      setMostrarLista(false);
-                    }}
-                    className={`px-3 py-2 text-sm cursor-pointer transition
-                    ${
-                      modoNoche
-                        ? "hover:bg-[#2a2a2a]"
-                        : "hover:bg-gray-100"
-                    }`}
-                  >
-                    {a.nombre}
-                  </div>
-                ))
-              ) : (
-                <div className="px-3 py-2 text-sm opacity-60">
-                  Sin resultados
-                </div>
-              )}
-            </div>
-          )}
+            className={`px-3 py-2 text-sm cursor-pointer transition
+            ${
+              modoNoche
+                ? "hover:bg-[#2a2a2a]"
+                : "hover:bg-gray-100"
+            }`}
+          >
+            {a.nombre}
+          </div>
+        ))
+      ) : (
+        <div className="px-3 py-2 text-sm opacity-60">
+          Sin resultados
         </div>
+      )}
+    </div>
+  )}
+</div>
 
         {/* CAMPOS */}
         {[

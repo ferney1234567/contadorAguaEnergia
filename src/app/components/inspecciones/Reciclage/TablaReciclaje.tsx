@@ -6,9 +6,12 @@ import Swal from "sweetalert2";
 import MovilReciclaje from "./modalReciclaje";
 
 type RegistroValores = {
-  [fila: number]: { [campo: number]: { c?: string; nc?: string } };
+  [fila: string]: { [campo: number]: { c?: string; nc?: string } };
 };
-type RegistroObservaciones = { [fila: number]: string };
+
+type RegistroObservaciones = {
+  [fila: string]: string;
+};
 interface Props {
   modoNoche?: boolean;
   dataBackend: any[];
@@ -52,7 +55,7 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
   const [responsable, setResponsable] = useState("");
   const [fechaSesion, setFechaSesion] = useState(new Date().toISOString().split("T")[0],);
   const [mostrarModal, setMostrarModal] = useState(false);
-  
+
   useEffect(() => {
     const guardado = localStorage.getItem("responsable");
     if (guardado) setResponsable(guardado);
@@ -115,7 +118,8 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
     if (modoNuevaInspeccion) return;
     const nuevosValores: RegistroValores = {};
     const nuevasObservaciones: RegistroObservaciones = {};
-    dataBackend.forEach((area, index) => {
+    dataBackend.forEach((area) => {
+  const filaKey = `${fechaSesion}__${responsable}__${area.id}`;
       const inspeccion = inspecciones
         .filter(
           (i) =>
@@ -125,7 +129,7 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
         )
         .slice(-1)[0];
       if (!inspeccion) return;
-      nuevosValores[index] = {
+     nuevosValores[filaKey] = {
         1: {
           c: String(inspeccion.reciclables_c || ""),
           nc: String(inspeccion.reciclables_nc || ""),
@@ -143,7 +147,7 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
           nc: String(inspeccion.presintos_nc || ""),
         },
       };
-      nuevasObservaciones[index] = inspeccion.observacion || "";
+      nuevasObservaciones[filaKey] = inspeccion.observacion || "";
     });
     setValores(nuevosValores);
     setObservaciones(nuevasObservaciones);
@@ -214,7 +218,7 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
 
 
   const handleChange = (
-    fila: number,
+    filaKey: string,
     campo: number,
     tipo: "c" | "nc",
     value: string,
@@ -223,10 +227,10 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
 
     setValores((prev) => ({
       ...prev,
-      [fila]: {
-        ...prev[fila],
+      [filaKey]: {
+        ...prev[filaKey],
         [campo]: {
-          ...prev[fila]?.[campo],
+          ...prev[filaKey]?.[campo],
           [tipo]: limpio,
         },
       },
@@ -234,10 +238,10 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
   };
 
 
-  const handleObs = (fila: number, value: string) => {
+  const handleObs = (filaKey: string, value: string) => {
     setObservaciones((prev) => ({
       ...prev,
-      [fila]: value,
+      [filaKey]: value,
     }));
   };
 
@@ -316,6 +320,13 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
     return ["Todos", ...aniosOrdenados];
   }, [inspecciones]);
 
+  const obtenerSemana = (fecha: string) => {
+  const d = new Date(fecha);
+  const inicio = new Date(d.getFullYear(), 0, 1);
+  const dias = Math.floor((d.getTime() - inicio.getTime()) / (1000 * 60 * 60 * 24));
+  return Math.ceil((dias + inicio.getDay() + 1) / 7);
+};
+
 
   const dataBackendFiltrada = useMemo(() => {
     return dataBackend.filter((fila) => {
@@ -367,173 +378,198 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
     return total;
   };
 
+  const getFilaKey = (fecha: string, responsable: string, areaId: number | string) =>
+    `${fecha}__${responsable}__${areaId}`;
+
+  const normalizarFecha = (fecha: string) => {
+    if (!fecha) return "";
+    return fecha.split("T")[0]; // 🔥 quita la hora
+  };
+
   const inspeccionesPorFecha = useMemo(() => {
-    const grupos: Record<string, any[]> = {};
-    inspecciones.forEach((item) => {
-      const clave = `${item.fecha || "sin-fecha"}__${item.responsable || "sin-responsable"}`;
-      if (!grupos[clave]) grupos[clave] = [];
-      grupos[clave].push(item);
-    });
-    return grupos;
-  }, [inspecciones]);
+  const grupos: Record<string, any[]> = {};
 
- const inspeccionesFiltradas = useMemo(() => {
+  inspecciones.forEach((item) => {
+    const fecha = normalizarFecha(item.fecha);
+    const responsable = item.responsable || "sin-responsable";
+
+    const semana = obtenerSemana(fecha);
+    const anio = new Date(fecha).getFullYear();
+
+    const clave = `${anio}__semana${semana}__${responsable}`;
+
+    if (!grupos[clave]) {
+      grupos[clave] = [];
+    }
+
+    grupos[clave].push(item);
+  });
+
+  return grupos;
+}, [inspecciones]);
+
+  const inspeccionesFiltradas = useMemo(() => {
   return Object.entries(inspeccionesPorFecha)
-    .filter(([clave, registros]) => {
-      const [fechaBase] = clave.split("__");
-      const d = new Date(fechaBase);
-
-      if (isNaN(d.getTime())) return false;
-
-      const mes = String(d.getMonth() + 1).padStart(2, "0");
-      const anio = String(d.getFullYear());
-
-      // 🔥 FILTRO REAL
-      const coincideMes =
-        mesFiltro === "Todos" ? true : mes === mesFiltro;
+    .filter(([clave]) => {
+      const [anio] = clave.split("__");
 
       const coincideAnio =
-        anioFiltro === "Todos" ? true : anio === anioFiltro;
+        anioFiltro === "Todos" || anio === anioFiltro;
 
-      return coincideMes && coincideAnio;
+      return coincideAnio;
     })
     .sort((a, b) => {
-      const [fechaA] = a[0].split("__");
-      const [fechaB] = b[0].split("__");
-
-      return new Date(fechaB).getTime() - new Date(fechaA).getTime();
+      return b[0].localeCompare(a[0]);
     });
-}, [inspeccionesPorFecha, mesFiltro, anioFiltro]);
+}, [inspeccionesPorFecha, anioFiltro]);
 
 
-  const obtenerValor = (index: number, campo: number, tipo: "c" | "nc", registro: any) => {
-    const valorLocal = valores?.[index]?.[campo]?.[tipo];
+  const obtenerValor = (
+    filaKey: string,
+    campo: number,
+    tipo: "c" | "nc",
+    registro: any
+  ) => {
+    const valorLocal = valores?.[filaKey]?.[campo]?.[tipo];
 
     if (valorLocal !== undefined && valorLocal !== "") {
       return Number(valorLocal);
     }
 
     if (registro) {
-      const key = `${campos.find(c => c.key === campo)?.nombre.toLowerCase()}_${tipo}`;
+      const key = `${campos.find((c) => c.key === campo)?.nombre.toLowerCase()}_${tipo}`;
       return Number(registro[key] || 0);
     }
 
     return 0;
   };
 
-  const guardarFila = async (
-    index: number,
-    area: any,
-    registro: any
-  ) => {
-    try {
-      // =========================
-      // 🔒 VALIDACIONES
-      // =========================
-      if (!area || !area.id) return;
+ const guardarFila = async (
+  filaKey: string,
+  area: any,
+  registro: any
+) => {
+  try {
+    // =========================
+    // 🔒 VALIDACIONES
+    // =========================
+    if (!area || !area.id) return;
 
-      const responsableFinal =
-        (typeof responsable === "string" && responsable.trim()) ||
-        registro?.responsable ||
-        "";
-
-      if (!responsableFinal) {
-        Swal.fire({
-          toast: true,
-          position: "top-end",
-          icon: "warning",
-          title: "Falta responsable",
-          timer: 1200,
-          showConfirmButton: false,
-        });
-        return;
-      }
-
-      // =========================
-      // 📦 ARMAR BODY
-      // =========================
-      const body = {
-        id: registro?.id || null,
-        fecha: new Date().toISOString().split("T")[0],
-        responsable: responsableFinal,
-        area_id: area.id,
-
-        reciclables_c: obtenerValor(index, 1, "c", registro),
-        reciclables_nc: obtenerValor(index, 1, "nc", registro),
-
-        ordinarios_c: obtenerValor(index, 2, "c", registro),
-        ordinarios_nc: obtenerValor(index, 2, "nc", registro),
-
-        peligrosos_c: obtenerValor(index, 3, "c", registro),
-        peligrosos_nc: obtenerValor(index, 3, "nc", registro),
-
-        presintos_c: obtenerValor(index, 4, "c", registro),
-        presintos_nc: obtenerValor(index, 4, "nc", registro),
-
-        observacion:
-          observaciones[index] ||
-          registro?.observacion ||
-          "",
-      };
-
-      console.log("📤 ENVIANDO:", body);
-
-      // =========================
-      // 🔥 PETICIÓN (PUT o POST)
-      // =========================
-      const response = await fetch("/api/inspecciones-residuos", {
-        method: body.id ? "PUT" : "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
-      });
-
-      // =========================
-      // ❌ ERROR BACKEND
-      // =========================
-      if (!response.ok) {
-        const errorText = await response.text();
-        console.error("❌ ERROR BACKEND:", errorText);
-
-        Swal.fire({
-          icon: "error",
-          title: "Error del servidor",
-          text: errorText,
-        });
-
-        return;
-      }
-
-      // =========================
-      // 🔄 REFRESCAR DATOS
-      // =========================
-      const res = await fetch("/api/inspecciones-residuos");
-      const data = await res.json();
-      setInspecciones(data);
-
-      // =========================
-      // ✅ MENSAJE
-      // =========================
+    // ❌ NO PERMITIR CREAR
+    if (!registro?.id) {
       Swal.fire({
         toast: true,
         position: "top-end",
-        icon: "success",
-        title: body.id ? "Actualizado correctamente" : "Guardado correctamente",
+        icon: "warning",
+        title: "No puedes crear registros aquí",
+        timer: 1500,
+        showConfirmButton: false,
+      });
+      return;
+    }
+
+    const responsableFinal =
+      (typeof responsable === "string" && responsable.trim()) ||
+      registro?.responsable ||
+      "";
+
+    if (!responsableFinal) {
+      Swal.fire({
+        toast: true,
+        position: "top-end",
+        icon: "warning",
+        title: "Falta responsable",
         timer: 1200,
         showConfirmButton: false,
       });
+      return;
+    }
 
-    } catch (error) {
-      console.error("🔥 ERROR GENERAL:", error);
+    // =========================
+    // 📦 ARMAR BODY
+    // =========================
+    const body = {
+      id: registro.id, // 🔥 SOLO UPDATE
+
+      fecha: registro.fecha, // 🔥 IMPORTANTE → NO CAMBIAR FECHA
+      responsable: responsableFinal,
+      area_id: area.id,
+
+      reciclables_c: obtenerValor(filaKey, 1, "c", registro),
+      reciclables_nc: obtenerValor(filaKey, 1, "nc", registro),
+
+      ordinarios_c: obtenerValor(filaKey, 2, "c", registro),
+      ordinarios_nc: obtenerValor(filaKey, 2, "nc", registro),
+
+      peligrosos_c: obtenerValor(filaKey, 3, "c", registro),
+      peligrosos_nc: obtenerValor(filaKey, 3, "nc", registro),
+
+      presintos_c: obtenerValor(filaKey, 4, "c", registro),
+      presintos_nc: obtenerValor(filaKey, 4, "nc", registro),
+
+      observacion:
+        observaciones[filaKey] ||
+        registro?.observacion ||
+        "",
+    };
+
+    console.log("📤 ACTUALIZANDO:", body);
+
+    // =========================
+    // 🔥 SOLO PUT (UPDATE)
+    // =========================
+    const response = await fetch("/api/inspecciones-residuos", {
+      method: "PUT", // 🔥 FORZADO
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    // =========================
+    // ❌ ERROR BACKEND
+    // =========================
+    if (!response.ok) {
+      const errorText = await response.text();
 
       Swal.fire({
         icon: "error",
-        title: "Error inesperado",
-        text: "No se pudo guardar la información",
+        title: "Error del servidor",
+        text: errorText,
       });
+
+      return;
     }
-  };
+
+    // =========================
+    // 🔄 REFRESCAR
+    // =========================
+    const res = await fetch("/api/inspecciones-residuos");
+    const data = await res.json();
+    setInspecciones(data);
+
+    // =========================
+    // ✅ MENSAJE
+    // =========================
+    Swal.fire({
+      toast: true,
+      position: "top-end",
+      icon: "success",
+      title: "Actualizado correctamente",
+      timer: 1200,
+      showConfirmButton: false,
+    });
+
+  } catch (error) {
+    console.error("🔥 ERROR GENERAL:", error);
+
+    Swal.fire({
+      icon: "error",
+      title: "Error inesperado",
+      text: "No se pudo actualizar",
+    });
+  }
+};
 
   return (
     <div className={`w-full rounded-3xl p-3 sm:p-4 md:p-6 ${estilos.tarjeta}`}>
@@ -550,176 +586,176 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
           </p>
         </div>
 
-     <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
 
-  {/* 📅 FECHA */}
-  <div
-    className={`rounded-2xl px-4 py-3 flex items-center gap-3 ${estilos.inputSuave}`}
-  >
-    <CalendarDays size={18} />
-    <div className="flex flex-col">
-      <span className="text-[11px] sm:text-xs opacity-80">
-        Fecha de inspección
-      </span>
-      <span className="text-xs sm:text-sm font-semibold">
-        {fechaActual}
-      </span>
-    </div>
-  </div>
+          {/* 📅 FECHA */}
+          <div
+            className={`rounded-2xl px-4 py-3 flex items-center gap-3 ${estilos.inputSuave}`}
+          >
+            <CalendarDays size={18} />
+            <div className="flex flex-col">
+              <span className="text-[11px] sm:text-xs opacity-80">
+                Fecha de inspección
+              </span>
+              <span className="text-xs sm:text-sm font-semibold">
+                {fechaActual}
+              </span>
+            </div>
+          </div>
 
-  
- <div
-  className={`rounded-2xl px-4 py-3 flex items-center gap-3 ${estilos.inputSuave}`}
->
-  
 
-    {/* 🔥 BOTÓN PRO */}
-    <button
-      onClick={() => setMostrarModal(true)}
-      className={`
+          <div
+            className={`rounded-2xl px-4 py-3 flex items-center gap-3 ${estilos.inputSuave}`}
+          >
+
+
+            {/* 🔥 BOTÓN PRO */}
+            <button
+              onClick={() => setMostrarModal(true)}
+              className={`
         flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition whitespace-nowrap
-        ${
-          modoNoche
-            ? "bg-gradient-to-r from-blue-700 to-blue-500 text-white shadow-md"
-            : "bg-gradient-to-r from-blue-500 to-blue-400 text-white shadow-sm"
-        }
+        ${modoNoche
+                  ? "bg-gradient-to-r from-blue-700 to-blue-500 text-white shadow-md"
+                  : "bg-gradient-to-r from-blue-500 to-blue-400 text-white shadow-sm"
+                }
         hover:scale-105 active:scale-95
       `}
-    >
-      <Plus size={16} />
-      Nueva inspección
-    </button>
+            >
+              <Plus size={16} />
+              Nueva inspección
+            </button>
 
-  </div>
-  </div>
+          </div>
+        </div>
 
 
-{/* 🔥 FILTROS MEJORADOS */}
-<div className={`rounded-2xl p-4 ${estilos.inputSuave}`}>
+        {/* 🔥 FILTROS MEJORADOS */}
+        <div className={`rounded-2xl p-4 ${estilos.inputSuave}`}>
 
-  {/* HEADER */}
-  <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-    <div className="flex items-center gap-2">
-      <Filter size={16} />
-      <h3 className="text-sm sm:text-base font-semibold">
-        Filtros de búsqueda
-      </h3>
-    </div>
+          {/* HEADER */}
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <Filter size={16} />
+              <h3 className="text-sm sm:text-base font-semibold">
+                Filtros de búsqueda
+              </h3>
+            </div>
 
-    
-  </div>
 
-  {/* CONTROLES */}
-  <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
+          </div>
 
-    {/* BUSCAR */}
-    <div className="relative">
-      <Search
-        size={16}
-        className="absolute left-3 top-1/2 -translate-y-1/2 opacity-60"
-      />
-      <input
-        type="text"
-        value={busqueda}
-        onChange={(e) => setBusqueda(e.target.value)}
-        placeholder="Buscar por área"
-        className={`w-full rounded-xl pl-10 pr-3 py-2.5 text-sm outline-none ${estilos.input}`}
-      />
-    </div>
+          {/* CONTROLES */}
+          <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
 
-    {/* AÑO */}
-    <select
-      value={anioFiltro}
-      onChange={(e) => setAnioFiltro(e.target.value)}
-      className={`rounded-xl px-3 py-2.5 text-sm outline-none ${estilos.input}`}
-    >
-      {aniosDisponibles.map((anio) => (
-        <option key={anio} value={anio}>
-          Año: {anio}
-        </option>
-      ))}
-    </select>
+            {/* BUSCAR */}
+            <div className="relative">
+              <Search
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2 opacity-60"
+              />
+              <input
+                type="text"
+                value={busqueda}
+                
+                onChange={(e) => setBusqueda(e.target.value)}
+                placeholder="Buscar por área"
+                className={`w-full rounded-xl pl-10 pr-3 py-2.5 text-sm outline-none ${estilos.input}`}
+              />
+            </div>
 
-    {/* MES */}
-    <select
-      value={mesFiltro}
-      onChange={(e) => setMesFiltro(e.target.value)}
-      className={`rounded-xl px-3 py-2.5 text-sm outline-none ${estilos.input}`}
-    >
-      {MESES.map((mes) => (
-        <option key={mes.value} value={mes.value}>
-          Mes: {mes.label}
-        </option>
-      ))}
-    </select>
+            {/* AÑO */}
+            <select
+              value={anioFiltro}
+              onChange={(e) => setAnioFiltro(e.target.value)}
+              className={`rounded-xl px-3 py-2.5 text-sm outline-none ${estilos.input}`}
+            >
+              {aniosDisponibles.map((anio) => (
+                <option key={anio} value={anio}>
+                  Año: {anio}
+                </option>
+              ))}
+            </select>
 
-    {/* CREAR ÁREA */}
-    <div className="relative">
-      <Plus
-        size={16}
-        className="absolute left-3 top-1/2 -translate-y-1/2 opacity-60"
-      />
-      <input
-        type="text"
-        placeholder="Nueva área + Enter"
-        className={`w-full rounded-xl pl-10 pr-3 py-2.5 text-sm outline-none ${estilos.input}`}
-        onKeyDown={async (e) => {
-          if (e.key === "Enter") {
-            e.preventDefault();
+            {/* MES */}
+            <select
+              value={mesFiltro}
+              onChange={(e) => setMesFiltro(e.target.value)}
+              className={`rounded-xl px-3 py-2.5 text-sm outline-none ${estilos.input}`}
+            >
+              {MESES.map((mes) => (
+                <option key={mes.value} value={mes.value}>
+                  Mes: {mes.label}
+                </option>
+              ))}
+            </select>
 
-            const input = e.target as HTMLInputElement;
-            const valor = input.value.trim();
+            {/* CREAR ÁREA */}
+            <div className="relative">
+              <Plus
+                size={16}
+                className="absolute left-3 top-1/2 -translate-y-1/2 opacity-60"
+              />
+              <input
+                type="text"
+                placeholder="Nueva área + Enter"
+                className={`w-full rounded-xl pl-10 pr-3 py-2.5 text-sm outline-none ${estilos.input}`}
+                onKeyDown={async (e) => {
+                  if (e.key === "Enter") {
+                    e.preventDefault();
 
-            if (!valor) return;
+                    const input = e.target as HTMLInputElement;
+                    const valor = input.value.trim();
 
-            try {
-              const res = await fetch("/api/areas", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({ nombre: valor }),
-              });
+                    if (!valor) return;
 
-              if (!res.ok) throw new Error();
+                    try {
+                      const res = await fetch("/api/areas", {
+                        method: "POST",
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ nombre: valor }),
+                      });
 
-              const nuevaArea = await res.json();
-              setdataBackend((prev) => [...prev, nuevaArea]);
+                      if (!res.ok) throw new Error();
 
-              Swal.fire({
-                toast: true,
-                position: "top-end",
-                icon: "success",
-                title: "Área creada",
-                timer: 1200,
-                showConfirmButton: false,
-              });
+                      const nuevaArea = await res.json();
+                      setdataBackend((prev) => [...prev, nuevaArea]);
 
-              input.value = "";
-            } catch {
-              Swal.fire({
-                icon: "error",
-                title: "Error",
-                text: "No se pudo crear el área",
-              });
-            }
-          }
-        }}
-      />
-    </div>
+                      Swal.fire({
+                        toast: true,
+                        position: "top-end",
+                        icon: "success",
+                        title: "Área creada",
+                        timer: 1200,
+                        showConfirmButton: false,
+                      });
 
-  </div>
+                      input.value = "";
+                    } catch {
+                      Swal.fire({
+                        icon: "error",
+                        title: "Error",
+                        text: "No se pudo crear el área",
+                      });
+                    }
+                  }
+                }}
+              />
+            </div>
 
-  {/* CHIPS */}
-  <div className="mt-4 flex flex-wrap gap-2">
-    <span className={`px-3 py-1 rounded-full text-xs ${estilos.chip}`}>
-      📊 {inspeccionesFiltradas.length} registros
-    </span>
-    <span className={`px-3 py-1 rounded-full text-xs ${estilos.chip}`}>
-      👤 {responsable || "Sin responsable"}
-    </span>
-    <span className={`px-3 py-1 rounded-full text-xs ${estilos.chip}`}>
-      📅 {fechaActual}
-    </span>
-  </div>
+          </div>
+
+          {/* CHIPS */}
+          <div className="mt-4 flex flex-wrap gap-2">
+            <span className={`px-3 py-1 rounded-full text-xs ${estilos.chip}`}>
+              📊 {inspeccionesFiltradas.length} registros
+            </span>
+            <span className={`px-3 py-1 rounded-full text-xs ${estilos.chip}`}>
+              👤 {responsable || "Sin responsable"}
+            </span>
+            <span className={`px-3 py-1 rounded-full text-xs ${estilos.chip}`}>
+              📅 {fechaActual}
+            </span>
+          </div>
 
 
         </div>
@@ -727,13 +763,13 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
 
       <>
         {/*------------------ VISTA MOVIL -------------------------*/}
-  <MovilReciclaje
-   modoNoche={modoNoche ?? false}// ✅ CORRECTO
-  dataBackend={dataBackend}
-  setInspecciones={setInspecciones}
-  mostrarModal={mostrarModal}
-  setMostrarModal={setMostrarModal}
-/>
+        <MovilReciclaje
+          modoNoche={modoNoche ?? false}// ✅ CORRECTO
+          dataBackend={dataBackend}
+          setInspecciones={setInspecciones}
+          mostrarModal={mostrarModal}
+          setMostrarModal={setMostrarModal}
+        />
 
         {/*------------------ VISTA DESKTOP------------------------ */}
         <div
@@ -741,7 +777,7 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
             }`}
         >
           {inspeccionesFiltradas.map(([clave, registros]) => {
-            const [fecha, responsableGrupo] = clave.split("__");
+           const [anio, semana, responsableGrupo] = clave.split("__");
 
             return (
               <div
@@ -753,17 +789,9 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
               >
                 {/* HEADER */}
                 <div className="mb-5 text-center">
-                  <h2
-                    className={`text-xl font-bold tracking-wide ${modoNoche ? "text-white" : "text-gray-800"
-                      }`}
-                  >
-                    {new Date(fecha).toLocaleDateString("es-CO", {
-                      weekday: "long",
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
-                  </h2>
+                  <h2>
+  Semana {semana.replace("semana", "")} - {anio}
+</h2>
 
                   <div className="flex justify-center gap-3 mt-3 flex-wrap">
                     <span
@@ -774,7 +802,7 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
                     >
                       📊 {registros.length} registros
                     </span>
-        
+
 
                     <span
                       className={`px-3 py-1 rounded-full text-xs font-semibold ${modoNoche
@@ -837,14 +865,15 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
 
                     {/* BODY */}
                     <tbody>
-                      {dataBackend.map((area: any, index) => {
-                        const registro = registros.find(
-                          (r) => r.area_id === area.id,
-                        );
+                      {dataBackend.map((area: any) => {
+                        const filaKey = `${anio}__${semana}__${responsableGrupo}__${area.id}`;
 
+                        const registro = registros.find(
+  (r) => r.area_id === area.id
+);
                         return (
                           <tr
-                            key={index}
+                            key={filaKey}
                             className={`transition ${modoNoche
                               ? "bg-[#181818] hover:bg-[#1f1f1f]"
                               : "bg-white hover:bg-gray-50"
@@ -990,28 +1019,21 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
                                     <div className="grid grid-cols-2 gap-2">
                                       <input
                                         value={
-                                          valores &&
-                                            valores[index] &&
-                                            valores[index][c.key] &&
-                                            valores[index][c.key].c !== undefined
-                                            ? valores[index][c.key].c
+                                          valores?.[filaKey]?.[c.key]?.c !== undefined
+                                            ? valores[filaKey][c.key].c
                                             : registro
                                               ? String(registro[`${c.nombre.toLowerCase()}_c`] || "")
                                               : ""
                                         }
                                         onChange={(e) =>
-                                          handleChange(
-                                            index,
-                                            c.key,
-                                            "c",
-                                            e.target.value
-                                          )
+                                          handleChange(filaKey, c.key, "c", e.target.value)
                                         }
                                         onKeyDown={(e) => {
                                           if (e.key === "Enter") {
-                                            guardarFila(index, area, registro);
+                                            guardarFila(filaKey, area, registro);
                                           }
                                         }}
+
                                         className={`w-full text-center rounded-lg py-1 border font-semibold ${modoNoche
                                           ? "bg-[#111] text-white border-[#2f2f2f]"
                                           : "bg-white text-gray-700 border-gray-200"
@@ -1020,26 +1042,18 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
 
                                       <input
                                         value={
-                                          valores &&
-                                            valores[index] &&
-                                            valores[index][c.key] &&
-                                            valores[index][c.key].nc !== undefined
-                                            ? valores[index][c.key].nc
+                                          valores?.[filaKey]?.[c.key]?.nc !== undefined
+                                            ? valores[filaKey][c.key].nc
                                             : registro
                                               ? String(registro[`${c.nombre.toLowerCase()}_nc`] || "")
                                               : ""
                                         }
                                         onChange={(e) =>
-                                          handleChange(
-                                            index,
-                                            c.key,
-                                            "nc",
-                                            e.target.value
-                                          )
+                                          handleChange(filaKey, c.key, "nc", e.target.value)
                                         }
                                         onKeyDown={(e) => {
                                           if (e.key === "Enter") {
-                                            guardarFila(index, area, registro);
+                                            guardarFila(filaKey, area, registro);
                                           }
                                         }}
                                         className={`w-full text-center rounded-lg py-1 border font-semibold ${modoNoche
@@ -1071,14 +1085,21 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
                                 }`}
                             >
                               <div className="flex flex-col gap-2">
-                                <textarea
-                                  value={observaciones[index] || ""}
+                                  <textarea
+                                  disabled={!registro}
+                               value={
+                               
+                                    observaciones[filaKey] !== undefined
+                                      ? observaciones[filaKey]
+                                      : registro?.observacion || ""
+                                  }
                                   onChange={(e) =>
-                                    handleObs(index, e.target.value)
+                                    handleObs(filaKey, e.target.value)
                                   }
                                   onKeyDown={(e) => {
-                                    if (e.key === "Enter")
-                                      guardarFila(index, area, registro);
+                                    if (e.key === "Enter") {
+                                      guardarFila(filaKey, area, registro);
+                                    }
                                   }}
                                   className={`w-full p-2 rounded-xl border ${modoNoche
                                     ? "bg-[#222] text-white border-[#2f2f2f]"
@@ -1266,5 +1287,5 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
     </div>
   );
 
-  
+
 }

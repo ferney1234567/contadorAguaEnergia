@@ -44,30 +44,25 @@ export default function MovilReciclaje({
   const [busquedaArea, setBusquedaArea] = useState("");
   const [mostrarLista, setMostrarLista] = useState(false);
 
-const areasFiltradas = dataBackend.filter((a: any) =>
-  a.nombre.toLowerCase().includes(busquedaArea.toLowerCase())
-);
+  const areasFiltradas = dataBackend.filter((a: any) =>
+    a.nombre.toLowerCase().includes(busquedaArea.toLowerCase())
+  );
 
   useEffect(() => {
     localStorage.setItem("responsable", responsable);
   }, [responsable]);
 
+
   useEffect(() => {
-  const cerrar = () => setMostrarLista(false);
-  window.addEventListener("click", cerrar);
-  return () => window.removeEventListener("click", cerrar);
-}, []);
+    const areaExacta = dataBackend.find(
+      (a: any) =>
+        a.nombre.toLowerCase() === busquedaArea.toLowerCase()
+    );
 
-useEffect(() => {
-  const areaExacta = dataBackend.find(
-    (a: any) =>
-      a.nombre.toLowerCase() === busquedaArea.toLowerCase()
-  );
-
-  if (areaExacta) {
-    setAreaId(areaExacta.id);
-  }
-}, [busquedaArea, dataBackend]);
+    if (areaExacta) {
+      setAreaId(areaExacta.id);
+    }
+  }, [busquedaArea, dataBackend]);
 
   const handleChange = (campo: number, tipo: "c" | "nc", value: string) => {
     const limpio = value.replace(/\D/g, "");
@@ -82,99 +77,106 @@ useEffect(() => {
   };
 
   const guardar = async () => {
-  if (!areaId || !responsable) {
-    Swal.fire({
-      toast: true,
-      position: "top-end",
-      icon: "warning",
-      title: "Faltan datos",
-      timer: 1200,
-      showConfirmButton: false,
-    });
-    return;
-  }
+    if (!areaId || !responsable) {
+      Swal.fire({
+        toast: true,
+        position: "top-end",
+        icon: "warning",
+        title: "Faltan datos",
+        timer: 1200,
+        showConfirmButton: false,
+      });
+      return;
+    }
 
-  // 🔥 VALIDACIÓN DUPLICADO
-  const yaExiste = dataBackend.some((item: any) => {
-    // soporta ambas estructuras
-    const idBackend =
-      item.area_id || item.area?.id || item.areaId;
+    // 🔥 VALIDACIÓN DUPLICADO
+    // 🔥 VALIDACIÓN REAL (POR DÍA + ÁREA + RESPONSABLE)
+    const hoy = new Date().toISOString().split("T")[0];
 
-    return Number(idBackend) === Number(areaId);
-  });
+    const yaExiste = await fetch("/api/inspecciones-residuos")
+      .then(res => res.json())
+      .then((data) => {
+        return data.some((item: any) => {
+          return (
+            item.area_id === Number(areaId) &&
+            item.responsable === responsable &&
+            item.fecha?.split("T")[0] === hoy
+          );
+        });
+      });
 
-  if (yaExiste) {
-    Swal.fire({
-      toast: true,
-      position: "top-end",
-      icon: "warning",
-      title: "⚠️ Ya agregaste datos de esta área",
-      timer: 1500,
-      showConfirmButton: false,
-    });
-    return;
-  }
+    if (yaExiste) {
+      Swal.fire({
+        toast: true,
+        position: "top-end",
+        icon: "warning",
+        title: "⚠️ Ya creaste esta área hoy",
+        timer: 1500,
+        showConfirmButton: false,
+      });
+      return;
+    }
 
-  if (guardando) return;
-  setGuardando(true);
+    if (guardando) return;
+    setGuardando(true);
 
-  try {
-    const body = {
-      fecha: new Date().toISOString().split("T")[0],
-      responsable,
-      area_id: Number(areaId),
+    try {
+      const body = {
+        fecha: new Date().toISOString().split("T")[0],
+        responsable,
+        area_id: Number(areaId),
 
-      reciclables_c: Number(valores?.[1]?.c || 0),
-      reciclables_nc: Number(valores?.[1]?.nc || 0),
+        reciclables_c: Number(valores?.[1]?.c || 0),
+        reciclables_nc: Number(valores?.[1]?.nc || 0),
 
-      ordinarios_c: Number(valores?.[2]?.c || 0),
-      ordinarios_nc: Number(valores?.[2]?.nc || 0),
+        ordinarios_c: Number(valores?.[2]?.c || 0),
+        ordinarios_nc: Number(valores?.[2]?.nc || 0),
 
-      peligrosos_c: Number(valores?.[3]?.c || 0),
-      peligrosos_nc: Number(valores?.[3]?.nc || 0),
+        peligrosos_c: Number(valores?.[3]?.c || 0),
+        peligrosos_nc: Number(valores?.[3]?.nc || 0),
 
-      presintos_c: Number(valores?.[4]?.c || 0),
-      presintos_nc: Number(valores?.[4]?.nc || 0),
+        presintos_c: Number(valores?.[4]?.c || 0),
+        presintos_nc: Number(valores?.[4]?.nc || 0),
 
-      observacion,
-    };
+        observacion,
+      };
 
-    await fetch("/api/inspecciones-residuos", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
+      await fetch("/api/inspecciones-residuos", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
+      });
 
-    const res = await fetch("/api/inspecciones-residuos");
-    const data = await res.json();
-    setInspecciones(data);
+      const res = await fetch("/api/inspecciones-residuos");
+      const data = await res.json();
+      setInspecciones(data);
 
-    // 🔥 LIMPIAR CAMPOS
-    setValores({});
-    setObservacion("");
-    setAreaId("");
-    setBusquedaArea("");
+      // 🔥 LIMPIAR CAMPOS
+      setValores({});
+      setObservacion("");
+      setAreaId("");
+      setBusquedaArea("");
 
-    Swal.fire({
-      toast: true,
-      position: "top-end",
-      icon: "success",
-      title: "Guardado correctamente",
-      timer: 1200,
-      showConfirmButton: false,
-    });
+      Swal.fire({
+        toast: true,
+        position: "top-end",
+        icon: "success",
+        title: "Guardado correctamente",
+        timer: 1200,
+        showConfirmButton: false,
+      });
 
-  } catch (error) {
-    Swal.fire({
-      icon: "error",
-      title: "Error al guardar",
-    });
-  } finally {
-    setGuardando(false);
-  }
-};
+    } catch (error) {
+      Swal.fire({
+        icon: "error",
+        title: "Error al guardar",
+      });
+    } finally {
+      setGuardando(false);
+    }
+  };
 
   return (
     <>
@@ -229,67 +231,69 @@ useEffect(() => {
               </div>
 
               {/* AREA */}
- 
 
-<div
-  className={`relative flex items-center gap-2 p-3 rounded-xl border transition
-  ${
-    modoNoche
-      ? "bg-[#161616] border-white/10 text-white"
-      : "bg-gray-50 border-gray-200 text-gray-800"
-  }`}
->
-  <MapPin className="text-blue-500" size={18} />
 
-  {/* INPUT BUSCADOR */}
-  <input
-    value={busquedaArea}
-    onChange={(e) => {
-      setBusquedaArea(e.target.value);
-      setMostrarLista(true);
-    }}
-    onFocus={() => setMostrarLista(true)}
-    placeholder="Buscar o seleccionar área..."
-    className="w-full bg-transparent outline-none text-sm"
-  />
+              <div
+                onClick={(e) => e.stopPropagation()} // 🔥 CLAVE
+                className={`relative flex items-center gap-2 p-3 rounded-xl border transition
+  ${modoNoche
+                    ? "bg-[#161616] border-white/10 text-white"
+                    : "bg-gray-50 border-gray-200 text-gray-800"
+                  }`}
+              >
+                <MapPin className="text-blue-500" size={18} />
 
-  {/* LISTA DESPLEGABLE */}
-  {mostrarLista && (
-    <div
-      className={`absolute top-full left-0 w-full mt-2 rounded-xl shadow-lg z-50 max-h-40 overflow-y-auto
-      ${
-        modoNoche
-          ? "bg-[#1a1a1a] border border-white/10"
-          : "bg-white border border-gray-200"
-      }`}
-    >
-      {areasFiltradas.length > 0 ? (
-        areasFiltradas.map((a: any) => (
-          <div
-            key={a.id}
-            onClick={() => {
-              setAreaId(a.id);
-              setBusquedaArea(a.nombre);
-              setMostrarLista(false);
-            }}
-            className={`px-3 py-2 text-sm cursor-pointer transition
-            ${
-              modoNoche
-                ? "hover:bg-[#2a2a2a]"
-                : "hover:bg-gray-100"
-            }`}
-          >
-            {a.nombre}
-          </div>
-        ))
-      ) : (
-        <div className="px-3 py-2 text-sm opacity-60">
-          Sin resultados
-        </div>
-      )}
-    </div>
-  )}
-</div>
+                {/* INPUT BUSCADOR */}
+                <input
+                  value={busquedaArea}
+                  onChange={(e) => {
+                    setBusquedaArea(e.target.value);
+                    setMostrarLista(true);
+                  }}
+                  onFocus={() => setMostrarLista(true)}
+                  onBlur={() => {
+                    setTimeout(() => setMostrarLista(false), 200); // 🔥 CLAVE
+                  }}
+                  placeholder="Buscar o seleccionar área..."
+                  className="w-full bg-transparent outline-none text-sm"
+                />
+
+                {/* LISTA DESPLEGABLE */}
+                {mostrarLista && (
+                  <div
+                    className={`absolute top-full left-0 w-full mt-2 rounded-xl shadow-lg z-50 max-h-40 overflow-y-auto
+      ${modoNoche
+                        ? "bg-[#1a1a1a] border border-white/10"
+                        : "bg-white border border-gray-200"
+                      }`}
+                  >
+                    {areasFiltradas.length > 0 ? (
+                      areasFiltradas.map((a: any) => (
+                        <div
+                          key={a.id}
+                          onMouseDown={(e) => {
+                            e.preventDefault(); // 🔥 CLAVE
+                            setAreaId(a.id);
+                            setBusquedaArea(a.nombre);
+                            setMostrarLista(false);
+                          }}
+                          className={`px-3 py-2 text-sm cursor-pointer transition
+            ${modoNoche
+                              ? "hover:bg-[#2a2a2a]"
+                              : "hover:bg-gray-100"
+                            }`}
+                        >
+                          {a.nombre}
+                        </div>
+                      ))
+                    ) : (
+                      <div className="px-3 py-2 text-sm opacity-60">
+                        Sin resultados
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
 
               {/* CAMPOS */}
               {[
