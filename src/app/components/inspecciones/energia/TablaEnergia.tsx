@@ -6,11 +6,17 @@ import {
 } from "lucide-react";
 import Swal from "sweetalert2";
 import MovilEnergia from "./modalEnergia";
+import { exportarEnergiaPDF } from "@/app/utils/exportadorEnergiaPDF";
 
 type RegistroValores = {
-  [fila: number]: { [campo: number]: { c?: string; nc?: string } };
+  [filaKey: string]: { [campo: number]: { c?: string; nc?: string } };
 };
-type RegistroObservaciones = { [fila: number]: string };
+
+type RegistroObservaciones = {
+  [filaKey: string]: string;
+};
+
+
 interface Props {
   modoNoche?: boolean;
   dataBackend: any[];
@@ -28,7 +34,7 @@ export default function TablaEnergia({
     { key: 2, nombre: "Reflectores", img: "https://cdn-icons-png.flaticon.com/animated/light.gif" },
     { key: 3, nombre: "Lampara de piso", img: "https://cdn-icons-png.flaticon.com/animated/lamp.gif" },
     { key: 4, nombre: "Aires Acondicionados", img: "https://cdn-icons-png.flaticon.com/animated/fan.gif" },
-    { key: 5, nombre: "Observaciones", img: "https://cdn-icons-png.flaticon.com/animated/note.gif" },
+
   ];
   const MESES = [
     { value: "Todos", label: "Todos" },
@@ -45,6 +51,13 @@ export default function TablaEnergia({
     { value: "11", label: "Noviembre" },
     { value: "12", label: "Diciembre" },
   ];
+
+  const camposMap: Record<number, string> = {
+    1: "bombillas",
+    2: "reflectores",
+    3: "lamparas",
+    4: "aires",
+  };
 
   const [valores, setValores] = useState<RegistroValores>({});
   const [observaciones, setObservaciones] = useState<RegistroObservaciones>({});
@@ -67,7 +80,8 @@ export default function TablaEnergia({
   );
   const [mostrarModal, setMostrarModal] = useState(false);
 
-
+  const STORAGE_DATA = "energia_data";
+  const STORAGE_MODO = "modo_nueva_inspeccion_energia";
 
   useEffect(() => {
     const guardado = localStorage.getItem("responsable");
@@ -86,13 +100,13 @@ export default function TablaEnergia({
       valores,
       observaciones,
     };
-    localStorage.setItem("residuos_data", JSON.stringify(data));
+    localStorage.setItem(STORAGE_DATA, JSON.stringify(data));
   }, [valores, observaciones]);
 
   useEffect(() => {
     if (modoNuevaInspeccion) return; // 🔥 CLAVE
 
-    const data = localStorage.getItem("residuos_data");
+    const data = localStorage.getItem(STORAGE_DATA);
     if (data) {
       const parsed = JSON.parse(data);
       setValores(parsed.valores || {});
@@ -101,7 +115,7 @@ export default function TablaEnergia({
   }, [modoNuevaInspeccion]);
 
   useEffect(() => {
-    const estado = localStorage.getItem("modo_nueva_inspeccion");
+    const estado = localStorage.getItem(STORAGE_MODO);
     if (estado === "true") {
       setModoNuevaInspeccion(true);
     }
@@ -109,8 +123,8 @@ export default function TablaEnergia({
 
   const finalizarInspeccion = async () => {
     setModoNuevaInspeccion(true);
-    localStorage.setItem("modo_nueva_inspeccion", "true");
-    localStorage.removeItem("residuos_data");
+    localStorage.setItem(STORAGE_MODO, "true");
+    localStorage.removeItem(STORAGE_DATA);
     setValores({});
     setObservaciones({});
     setInspecciones([]);
@@ -125,14 +139,15 @@ export default function TablaEnergia({
 
   useEffect(() => {
     if (!dataBackend.length) return;
-
-    // 🔥 EVITA QUE RELLENE CUANDO ES NUEVA INSPECCIÓN
     if (modoNuevaInspeccion) return;
 
     const nuevosValores: RegistroValores = {};
     const nuevasObservaciones: RegistroObservaciones = {};
 
-    dataBackend.forEach((area, index) => {
+    dataBackend.forEach((area) => {
+
+      const filaKey = `${fechaSesion}__${responsable}__${area.id}`;
+
       const inspeccion = inspecciones
         .filter((i) =>
           i.area_id === area.id &&
@@ -140,9 +155,10 @@ export default function TablaEnergia({
           i.fecha?.split("T")[0] === fechaSesion
         )
         .slice(-1)[0];
+
       if (!inspeccion) return;
 
-      nuevosValores[index] = {
+      nuevosValores[filaKey] = {
         1: {
           c: String(inspeccion.bombillas_c || ""),
           nc: String(inspeccion.bombillas_nc || ""),
@@ -161,19 +177,19 @@ export default function TablaEnergia({
         },
       };
 
-      nuevasObservaciones[index] = inspeccion.observacion || "";
+      nuevasObservaciones[filaKey] = inspeccion.observacion || "";
     });
 
     setValores(nuevosValores);
     setObservaciones(nuevasObservaciones);
-  }, [dataBackend, inspecciones, responsable, fechaSesion]);
 
+  }, [dataBackend, inspecciones, responsable, fechaSesion, modoNuevaInspeccion]);
   useEffect(() => {
     const init = async () => {
       try {
         const guardado = localStorage.getItem("responsable");
         if (guardado) setResponsable(guardado);
-        const dataLocal = localStorage.getItem("residuos_data");
+        const dataLocal = localStorage.getItem(STORAGE_DATA);
         if (dataLocal) {
           const parsed = JSON.parse(dataLocal);
           setValores(parsed.valores || {});
@@ -187,7 +203,6 @@ export default function TablaEnergia({
         console.log("AREAS:", areas); // 🔍 DEBUG
         setdataBackend(Array.isArray(areas) ? areas : []);
         const inspeccionesData = await inspeccionesRes.json();
-        setdataBackend(areas);
         setInspecciones(inspeccionesData);
       } catch (error) {
         console.error("Error inicializando:", error);
@@ -263,7 +278,7 @@ export default function TablaEnergia({
   }, []);
 
   const handleChange = (
-    fila: number,
+    filaKey: string,
     campo: number,
     tipo: "c" | "nc",
     value: string
@@ -272,21 +287,25 @@ export default function TablaEnergia({
 
     setValores((prev) => ({
       ...prev,
-      [fila]: {
-        ...prev[fila],
+      [filaKey]: {
+        ...prev[filaKey],
         [campo]: {
-          ...prev[fila]?.[campo],
+          ...prev[filaKey]?.[campo],
           [tipo]: limpio,
         },
       },
     }));
   };
-  const handleObs = (fila: number, value: string) => {
+
+
+  const handleObs = (filaKey: string, value: string) => {
     setObservaciones((prev) => ({
       ...prev,
-      [fila]: value,
+      [filaKey]: value,
     }));
   };
+
+
   const estilos = {
     fondo: modoNoche
       ? "bg-[#111111] text-white border border-[#2b2b2b]"
@@ -401,57 +420,53 @@ export default function TablaEnergia({
 
 
   const obtenerValor = (
-    index: number,
+    filaKey: string,
     campo: number,
     tipo: "c" | "nc",
     registro: any
   ): number => {
 
-    // =========================
-    // 🔹 1. VALOR LOCAL (INPUT)
-    // =========================
-    const valorLocal = valores?.[index]?.[campo]?.[tipo];
+    // 🔹 valor escrito por el usuario
+    const valorLocal = valores?.[filaKey]?.[campo]?.[tipo];
 
     if (valorLocal !== undefined && valorLocal !== "") {
       return Number(valorLocal);
     }
 
-    // =========================
-    // 🔹 2. VALOR BACKEND
-    // =========================
+    // 🔹 valor del backend
     if (registro) {
-      // 🔥 MAPEO SEGURO POR KEY (MEJOR OPCIÓN)
-      const mapa: Record<number, string> = {
-        1: "bombillas",
-        2: "reflectores",
-        3: "lamparas",
-        4: "aires",
-      };
-
-      const baseKey = mapa[campo];
-
-      // 🔥 VALIDACIÓN CLAVE
+      const baseKey = camposMap[campo];
       if (!baseKey) return 0;
 
-      const keyBackend = `${baseKey}_${tipo}`;
-
-      return Number(registro[keyBackend] ?? 0);
+      return Number(registro[`${baseKey}_${tipo}`] || 0);
     }
 
-    // =========================
-    // 🔹 3. DEFAULT
-    // =========================
     return 0;
   };
 
 
+
+
   const guardarFila = async (
-    index: number,
+    filaKey: string,
     area: any,
     registro: any
   ) => {
     try {
-      if (!area || !area.id) return;
+      if (!area?.id) return;
+
+      // ❌ NO PERMITIR CREAR
+      if (!registro?.id) {
+        Swal.fire({
+          toast: true,
+          position: "top-end",
+          icon: "warning",
+          title: "No puedes crear registros aquí",
+          timer: 1500,
+          showConfirmButton: false,
+        });
+        return;
+      }
 
       const responsableFinal =
         (typeof responsable === "string" && responsable.trim()) ||
@@ -471,32 +486,31 @@ export default function TablaEnergia({
       }
 
       const body = {
-        id: registro?.id || null,
-
-        fecha: new Date().toISOString().split("T")[0],
+        id: registro.id,
+        fecha: registro.fecha,
         responsable: responsableFinal,
         area_id: area.id,
 
-        bombillas_c: obtenerValor(index, 1, "c", registro),
-        bombillas_nc: obtenerValor(index, 1, "nc", registro),
+        bombillas_c: obtenerValor(filaKey, 1, "c", registro),
+        bombillas_nc: obtenerValor(filaKey, 1, "nc", registro),
 
-        reflectores_c: obtenerValor(index, 2, "c", registro),
-        reflectores_nc: obtenerValor(index, 2, "nc", registro),
+        reflectores_c: obtenerValor(filaKey, 2, "c", registro),
+        reflectores_nc: obtenerValor(filaKey, 2, "nc", registro),
 
-        lamparas_c: obtenerValor(index, 3, "c", registro),
-        lamparas_nc: obtenerValor(index, 3, "nc", registro),
+        lamparas_c: obtenerValor(filaKey, 3, "c", registro),
+        lamparas_nc: obtenerValor(filaKey, 3, "nc", registro),
 
-        aires_c: obtenerValor(index, 4, "c", registro),
-        aires_nc: obtenerValor(index, 4, "nc", registro),
+        aires_c: obtenerValor(filaKey, 4, "c", registro),
+        aires_nc: obtenerValor(filaKey, 4, "nc", registro),
 
         observacion:
-          observaciones[index] ||
+          observaciones[filaKey] ||
           registro?.observacion ||
           "",
       };
 
       const response = await fetch("/api/inspecciones-energia", {
-        method: body.id ? "PUT" : "POST",
+        method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
@@ -517,15 +531,16 @@ export default function TablaEnergia({
 
       const res = await fetch("/api/inspecciones-energia");
       const data = await res.json();
-      setInspecciones(data);
+
+      const dataFinal = Array.isArray(data) ? data : data?.data || [];
+
+      setInspecciones(dataFinal);
 
       Swal.fire({
         toast: true,
         position: "top-end",
         icon: "success",
-        title: body.id
-          ? "Actualizado correctamente"
-          : "Guardado correctamente",
+        title: "Actualizado correctamente",
         timer: 1200,
         showConfirmButton: false,
       });
@@ -536,7 +551,7 @@ export default function TablaEnergia({
       Swal.fire({
         icon: "error",
         title: "Error inesperado",
-        text: "No se pudo guardar la información",
+        text: "No se pudo actualizar",
       });
     }
   };
@@ -616,20 +631,32 @@ export default function TablaEnergia({
           <div
             className={`rounded-2xl px-4 py-3 flex items-center gap-3 ${estilos.inputSuave}`}
           >
-             <button
-            onClick={() => setMostrarModal(true)}
-            className={`
-                            flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition
-                            ${modoNoche
-                ? "bg-gradient-to-r from-blue-700 to-blue-500 text-white shadow-md"
-                : "bg-gradient-to-r from-blue-500 to-blue-400 text-white shadow-sm"
-              }
-                            hover:scale-105 active:scale-95
-                          `}
-          >
-            <Plus size={16} />
-            Nueva inspección de Energia
-          </button>
+            {/* BOTÓN NUEVA INSPECCIÓN */}
+            <button
+              onClick={() => setMostrarModal(true)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition
+    ${modoNoche
+                  ? "bg-gradient-to-r from-blue-700 to-blue-500 text-white shadow-md"
+                  : "bg-gradient-to-r from-blue-500 to-blue-400 text-white shadow-sm"
+                }
+    hover:scale-105 active:scale-95`}
+            >
+              <Plus size={16} />
+              Nueva inspección de Energía
+            </button>
+
+            {/* 🔥 BOTÓN EXPORTAR PDF */}
+            <button
+              onClick={() => exportarEnergiaPDF(inspecciones)}
+              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition
+    ${modoNoche
+                  ? "bg-gradient-to-r from-green-700 to-green-500 text-white shadow-md"
+                  : "bg-gradient-to-r from-green-500 to-green-400 text-white shadow-sm"
+                }
+    hover:scale-105 active:scale-95`}
+            >
+              📄 Exportar PDF
+            </button>
           </div>
         </div>
 
@@ -886,14 +913,15 @@ export default function TablaEnergia({
 
                     {/* BODY */}
                     <tbody>
-                      {dataBackend.map((area: any, index) => {
+                      {dataBackend.map((area: any) => {
+                        const filaKey = `${fecha}__${responsableGrupo}__${area.id}`;
                         const registro = registros.find(
                           (r) => r.area_id === area.id,
                         );
 
                         return (
                           <tr
-                            key={index}
+                            key={filaKey}
                             className={`transition ${modoNoche
                               ? "bg-[#181818] hover:bg-[#1f1f1f]"
                               : "bg-white hover:bg-gray-50"
@@ -1015,13 +1043,10 @@ export default function TablaEnergia({
 
                             {/* CAMPOS */}
                             {campos.map((c) => {
-                              const cVal = registro
-                                ? registro[`${c.nombre.toLowerCase()}_c`] || 0
-                                : 0;
+                              const base = camposMap[c.key];
 
-                              const ncVal = registro
-                                ? registro[`${c.nombre.toLowerCase()}_nc`] || 0
-                                : 0;
+                              const cVal = registro ? Number(registro[`${base}_c`] || 0) : 0;
+                              const ncVal = registro ? Number(registro[`${base}_nc`] || 0) : 0;
 
                               const total = Number(cVal) + Number(ncVal);
 
@@ -1041,13 +1066,13 @@ export default function TablaEnergia({
                                       {/* CUMPLE */}
                                       <input
                                         value={
-                                          obtenerValor(index, c.key, "c", registro) === 0
+                                          obtenerValor(filaKey, c.key, "c", registro) === 0
                                             ? ""
-                                            : obtenerValor(index, c.key, "c", registro)
+                                            : obtenerValor(filaKey, c.key, "c", registro)
                                         }
                                         onChange={(e) =>
                                           handleChange(
-                                            index,
+                                            filaKey,
                                             c.key,
                                             "c",
                                             e.target.value
@@ -1055,7 +1080,7 @@ export default function TablaEnergia({
                                         }
                                         onKeyDown={(e) => {
                                           if (e.key === "Enter")
-                                            guardarFila(index, area, registro);
+                                            guardarFila(filaKey, area, registro);
                                         }}
                                         className={`w-full text-center rounded-lg py-1 border ${modoNoche
                                           ? "bg-[#111] text-white border-[#2f2f2f]"
@@ -1066,13 +1091,13 @@ export default function TablaEnergia({
                                       {/* NO CUMPLE */}
                                       <input
                                         value={
-                                          obtenerValor(index, c.key, "nc", registro) === 0
+                                          obtenerValor(filaKey, c.key, "nc", registro) === 0
                                             ? ""
-                                            : obtenerValor(index, c.key, "nc", registro)
+                                            : obtenerValor(filaKey, c.key, "nc", registro)
                                         }
                                         onChange={(e) =>
                                           handleChange(
-                                            index,
+                                            filaKey,
                                             c.key,
                                             "nc",
                                             e.target.value
@@ -1080,7 +1105,7 @@ export default function TablaEnergia({
                                         }
                                         onKeyDown={(e) => {
                                           if (e.key === "Enter")
-                                            guardarFila(index, area, registro);
+                                            guardarFila(filaKey, area, registro);
                                         }}
                                         className={`w-full text-center rounded-lg py-1 border ${modoNoche
                                           ? "bg-[#111] text-white border-[#2f2f2f]"
@@ -1112,13 +1137,17 @@ export default function TablaEnergia({
                             >
                               <div className="flex flex-col gap-2">
                                 <textarea
-                                  value={observaciones[index] || ""}
+                                  value={
+                                    observaciones[filaKey] !== undefined
+                                      ? observaciones[filaKey]
+                                      : registro?.observacion || ""
+                                  }
                                   onChange={(e) =>
-                                    handleObs(index, e.target.value)
+                                    handleObs(filaKey, e.target.value)
                                   }
                                   onKeyDown={(e) => {
                                     if (e.key === "Enter")
-                                      guardarFila(index, area, registro);
+                                      guardarFila(filaKey, area, registro);
                                   }}
                                   className={`w-full p-2 rounded-xl border ${modoNoche
                                     ? "bg-[#222] text-white border-[#2f2f2f]"
@@ -1187,14 +1216,10 @@ export default function TablaEnergia({
                         let totalNC = 0;
 
                         registros.forEach((r) => {
-                          totalC += Number(
-                            r[`${c.nombre.toLowerCase()}_c`] || 0,
-                          );
-                          totalNC += Number(
-                            r[`${c.nombre.toLowerCase()}_nc`] || 0,
-                          );
+                          const base = camposMap[c.key];
+                          totalC += Number(r[`${base}_c`] || 0);
+                          totalNC += Number(r[`${base}_nc`] || 0);
                         });
-
                         return (
                           <tr
                             key={c.key}

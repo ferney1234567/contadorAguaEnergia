@@ -4,6 +4,7 @@ import { useEffect, useMemo, useState } from "react";
 import { CalendarDays, Search, User2, Filter, Plus } from "lucide-react";
 import Swal from "sweetalert2";
 import MovilReciclaje from "./modalReciclaje";
+import { exportarResiduosPDF } from "@/app/utils/exportadorResiduosPDF";
 
 type RegistroValores = {
   [fila: string]: { [campo: number]: { c?: string; nc?: string } };
@@ -604,28 +605,34 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
           </div>
 
 
-          <div
-            className={`rounded-2xl px-4 py-3 flex items-center gap-3 ${estilos.inputSuave}`}
-          >
+         <div
+  className={`rounded-2xl px-4 py-3 flex items-center gap-3 ${estilos.inputSuave}`}
+>
+  {/* BOTÓN EXISTENTE */}
+  <button
+    onClick={() => setMostrarModal(true)}
+    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition whitespace-nowrap ${
+      modoNoche
+        ? "bg-gradient-to-r from-blue-700 to-blue-500 text-white shadow-md"
+        : "bg-gradient-to-r from-blue-500 to-blue-400 text-white shadow-sm"
+    } hover:scale-105 active:scale-95`}
+  >
+    <Plus size={16} />
+    Nueva inspección de residuos
+  </button>
 
-
-            {/* 🔥 BOTÓN PRO */}
-            <button
-              onClick={() => setMostrarModal(true)}
-              className={`
-        flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition whitespace-nowrap
-        ${modoNoche
-                  ? "bg-gradient-to-r from-blue-700 to-blue-500 text-white shadow-md"
-                  : "bg-gradient-to-r from-blue-500 to-blue-400 text-white shadow-sm"
-                }
-        hover:scale-105 active:scale-95
-      `}
-            >
-              <Plus size={16} />
-              Nueva inspección
-            </button>
-
-          </div>
+  {/* 🔥 BOTÓN EXPORTAR PDF */}
+  <button
+    onClick={() => exportarResiduosPDF(inspecciones)}
+    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition whitespace-nowrap ${
+      modoNoche
+        ? "bg-gradient-to-r from-orange-700 to-orange-500 text-white shadow-md"
+        : "bg-gradient-to-r from-orange-500 to-orange-400 text-white shadow-sm"
+    } hover:scale-105 active:scale-95`}
+  >
+    ♻️ Exportar PDF
+  </button>
+</div>
         </div>
 
 

@@ -1,15 +1,19 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import {CalendarDays,Search,User2,Filter,Plus,
-} from "lucide-react";
+import { CalendarDays, Search, Filter, Plus } from "lucide-react";
 import Swal from "sweetalert2";
 import MovilAgua from "./modalAgua";
+import { exportarSanitariosPDF } from "@/app/utils/exportadorSanitariosPDF";
 
 type RegistroValores = {
-  [fila: number]: { [campo: number]: { c?: string; nc?: string } };
+  [filaKey: string]: { [campo: number]: { c?: string; nc?: string } };
 };
-type RegistroObservaciones = { [fila: number]: string };
+
+type RegistroObservaciones = {
+  [filaKey: string]: string;
+};
+
 interface Props {
   modoNoche?: boolean;
   dataBackend: any[];
@@ -20,17 +24,17 @@ export default function InpeccionesSanitarios({
   dataBackend: dataInicial,
 }: Props) {
   const [dataBackend, setdataBackend] = useState<any[]>(
-    Array.isArray(dataInicial) ? dataInicial : [],
+    Array.isArray(dataInicial) ? dataInicial : []
   );
 
-const campos = [
-  { key: 1, nombre: "Sanitarios", db: "sanitarios", img: "/img/sanitarios.png" },
-  { key: 2, nombre: "Orinales", db: "orinales", img: "/img/orinal.png" },
-  { key: 3, nombre: "Duchas", db: "duchas", img: "/img/ducha.png" },
-  { key: 4, nombre: "Lavamanos", db: "lavamanos", img: "/img/lavamanos.png" },
-  { key: 5, nombre: "Llaves", db: "llaves", img: "/img/llave.png" },
-];
- 
+  const campos = [
+    { key: 1, nombre: "Sanitarios", db: "sanitarios", img: "/img/sanitarios.png" },
+    { key: 2, nombre: "Orinales", db: "orinales", img: "/img/orinal.png" },
+    { key: 3, nombre: "Duchas", db: "duchas", img: "/img/ducha.png" },
+    { key: 4, nombre: "Lavamanos", db: "lavamanos", img: "/img/lavamanos.png" },
+    { key: 5, nombre: "Llaves", db: "llaves", img: "/img/llave.png" },
+  ];
+
   const MESES = [
     { value: "Todos", label: "Todos" },
     { value: "01", label: "Enero" },
@@ -47,183 +51,200 @@ const campos = [
     { value: "12", label: "Diciembre" },
   ];
 
+  const STORAGE_DATA = "sanitarios_data";
+  const STORAGE_MODO = "modo_nueva_inspeccion_sanitarios";
+  const STORAGE_RESPONSABLE = "responsable";
+
   const [valores, setValores] = useState<RegistroValores>({});
   const [observaciones, setObservaciones] = useState<RegistroObservaciones>({});
   const [fechaActual, setFechaActual] = useState("");
   const [busqueda, setBusqueda] = useState("");
   const [modoNuevaInspeccion, setModoNuevaInspeccion] = useState(false);
-  const obtenerAnioActual = () => {
-    return String(new Date().getFullYear());
-  };
-  const [anioFiltro, setAnioFiltro] = useState(obtenerAnioActual());
-  const obtenerMesActual = () => {
-    const hoy = new Date();
-    return String(hoy.getMonth() + 1).padStart(2, "0");
-  };
-  const [mesFiltro, setMesFiltro] = useState(obtenerMesActual());
   const [inspecciones, setInspecciones] = useState<any[]>([]);
   const [responsable, setResponsable] = useState("");
   const [fechaSesion, setFechaSesion] = useState(
-  new Date().toISOString().split("T")[0]);
+    new Date().toISOString().split("T")[0]
+  );
   const [mostrarModal, setMostrarModal] = useState(false);
-    
+
+  const obtenerAnioActual = () => String(new Date().getFullYear());
+  const obtenerMesActual = () =>
+    String(new Date().getMonth() + 1).padStart(2, "0");
+
+  const [anioFiltro, setAnioFiltro] = useState(obtenerAnioActual());
+  const [mesFiltro, setMesFiltro] = useState(obtenerMesActual());
+
+  const estilos = {
+    fondo: modoNoche
+      ? "bg-[#111111] text-white border border-[#2b2b2b]"
+      : "bg-white text-gray-800 border border-gray-200",
+
+    tarjeta: modoNoche
+      ? "bg-[#181818] border border-[#2e2e2e] shadow-[0_8px_25px_rgba(0,0,0,0.25)]"
+      : "bg-white border border-gray-200 shadow-[0_8px_25px_rgba(0,0,0,0.06)]",
+
+    titulo: modoNoche ? "text-white" : "text-gray-800",
+    subtitulo: modoNoche ? "text-gray-300" : "text-gray-500",
+
+    input: modoNoche
+      ? "bg-[#222] border border-[#3a3a3a] text-white placeholder:text-gray-400"
+      : "bg-white border border-gray-300 text-gray-800 placeholder:text-gray-400",
+
+    inputSuave: modoNoche
+      ? "bg-[#202020] border border-[#363636] text-white"
+      : "bg-gray-50 border border-gray-200 text-gray-700",
+
+    chip: modoNoche
+      ? "bg-[#202020] text-gray-200 border border-[#353535]"
+      : "bg-gray-100 text-gray-700 border border-gray-200",
+  };
 
   useEffect(() => {
-    const guardado = localStorage.getItem("responsable");
+    const guardado = localStorage.getItem(STORAGE_RESPONSABLE);
     if (guardado) setResponsable(guardado);
   }, []);
 
   const handleResponsable = (valor: string) => {
-    setModoNuevaInspeccion(false); // 🔥 vuelve a modo normal
+    setModoNuevaInspeccion(false);
     setResponsable(valor);
-    localStorage.setItem("responsable", valor);
-    localStorage.removeItem("modo_nueva_inspeccion");
+    localStorage.setItem(STORAGE_RESPONSABLE, valor);
+    localStorage.removeItem(STORAGE_MODO);
   };
 
   useEffect(() => {
-    const data = {
-      valores,
-      observaciones,
-    };
-    localStorage.setItem("residuos_data", JSON.stringify(data));
+    const data = { valores, observaciones };
+    localStorage.setItem(STORAGE_DATA, JSON.stringify(data));
   }, [valores, observaciones]);
 
-useEffect(() => {
-  if (modoNuevaInspeccion) return; // 🔥 CLAVE
+  useEffect(() => {
+    if (modoNuevaInspeccion) return;
 
-  const data = localStorage.getItem("residuos_data");
-  if (data) {
-    const parsed = JSON.parse(data);
-    setValores(parsed.valores || {});
-    setObservaciones(parsed.observaciones || {});
-  }
-}, [modoNuevaInspeccion]);
+    const data = localStorage.getItem(STORAGE_DATA);
+    if (data) {
+      const parsed = JSON.parse(data);
+      setValores(parsed.valores || {});
+      setObservaciones(parsed.observaciones || {});
+    }
+  }, [modoNuevaInspeccion]);
 
-useEffect(() => {
-  const estado = localStorage.getItem("modo_nueva_inspeccion");
-  if (estado === "true") {
+  useEffect(() => {
+    const estado = localStorage.getItem(STORAGE_MODO);
+    if (estado === "true") {
+      setModoNuevaInspeccion(true);
+    }
+  }, []);
+
+  const finalizarInspeccion = async () => {
     setModoNuevaInspeccion(true);
-  }
-}, []);
+    localStorage.setItem(STORAGE_MODO, "true");
+    localStorage.removeItem(STORAGE_DATA);
 
-const finalizarInspeccion = async () => {
-  setModoNuevaInspeccion(true);
+    setValores({});
+    setObservaciones({});
+    setInspecciones([]);
+    setFechaSesion(new Date().toISOString().split("T")[0]);
 
-  localStorage.setItem("modo_nueva_inspeccion", "true"); // 🔥 CLAVE
+    Swal.fire({
+      icon: "success",
+      title: "Inspección finalizada",
+      timer: 1500,
+      showConfirmButton: false,
+    });
+  };
 
-  localStorage.removeItem("residuos_data");
+  useEffect(() => {
+    const init = async () => {
+      try {
+        const guardado = localStorage.getItem(STORAGE_RESPONSABLE);
+        if (guardado) setResponsable(guardado);
 
-  setValores({});
-  setObservaciones({});
-  setInspecciones([]);
+        const dataLocal = localStorage.getItem(STORAGE_DATA);
+        if (dataLocal) {
+          const parsed = JSON.parse(dataLocal);
+          setValores(parsed.valores || {});
+          setObservaciones(parsed.observaciones || {});
+        }
 
-  // 🔥 NUEVA SESIÓN
-  setFechaSesion(new Date().toISOString().split("T")[0]);
+        const [areasRes, inspeccionesRes] = await Promise.all([
+          fetch("/api/areas-sanitarias"),
+          fetch("/api/inspecciones-sanitarias"),
+        ]);
 
-  Swal.fire({
-    icon: "success",
-    title: "Inspección finalizada",
-    timer: 1500,
-    showConfirmButton: false,
-  });
-};
+        const areasData = await areasRes.json();
+        const inspeccionesData = await inspeccionesRes.json();
+
+        const areasFinal = Array.isArray(areasData)
+          ? areasData
+          : Array.isArray(areasData?.data)
+          ? areasData.data
+          : [];
+
+        const inspeccionesFinal = Array.isArray(inspeccionesData)
+          ? inspeccionesData
+          : Array.isArray(inspeccionesData?.data)
+          ? inspeccionesData.data
+          : [];
+
+        setdataBackend(areasFinal);
+        setInspecciones(inspeccionesFinal);
+      } catch (error) {
+        console.error("Error inicializando:", error);
+      }
+    };
+
+    init();
+  }, []);
 
   useEffect(() => {
     if (!dataBackend.length) return;
-
-    // 🔥 EVITA QUE RELLENE CUANDO ES NUEVA INSPECCIÓN
     if (modoNuevaInspeccion) return;
 
     const nuevosValores: RegistroValores = {};
     const nuevasObservaciones: RegistroObservaciones = {};
 
-    dataBackend.forEach((area, index) => {
+    dataBackend.forEach((area) => {
+      const filaKey = `${fechaSesion}__${responsable}__${area.id}`;
+
       const inspeccion = inspecciones
-  .filter((i) =>
-    i.area_id === area.id &&
-    i.responsable === responsable &&
-    i.fecha?.split("T")[0] === fechaSesion
-  )
-  .slice(-1)[0];
+        .filter(
+          (i) =>
+            i.area_id === area.id &&
+            i.responsable === responsable &&
+            i.fecha?.split("T")[0] === fechaSesion
+        )
+        .slice(-1)[0];
+
       if (!inspeccion) return;
 
-    nuevosValores[index] = {
-  1: { c: String(inspeccion.sanitarios_c || ""), nc: String(inspeccion.sanitarios_nc || "") },
-  2: { c: String(inspeccion.orinales_c || ""), nc: String(inspeccion.orinales_nc || "") },
-  3: { c: String(inspeccion.duchas_c || ""), nc: String(inspeccion.duchas_nc || "") },
-  4: { c: String(inspeccion.lavamanos_c || ""), nc: String(inspeccion.lavamanos_nc || "") },
-  5: { c: String(inspeccion.llaves_c || ""), nc: String(inspeccion.llaves_nc || "") },
-};
+      nuevosValores[filaKey] = {
+        1: {
+          c: String(inspeccion.sanitarios_c || ""),
+          nc: String(inspeccion.sanitarios_nc || ""),
+        },
+        2: {
+          c: String(inspeccion.orinales_c || ""),
+          nc: String(inspeccion.orinales_nc || ""),
+        },
+        3: {
+          c: String(inspeccion.duchas_c || ""),
+          nc: String(inspeccion.duchas_nc || ""),
+        },
+        4: {
+          c: String(inspeccion.lavamanos_c || ""),
+          nc: String(inspeccion.lavamanos_nc || ""),
+        },
+        5: {
+          c: String(inspeccion.llaves_c || ""),
+          nc: String(inspeccion.llaves_nc || ""),
+        },
+      };
 
-      nuevasObservaciones[index] = inspeccion.observacion || "";
+      nuevasObservaciones[filaKey] = inspeccion.observacion || "";
     });
 
     setValores(nuevosValores);
     setObservaciones(nuevasObservaciones);
-  }, [dataBackend, inspecciones, responsable, fechaSesion]);
-
- useEffect(() => {
-  const init = async () => {
-    try {
-      const guardado = localStorage.getItem("responsable");
-      if (guardado) setResponsable(guardado);
-
-      const dataLocal = localStorage.getItem("residuos_data");
-      if (dataLocal) {
-        const parsed = JSON.parse(dataLocal);
-        setValores(parsed.valores || {});
-        setObservaciones(parsed.observaciones || {});
-      }
-
-      const [areasRes, inspeccionesRes] = await Promise.all([
-        fetch("/api/areas-sanitarias"),
-        fetch("/api/inspecciones-sanitarias"),
-      ]);
-
-      const areas = await areasRes.json();
-      const inspeccionesData = await inspeccionesRes.json();
-
-      // 🔥 ASEGURAR ARRAY SIEMPRE
-      const areasFinal = Array.isArray(areas)
-        ? areas
-        : areas?.data || [];
-
-      const inspeccionesFinal = Array.isArray(inspeccionesData)
-        ? inspeccionesData
-        : inspeccionesData?.data || [];
-
-      console.log("AREAS:", areasFinal);
-      console.log("INSPECCIONES:", inspeccionesFinal);
-
-      setdataBackend(areasFinal);
-      setInspecciones(inspeccionesFinal);
-
-    } catch (error) {
-      console.error("Error inicializando:", error);
-    }
-  };
-
-  init();
-}, []);
-
-
-  const tieneDatos = (index: number) => {
-    const valoresFila = valores[index];
-    if (!valoresFila) return false;
-    return Object.values(valoresFila).some((campo: any) => {
-      return Number(campo?.c || 0) > 0 || Number(campo?.nc || 0) > 0;
-    });
-  };
-
-  const editarContenedor = (index: number) => {
-    Swal.fire({
-      icon: "info",
-      title: "Modo edición",
-      text: "Ahora puedes modificar los datos y guardar",
-      timer: 1500,
-      showConfirmButton: false,
-    });
-  };
+  }, [dataBackend, inspecciones, responsable, fechaSesion, modoNuevaInspeccion]);
 
   useEffect(() => {
     const actualizarFecha = () => {
@@ -243,72 +264,30 @@ const finalizarInspeccion = async () => {
   }, []);
 
   const handleChange = (
-    fila: number,
+    filaKey: string,
     campo: number,
     tipo: "c" | "nc",
-    value: string,
+    value: string
   ) => {
     const limpio = value.replace(/\D/g, "");
 
     setValores((prev) => ({
       ...prev,
-      [fila]: {
-        ...prev[fila],
+      [filaKey]: {
+        ...prev[filaKey],
         [campo]: {
-          ...prev[fila]?.[campo],
+          ...prev[filaKey]?.[campo],
           [tipo]: limpio,
         },
       },
     }));
   };
 
-  const handleObs = (fila: number, value: string) => {
+  const handleObs = (filaKey: string, value: string) => {
     setObservaciones((prev) => ({
       ...prev,
-      [fila]: value,
+      [filaKey]: value,
     }));
-  };
-
-  const estilos = {
-    fondo: modoNoche
-      ? "bg-[#111111] text-white border border-[#2b2b2b]"
-      : "bg-white text-gray-800 border border-gray-200",
-
-    tarjeta: modoNoche
-      ? "bg-[#181818] border border-[#2e2e2e] shadow-[0_8px_25px_rgba(0,0,0,0.25)]"
-      : "bg-white border border-gray-200 shadow-[0_8px_25px_rgba(0,0,0,0.06)]",
-
-    titulo: modoNoche ? "text-white" : "text-gray-800",
-
-    subtitulo: modoNoche ? "text-gray-300" : "text-gray-500",
-
-    input: modoNoche
-      ? "bg-[#222] border border-[#3a3a3a] text-white placeholder:text-gray-400"
-      : "bg-white border border-gray-300 text-gray-800 placeholder:text-gray-400",
-
-    inputSuave: modoNoche
-      ? "bg-[#202020] border border-[#363636] text-white"
-      : "bg-gray-50 border border-gray-200 text-gray-700",
-
-    header: modoNoche
-      ? "bg-[#161616] text-gray-200"
-      : "bg-gray-50 text-gray-700",
-
-    fila: modoNoche
-      ? "bg-[#111111] hover:bg-[#1b1b1b]"
-      : "bg-white hover:bg-gray-50",
-
-    borde: modoNoche ? "border-[#303030]" : "border-gray-200",
-
-    linea: modoNoche ? "border-[#3a3a3a]" : "border-gray-200",
-
-    totalGeneral: modoNoche
-      ? "bg-[#1a1a1a] text-gray-200"
-      : "bg-[#f8fafc] text-gray-700",
-
-    chip: modoNoche
-      ? "bg-[#202020] text-gray-200 border border-[#353535]"
-      : "bg-gray-100 text-gray-700 border border-gray-200",
   };
 
   const obtenerAnio = (fila: any) => {
@@ -322,7 +301,6 @@ const finalizarInspeccion = async () => {
 
   const obtenerMes = (fila: any) => {
     if (fila?.mes) return String(fila.mes);
-
     if (fila?.fecha) {
       const d = new Date(fila.fecha);
       if (!isNaN(d.getTime())) {
@@ -332,23 +310,29 @@ const finalizarInspeccion = async () => {
     return "Sin mes";
   };
 
- 
   const aniosDisponibles = useMemo(() => {
-  const setAnios = new Set<string>();
+    const setAnios = new Set<string>();
+    inspecciones.forEach((item) => {
+      if (item?.fecha) {
+        setAnios.add(String(new Date(item.fecha).getFullYear()));
+      }
+    });
+    return ["Todos", ...Array.from(setAnios).sort((a, b) => Number(b) - Number(a))];
+  }, [inspecciones]);
 
-  const lista = Array.isArray(inspecciones) ? inspecciones : [];
+  const obtenerSemana = (fecha: string) => {
+    const d = new Date(fecha);
+    const inicio = new Date(d.getFullYear(), 0, 1);
+    const dias = Math.floor(
+      (d.getTime() - inicio.getTime()) / (1000 * 60 * 60 * 24)
+    );
+    return Math.ceil((dias + inicio.getDay() + 1) / 7);
+  };
 
-  lista.forEach((item) => {
-    if (item?.fecha) {
-      const anio = new Date(item.fecha).getFullYear();
-      setAnios.add(String(anio));
-    }
-  });
-
-  return ["Todos", ...Array.from(setAnios).sort((a, b) => Number(b) - Number(a))];
-}, [inspecciones]);
-
-
+  const normalizarFecha = (fecha: string) => {
+    if (!fecha) return "";
+    return fecha.split("T")[0];
+  };
 
   const dataBackendFiltrada = useMemo(() => {
     return dataBackend.filter((fila) => {
@@ -366,191 +350,186 @@ const finalizarInspeccion = async () => {
     });
   }, [dataBackend, busqueda, anioFiltro, mesFiltro]);
 
-  const totalCampoFila = (fila: number, campo: number) => {
-    const c = Number(valores?.[fila]?.[campo]?.c || 0);
-    const nc = Number(valores?.[fila]?.[campo]?.nc || 0);
-    return c + nc;
-  };
+  const getFilaKey = (
+    fecha: string,
+    responsableFila: string,
+    areaId: number | string
+  ) => `${fecha}__${responsableFila}__${areaId}`;
 
-  const totalFila = (fila: number) => {
-    let total = 0;
-    campos.forEach((c) => {
-      total += totalCampoFila(fila, c.key);
-    });
-    return total;
-  };
+  const inspeccionesPorFecha = useMemo(() => {
+    const grupos: Record<string, any[]> = {};
 
-  const totalCampoGeneral = (campo: number) => {
-    let total = 0;
+    inspecciones.forEach((item) => {
+      const fecha = normalizarFecha(item.fecha);
+      const responsableItem = item.responsable || "sin-responsable";
+      const semana = obtenerSemana(fecha);
+      const anio = new Date(fecha).getFullYear();
 
-    Object.keys(valores).forEach((fila) => {
-      const c = Number(valores?.[Number(fila)]?.[campo]?.c || 0);
-      const nc = Number(valores?.[Number(fila)]?.[campo]?.nc || 0);
-      total += c + nc;
+      const clave = `${anio}__semana${semana}__${responsableItem}`;
+
+      if (!grupos[clave]) grupos[clave] = [];
+      grupos[clave].push(item);
     });
 
-    return total;
-  };
-
-  const totalGeneral = () => {
-    let total = 0;
-
-    Object.keys(valores).forEach((fila) => {
-      campos.forEach((c) => {
-        const cVal = Number(valores?.[Number(fila)]?.[c.key]?.c || 0);
-        const ncVal = Number(valores?.[Number(fila)]?.[c.key]?.nc || 0);
-        total += cVal + ncVal;
-      });
-    });
-
-    return total;
-  };
-
-const inspeccionesPorFecha = useMemo(() => {
-  const grupos: Record<string, any[]> = {};
-
-  const lista = Array.isArray(inspecciones) ? inspecciones : [];
-
-  lista.forEach((item) => {
-    const clave = `${item.fecha || "sin-fecha"}__${item.responsable || "sin-responsable"}`;
-
-    if (!grupos[clave]) grupos[clave] = [];
-    grupos[clave].push(item);
-  });
-
-  return grupos;
-}, [inspecciones]);
+    return grupos;
+  }, [inspecciones]);
 
   const inspeccionesFiltradas = useMemo(() => {
     return Object.entries(inspeccionesPorFecha)
-      .filter(([clave]) => {
-        const [fechaBase] = clave.split("__");
-        const d = new Date(fechaBase);
+      .filter(([clave, registros]) => {
+        const [anio] = clave.split("__");
+        const coincideAnio = anioFiltro === "Todos" || anio === anioFiltro;
 
-        if (isNaN(d.getTime())) return false;
+        if (!coincideAnio) return false;
 
-        const mes = String(d.getMonth() + 1).padStart(2, "0");
-        const anio = String(d.getFullYear());
+        if (mesFiltro === "Todos") return true;
 
-        return (
-          (mesFiltro === "Todos" || mes === mesFiltro) &&
-          (anioFiltro === "Todos" || anio === anioFiltro)
-        );
+        return registros.some((r) => {
+          const fecha = normalizarFecha(r.fecha);
+          const d = new Date(fecha);
+          return String(d.getMonth() + 1).padStart(2, "0") === mesFiltro;
+        });
       })
-      .sort((a, b) => {
-        const [fechaA] = a[0].split("__");
-        const [fechaB] = b[0].split("__");
-        return new Date(fechaB).getTime() - new Date(fechaA).getTime();
+      .sort((a, b) => b[0].localeCompare(a[0]));
+  }, [inspeccionesPorFecha, anioFiltro, mesFiltro]);
+
+  const obtenerValor = (
+    filaKey: string,
+    campo: number,
+    tipo: "c" | "nc",
+    registro: any
+  ) => {
+    const valorLocal = valores?.[filaKey]?.[campo]?.[tipo];
+
+    if (valorLocal !== undefined && valorLocal !== "") {
+      return Number(valorLocal);
+    }
+
+    if (registro) {
+      const campoDef = campos.find((c) => c.key === campo);
+      if (!campoDef) return 0;
+      return Number(registro[`${campoDef.db}_${tipo}`] || 0);
+    }
+
+    return 0;
+  };
+
+  const guardarFila = async (filaKey: string, area: any, registro: any) => {
+    try {
+      if (!area?.id) return;
+
+      if (!registro?.id) {
+        Swal.fire({
+          toast: true,
+          position: "top-end",
+          icon: "warning",
+          title: "No puedes crear registros aquí",
+          timer: 1500,
+          showConfirmButton: false,
+        });
+        return;
+      }
+
+      const responsableFinal =
+        (typeof responsable === "string" && responsable.trim()) ||
+        registro?.responsable ||
+        "";
+
+      if (!responsableFinal) {
+        Swal.fire({
+          toast: true,
+          position: "top-end",
+          icon: "warning",
+          title: "Falta responsable",
+          timer: 1200,
+          showConfirmButton: false,
+        });
+        return;
+      }
+
+      const body = {
+        id: registro.id,
+        fecha: registro.fecha,
+        responsable: responsableFinal,
+        area_id: area.id,
+
+        sanitarios_c: obtenerValor(filaKey, 1, "c", registro),
+        sanitarios_nc: obtenerValor(filaKey, 1, "nc", registro),
+
+        orinales_c: obtenerValor(filaKey, 2, "c", registro),
+        orinales_nc: obtenerValor(filaKey, 2, "nc", registro),
+
+        duchas_c: obtenerValor(filaKey, 3, "c", registro),
+        duchas_nc: obtenerValor(filaKey, 3, "nc", registro),
+
+        lavamanos_c: obtenerValor(filaKey, 4, "c", registro),
+        lavamanos_nc: obtenerValor(filaKey, 4, "nc", registro),
+
+        llaves_c: obtenerValor(filaKey, 5, "c", registro),
+        llaves_nc: obtenerValor(filaKey, 5, "nc", registro),
+
+        observacion: observaciones[filaKey] || registro?.observacion || "",
+      };
+
+      const response = await fetch("/api/inspecciones-sanitarias", {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
       });
-  }, [inspeccionesPorFecha, mesFiltro, anioFiltro]);
 
+      if (!response.ok) {
+        const errorText = await response.text();
 
+        Swal.fire({
+          icon: "error",
+          title: "Error del servidor",
+          text: errorText,
+        });
 
- const guardarFila = async (index: number, area: any, registro: any) => {
-  try {
-    if (!area?.id) return;
+        return;
+      }
 
-    const responsableFinal = responsable?.trim() || registro?.responsable || "";
+      const res = await fetch("/api/inspecciones-sanitarias");
+      const data = await res.json();
+      const dataFinal = Array.isArray(data) ? data : data?.data || [];
 
-    if (!responsableFinal) {
+      setInspecciones(dataFinal);
+
       Swal.fire({
         toast: true,
         position: "top-end",
-        icon: "warning",
-        title: "Falta responsable",
+        icon: "success",
+        title: "Actualizado correctamente",
         timer: 1200,
         showConfirmButton: false,
       });
-      return;
-    }
-
-    const body = {
-      fecha: new Date().toISOString().split("T")[0],
-      responsable: responsableFinal,
-      area_id: area.id,
-
-      sanitarios_c: Number(valores?.[index]?.[1]?.c || 0),
-      sanitarios_nc: Number(valores?.[index]?.[1]?.nc || 0),
-
-      orinales_c: Number(valores?.[index]?.[2]?.c || 0),
-      orinales_nc: Number(valores?.[index]?.[2]?.nc || 0),
-
-      duchas_c: Number(valores?.[index]?.[3]?.c || 0),
-      duchas_nc: Number(valores?.[index]?.[3]?.nc || 0),
-
-      lavamanos_c: Number(valores?.[index]?.[4]?.c || 0),
-      lavamanos_nc: Number(valores?.[index]?.[4]?.nc || 0),
-
-      llaves_c: Number(valores?.[index]?.[5]?.c || 0),
-      llaves_nc: Number(valores?.[index]?.[5]?.nc || 0),
-
-      observacion: observaciones[index] || "",
-    };
-
-    console.log("BODY ENVIADO:", body);
-
-    const response = await fetch("/api/inspecciones-sanitarias/", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
-
-    if (!response.ok) {
-      const errorText = await response.text();
+    } catch (error) {
+      console.error("ERROR GENERAL:", error);
 
       Swal.fire({
         icon: "error",
-        title: "Error del servidor",
-        text: errorText,
+        title: "Error inesperado",
+        text: "No se pudo actualizar",
       });
-      return;
     }
-
-    // 🔥 recargar correctamente
-    const res = await fetch("/api/inspecciones-sanitarias/");
-    const data = await res.json();
-
-    const dataFinal = Array.isArray(data) ? data : data?.data || [];
-
-    setInspecciones(dataFinal);
-
-    Swal.fire({
-      toast: true,
-      position: "top-end",
-      icon: "success",
-      title: "Guardado correctamente",
-      timer: 1200,
-      showConfirmButton: false,
-    });
-
-  } catch (error) {
-    console.error("ERROR GUARDANDO:", error);
-
-    Swal.fire({
-      icon: "error",
-      title: "Error inesperado",
-    });
-  }
-};
+  };
 
   return (
     <div className={`w-full rounded-3xl p-3 sm:p-4 md:p-6 ${estilos.tarjeta}`}>
-      {/* ENCABEZADO */}
-      <div className=" mb-5 flex flex-col gap-4">
+      <div className="mb-5 flex flex-col gap-4">
         <div className="text-center">
           <h2
             className={`text-lg sm:text-xl md:text-2xl font-bold tracking-wide ${estilos.titulo}`}
           >
-            Gestión de Agua
+            Gestión de Sanitarios
           </h2>
           <p className={`mt-1 text-xs sm:text-sm ${estilos.subtitulo}`}>
-            Control de inspecciones de Agua, filtros e historial en tiempo real
+            Control de inspecciones sanitarias, filtros e historial en tiempo real
           </p>
         </div>
 
-        {/* FECHA + RESPONSABLE */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
           <div
             className={`rounded-2xl px-4 py-3 flex items-center gap-3 ${estilos.inputSuave}`}
@@ -566,36 +545,46 @@ const inspeccionesPorFecha = useMemo(() => {
             </div>
           </div>
 
-          <div
-            className={`rounded-2xl px-4 py-3 flex items-center gap-3 ${estilos.inputSuave}`}
-          >
-              <button
-                onClick={() => setMostrarModal(true)}
-                className={`
-                  flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition
-                  ${modoNoche
-                    ? "bg-gradient-to-r from-blue-700 to-blue-500 text-white shadow-md"
-                    : "bg-gradient-to-r from-blue-500 to-blue-400 text-white shadow-sm"
-                  }
-                  hover:scale-105 active:scale-95
-                `}
-              >
-                <Plus size={16} />
-                Nueva inspección de agua
-              </button>
-          </div>
-        </div>
+         <div
+  className={`rounded-2xl px-4 py-3 flex items-center gap-3 ${estilos.inputSuave}`}
+>
+  {/* BOTÓN EXISTENTE */}
+  <button
+    onClick={() => setMostrarModal(true)}
+    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition whitespace-nowrap ${
+      modoNoche
+        ? "bg-gradient-to-r from-blue-700 to-blue-500 text-white shadow-md"
+        : "bg-gradient-to-r from-blue-500 to-blue-400 text-white shadow-sm"
+    } hover:scale-105 active:scale-95`}
+  >
+    <Plus size={16} />
+    Nueva inspección sanitaria
+  </button>
 
-        {/* FILTROS */}
-        <div className={`rounded-2xl p-3 sm:p-4 ${estilos.inputSuave}`}>
-          <div className="flex items-center gap-2 mb-3">
-            <Filter size={16} />
-            <h3 className="text-sm sm:text-base font-semibold">
-              Filtros de búsqueda
-            </h3>
+  {/* 🔥 NUEVO BOTÓN PDF */}
+  <button
+    onClick={() => exportarSanitariosPDF(inspecciones)}
+    className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition whitespace-nowrap ${
+      modoNoche
+        ? "bg-gradient-to-r from-green-700 to-green-500 text-white shadow-md"
+        : "bg-gradient-to-r from-green-500 to-green-400 text-white shadow-sm"
+    } hover:scale-105 active:scale-95`}
+  >
+    📄 Exportar PDF
+  </button>
+</div>
+</div>
+
+        <div className={`rounded-2xl p-4 ${estilos.inputSuave}`}>
+          <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+            <div className="flex items-center gap-2">
+              <Filter size={16} />
+              <h3 className="text-sm sm:text-base font-semibold">
+                Filtros de búsqueda
+              </h3>
+            </div>
           </div>
 
-         
           <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-3">
             <div className="relative">
               <Search
@@ -606,7 +595,7 @@ const inspeccionesPorFecha = useMemo(() => {
                 type="text"
                 value={busqueda}
                 onChange={(e) => setBusqueda(e.target.value)}
-                placeholder="Buscar por área o puesto"
+                placeholder="Buscar por área"
                 className={`w-full rounded-xl pl-10 pr-3 py-2.5 text-sm outline-none ${estilos.input}`}
               />
             </div>
@@ -635,21 +624,15 @@ const inspeccionesPorFecha = useMemo(() => {
               ))}
             </select>
 
-            <div className="relative w-full">
+            <div className="relative">
               <Plus
                 size={16}
                 className="absolute left-3 top-1/2 -translate-y-1/2 opacity-60"
               />
-
               <input
                 type="text"
-                placeholder="Crear nueva área y presionar Enter..."
-                className={`w-full rounded-xl pl-10 pr-3 py-2.5 text-sm outline-none 
-    ${
-      modoNoche
-        ? "bg-[#222] border border-[#3a3a3a] text-white placeholder:text-gray-400"
-        : "bg-white border border-gray-300 text-gray-800 placeholder:text-gray-400"
-    }`}
+                placeholder="Nueva área + Enter"
+                className={`w-full rounded-xl pl-10 pr-3 py-2.5 text-sm outline-none ${estilos.input}`}
                 onKeyDown={async (e) => {
                   if (e.key === "Enter") {
                     e.preventDefault();
@@ -660,50 +643,45 @@ const inspeccionesPorFecha = useMemo(() => {
                     if (!valor) return;
 
                     try {
-                      // 🔥 guardar en backend
+                      const existe = dataBackend.some(
+                        (a) => String(a?.nombre || "").toLowerCase().trim() === valor.toLowerCase()
+                      );
+
+                      if (existe) {
+                        Swal.fire({
+                          toast: true,
+                          position: "top-end",
+                          icon: "warning",
+                          title: "Esa área ya existe",
+                          timer: 1400,
+                          showConfirmButton: false,
+                        });
+                        return;
+                      }
+
                       const res = await fetch("/api/areas-sanitarias", {
                         method: "POST",
-                        headers: {
-                          "Content-Type": "application/json",
-                        },
-                        body: JSON.stringify({
-                          nombre: valor,
-                        }),
+                        headers: { "Content-Type": "application/json" },
+                        body: JSON.stringify({ nombre: valor }),
                       });
 
-                      if (!res.ok) throw new Error("Error al guardar");
+                      if (!res.ok) throw new Error("Error al crear área");
 
                       const nuevaArea = await res.json();
-
-                      // 🔥 actualizar tabla SIN recargar
                       setdataBackend((prev) => [...prev, nuevaArea]);
 
-                      // 🔥 alerta bonita
                       Swal.fire({
                         toast: true,
-                        position: "top-end", // arriba derecha (en móvil se ve arriba)
+                        position: "top-end",
                         icon: "success",
                         title: "Área creada",
-                        text: valor,
+                        timer: 1200,
                         showConfirmButton: false,
-                        timer: 1500,
-                        timerProgressBar: true,
-
-                        // 🎨 ESTILO BLANCO
-                        background: "#ffffff",
-                        color: "#1f2937",
-                        width: "280px",
-
-                        // 🔥 bordes suaves y sombra elegante
-                        customClass: {
-                          popup: "rounded-xl shadow-md",
-                        },
                       });
 
-                      input.value = ""; // limpiar input
+                      input.value = "";
                     } catch (error) {
                       console.error(error);
-
                       Swal.fire({
                         icon: "error",
                         title: "Error",
@@ -716,39 +694,36 @@ const inspeccionesPorFecha = useMemo(() => {
             </div>
           </div>
 
-          <div className="mt-3 flex flex-wrap gap-2">
+          <div className="mt-4 flex flex-wrap gap-2">
             <span className={`px-3 py-1 rounded-full text-xs ${estilos.chip}`}>
-              Registros visibles: {inspeccionesFiltradas.length}
+              📊 {inspeccionesFiltradas.length} registros
             </span>
             <span className={`px-3 py-1 rounded-full text-xs ${estilos.chip}`}>
-              Responsable: {responsable || "Sin asignar"}
+              👤 {responsable || "Sin responsable"}
             </span>
             <span className={`px-3 py-1 rounded-full text-xs ${estilos.chip}`}>
-              Fecha: {fechaActual}
+              📅 {fechaActual}
             </span>
           </div>
         </div>
       </div>
 
       <>
-        {/*------------------ VISTA MOVIL -------------------------*/}
-         {/*------------------ VISTA MOVIL -------------------------*/}
-   <MovilAgua
-    modoNoche={modoNoche ?? false}// ✅ CORRECTO
-   dataBackend={dataBackend}
-   setInspecciones={setInspecciones}
-   mostrarModal={mostrarModal}
-   setMostrarModal={setMostrarModal}
- />
+        <MovilAgua
+          modoNoche={modoNoche ?? false}
+          dataBackend={dataBackend}
+          setInspecciones={setInspecciones}
+          mostrarModal={mostrarModal}
+          setMostrarModal={setMostrarModal}
+        />
 
-        {/*------------------ VISTA DESKTOP------------------------ */}
         <div
-          className={` lg:block p-4 rounded-2xl ${
+          className={`lg:block p-4 rounded-2xl ${
             modoNoche ? "bg-[#0f0f0f]" : "bg-gray-100"
           }`}
         >
           {inspeccionesFiltradas.map(([clave, registros]) => {
-            const [fecha, responsableGrupo] = clave.split("__");
+            const [anio, semana, responsableGrupo] = clave.split("__");
 
             return (
               <div
@@ -759,19 +734,13 @@ const inspeccionesPorFecha = useMemo(() => {
                     : "bg-white border border-gray-200"
                 }`}
               >
-                {/* HEADER */}
                 <div className="mb-5 text-center">
                   <h2
                     className={`text-xl font-bold tracking-wide ${
                       modoNoche ? "text-white" : "text-gray-800"
                     }`}
                   >
-                    {new Date(fecha).toLocaleDateString("es-CO", {
-                      weekday: "long",
-                      year: "numeric",
-                      month: "long",
-                      day: "numeric",
-                    })}
+                    Semana {semana.replace("semana", "")} - {anio}
                   </h2>
 
                   <div className="flex justify-center gap-3 mt-3 flex-wrap">
@@ -800,7 +769,6 @@ const inspeccionesPorFecha = useMemo(() => {
                   </div>
                 </div>
 
-                {/* TABLA */}
                 <div
                   className={`overflow-auto rounded-2xl border ${
                     modoNoche
@@ -809,7 +777,6 @@ const inspeccionesPorFecha = useMemo(() => {
                   }`}
                 >
                   <table className="w-full text-sm border-collapse">
-                    {/* HEADER */}
                     <thead>
                       <tr
                         className={`text-center text-xs uppercase ${
@@ -850,28 +817,28 @@ const inspeccionesPorFecha = useMemo(() => {
                       </tr>
                     </thead>
 
-                    {/* BODY */}
                     <tbody>
-                      {dataBackend.map((area: any, index) => {
-                        const registro = registros.find(
-                          (r) => r.area_id === area.id,
+                    {dataBackend.map((area: any) => {
+                        const registro = registros.find((r) => r.area_id === area.id);
+
+                        const filaKey = getFilaKey(
+                          registro?.fecha?.split("T")[0] || fechaSesion,
+                          responsableGrupo,
+                          area.id
                         );
 
                         return (
                           <tr
-                            key={index}
+                            key={filaKey}
                             className={`transition ${
                               modoNoche
                                 ? "bg-[#181818] hover:bg-[#1f1f1f]"
                                 : "bg-white hover:bg-gray-50"
                             }`}
                           >
-                            {/* AREA */}
                             <td
                               className={`p-3 border ${
-                                modoNoche
-                                  ? "border-[#353535]"
-                                  : "border-gray-200"
+                                modoNoche ? "border-[#353535]" : "border-gray-200"
                               }`}
                             >
                               <input
@@ -882,11 +849,105 @@ const inspeccionesPorFecha = useMemo(() => {
                                     prev.map((item) =>
                                       item.id === area.id
                                         ? { ...item, nombre: nuevo }
-                                        : item,
-                                    ),
+                                        : item
+                                    )
                                   );
                                 }}
-                                onKeyDown={undefined}
+                                onKeyDown={async (e) => {
+                                  if (e.key === "Enter") {
+                                    e.preventDefault();
+
+                                    const valor = String(area.nombre || "").trim();
+
+                                    try {
+                                      if (!valor) {
+                                        const res = await fetch(
+                                          `/api/areas-sanitarias?id=${area.id}`,
+                                          { method: "DELETE" }
+                                        );
+
+                                        if (!res.ok) {
+                                          const errorText = await res.text();
+                                          throw new Error(errorText);
+                                        }
+
+                                        setdataBackend((prev) =>
+                                          prev.filter((item) => item.id !== area.id)
+                                        );
+
+                                        Swal.fire({
+                                          toast: true,
+                                          position: "top-end",
+                                          icon: "success",
+                                          title: "Área eliminada",
+                                          timer: 1200,
+                                          showConfirmButton: false,
+                                        });
+
+                                        return;
+                                      }
+
+                                      const duplicada = dataBackend.some(
+                                        (a) =>
+                                          a.id !== area.id &&
+                                          String(a?.nombre || "").toLowerCase().trim() ===
+                                            valor.toLowerCase()
+                                      );
+
+                                      if (duplicada) {
+                                        Swal.fire({
+                                          toast: true,
+                                          position: "top-end",
+                                          icon: "warning",
+                                          title: "Ya existe un área con ese nombre",
+                                          timer: 1400,
+                                          showConfirmButton: false,
+                                        });
+                                        return;
+                                      }
+
+                                      const res = await fetch("/api/areas-sanitarias", {
+                                        method: "PUT",
+                                        headers: {
+                                          "Content-Type": "application/json",
+                                        },
+                                        body: JSON.stringify({
+                                          id: area.id,
+                                          nombre: valor,
+                                        }),
+                                      });
+
+                                      if (!res.ok) {
+                                        const errorText = await res.text();
+                                        throw new Error(errorText);
+                                      }
+
+                                      setdataBackend((prev) =>
+                                        prev.map((item) =>
+                                          item.id === area.id
+                                            ? { ...item, nombre: valor }
+                                            : item
+                                        )
+                                      );
+
+                                      Swal.fire({
+                                        toast: true,
+                                        position: "top-end",
+                                        icon: "success",
+                                        title: "Área actualizada",
+                                        timer: 1200,
+                                        showConfirmButton: false,
+                                      });
+                                    } catch (error) {
+                                      console.error(error);
+                                      Swal.fire({
+                                        icon: "error",
+                                        title: "Error",
+                                        text: "No se pudo actualizar/eliminar el área",
+                                      });
+                                    }
+                                  }
+                                }}
                                 className={`w-full text-center font-semibold rounded-xl px-3 py-2 ${
                                   modoNoche
                                     ? "bg-[#222] text-white"
@@ -895,17 +956,16 @@ const inspeccionesPorFecha = useMemo(() => {
                               />
                             </td>
 
-                            {/* CAMPOS */}
                             {campos.map((c) => {
                               const cVal = registro
-                                ? registro?.[`${c.db}_c`] || 0 || 0
+                                ? Number(registro?.[`${c.db}_c`] || 0)
                                 : 0;
 
                               const ncVal = registro
-                                ? registro?.[`${c.db}_nc`] || 0
+                                ? Number(registro?.[`${c.db}_nc`] || 0)
                                 : 0;
 
-                              const total = Number(cVal) + Number(ncVal);
+                              const total = cVal + ncVal;
 
                               return (
                                 <td
@@ -923,40 +983,52 @@ const inspeccionesPorFecha = useMemo(() => {
                                   >
                                     <div className="grid grid-cols-2 gap-2">
                                       <input
-            value={valores?.[index]?.[c.key]?.c ?? ""}
-            onChange={(e) =>
-              handleChange(index, c.key, "c", e.target.value)
-            }
+                                        value={
+                                          valores?.[filaKey]?.[c.key]?.c !== undefined
+                                            ? valores[filaKey][c.key].c
+                                            : registro
+                                            ? String(registro?.[`${c.db}_c`] || "")
+                                            : ""
+                                        }
+                                        onChange={(e) =>
+                                          handleChange(filaKey, c.key, "c", e.target.value)
+                                        }
+                                        onKeyDown={(e) => {
+                                          if (e.key === "Enter") {
+                                            guardarFila(filaKey, area, registro);
+                                          }
+                                        }}
+                                        className={`w-full text-center rounded-lg py-1 border font-semibold ${
+                                          modoNoche
+                                            ? "bg-[#111] text-white border-[#2f2f2f]"
+                                            : "bg-white text-gray-700 border-gray-200"
+                                        }`}
+                                      />
 
-            // 🔥 GUARDADO CORRECTO
-            onBlur={() => guardarFila(index, area, registro)}
-
-            className={`w-full text-center rounded-lg py-1 border ${
-              modoNoche
-                ? "bg-[#111] text-white border-[#2f2f2f]"
-                : "bg-white text-gray-700 border-gray-200"
-            }`}
-          />
-
-          {/* ❌ NO CUMPLE */}
-          <input
-            value={valores?.[index]?.[c.key]?.nc ?? ""}
-            onChange={(e) =>
-              handleChange(index, c.key, "nc", e.target.value)
-            }
-
-            // 🔥 GUARDADO CORRECTO
-            onBlur={() => guardarFila(index, area, registro)}
-
-            className={`w-full text-center rounded-lg py-1 border ${
-              modoNoche
-                ? "bg-[#111] text-white border-[#2f2f2f]"
-                : "bg-white text-gray-700 border-gray-200"
-            }`}
-          />
+                                      <input
+                                        value={
+                                          valores?.[filaKey]?.[c.key]?.nc !== undefined
+                                            ? valores[filaKey][c.key].nc
+                                            : registro
+                                            ? String(registro?.[`${c.db}_nc`] || "")
+                                            : ""
+                                        }
+                                        onChange={(e) =>
+                                          handleChange(filaKey, c.key, "nc", e.target.value)
+                                        }
+                                        onKeyDown={(e) => {
+                                          if (e.key === "Enter") {
+                                            guardarFila(filaKey, area, registro);
+                                          }
+                                        }}
+                                        className={`w-full text-center rounded-lg py-1 border font-semibold ${
+                                          modoNoche
+                                            ? "bg-[#111] text-white border-[#2f2f2f]"
+                                            : "bg-white text-gray-700 border-gray-200"
+                                        }`}
+                                      />
                                     </div>
 
-                                    {/* TOTAL */}
                                     <div
                                       className={`mt-2 text-center text-xs font-semibold py-1 rounded-lg border ${
                                         modoNoche
@@ -971,23 +1043,26 @@ const inspeccionesPorFecha = useMemo(() => {
                               );
                             })}
 
-                            {/* OBSERVACIONES */}
                             <td
                               className={`p-3 border ${
-                                modoNoche
-                                  ? "border-[#353535]"
-                                  : "border-gray-200"
+                                modoNoche ? "border-[#353535]" : "border-gray-200"
                               }`}
                             >
                               <div className="flex flex-col gap-2">
                                 <textarea
-                                  value={observaciones[index] || ""}
+                                  disabled={!registro}
+                                  value={
+                                    observaciones[filaKey] !== undefined
+                                      ? observaciones[filaKey]
+                                      : registro?.observacion || ""
+                                  }
                                   onChange={(e) =>
-                                    handleObs(index, e.target.value)
+                                    handleObs(filaKey, e.target.value)
                                   }
                                   onKeyDown={(e) => {
-                                    if (e.key === "Enter")
-                                      guardarFila(index, area, registro);
+                                    if (e.key === "Enter") {
+                                      guardarFila(filaKey, area, registro);
+                                    }
                                   }}
                                   className={`w-full p-2 rounded-xl border ${
                                     modoNoche
@@ -1006,14 +1081,6 @@ const inspeccionesPorFecha = useMemo(() => {
                                   Total: {registro?.total || 0}
                                 </div>
                               </div>
-                              <button
-                                onClick={() =>
-                                  guardarFila(index, area, registro)
-                                }
-                                className="mt-2 w-full bg-blue-600 text-white py-1 rounded-lg text-xs"
-                              >
-                                Guardar
-                              </button>
                             </td>
                           </tr>
                         );
@@ -1021,7 +1088,7 @@ const inspeccionesPorFecha = useMemo(() => {
                     </tbody>
                   </table>
                 </div>
-                {/* 🔥 RESUMEN CON MISMO DISEÑO */}
+
                 <div
                   className={`mt-6 overflow-auto rounded-2xl border ${
                     modoNoche
@@ -1039,22 +1106,30 @@ const inspeccionesPorFecha = useMemo(() => {
                         }`}
                       >
                         <th
-                          className={`p-3 border ${modoNoche ? "border-[#353535]" : "border-gray-200"}`}
+                          className={`p-3 border ${
+                            modoNoche ? "border-[#353535]" : "border-gray-200"
+                          }`}
                         >
                           Tipo
                         </th>
                         <th
-                          className={`p-3 border ${modoNoche ? "border-[#353535]" : "border-gray-200"}`}
+                          className={`p-3 border ${
+                            modoNoche ? "border-[#353535]" : "border-gray-200"
+                          }`}
                         >
                           ✔ Cumple
                         </th>
                         <th
-                          className={`p-3 border ${modoNoche ? "border-[#353535]" : "border-gray-200"}`}
+                          className={`p-3 border ${
+                            modoNoche ? "border-[#353535]" : "border-gray-200"
+                          }`}
                         >
                           ✖ No cumple
                         </th>
                         <th
-                          className={`p-3 border ${modoNoche ? "border-[#353535]" : "border-gray-200"}`}
+                          className={`p-3 border ${
+                            modoNoche ? "border-[#353535]" : "border-gray-200"
+                          }`}
                         >
                           Total
                         </th>
@@ -1067,12 +1142,8 @@ const inspeccionesPorFecha = useMemo(() => {
                         let totalNC = 0;
 
                         registros.forEach((r) => {
-                          totalC += Number(
-                            r[`${c.nombre.toLowerCase()}_c`] || 0,
-                          );
-                          totalNC += Number(
-                            r[`${c.nombre.toLowerCase()}_nc`] || 0,
-                          );
+                          totalC += Number(r?.[`${c.db}_c`] || 0);
+                          totalNC += Number(r?.[`${c.db}_nc`] || 0);
                         });
 
                         return (
@@ -1085,25 +1156,33 @@ const inspeccionesPorFecha = useMemo(() => {
                             }`}
                           >
                             <td
-                              className={`p-3 border font-semibold ${modoNoche ? "border-[#353535]" : "border-gray-200"}`}
+                              className={`p-3 border font-semibold ${
+                                modoNoche ? "border-[#353535]" : "border-gray-200"
+                              }`}
                             >
                               {c.nombre}
                             </td>
 
                             <td
-                              className={`p-3 border text-center ${modoNoche ? "border-[#353535]" : "border-gray-200"}`}
+                              className={`p-3 border text-center ${
+                                modoNoche ? "border-[#353535]" : "border-gray-200"
+                              }`}
                             >
                               {totalC}
                             </td>
 
                             <td
-                              className={`p-3 border text-center ${modoNoche ? "border-[#353535]" : "border-gray-200"}`}
+                              className={`p-3 border text-center ${
+                                modoNoche ? "border-[#353535]" : "border-gray-200"
+                              }`}
                             >
                               {totalNC}
                             </td>
 
                             <td
-                              className={`p-3 border text-center font-bold ${modoNoche ? "border-[#353535]" : "border-gray-200"}`}
+                              className={`p-3 border text-center font-bold ${
+                                modoNoche ? "border-[#353535]" : "border-gray-200"
+                              }`}
                             >
                               {totalC + totalNC}
                             </td>
@@ -1111,54 +1190,61 @@ const inspeccionesPorFecha = useMemo(() => {
                         );
                       })}
 
-                      {/* 🔥 TOTAL GENERAL */}
                       <tr
                         className={`font-bold ${
                           modoNoche ? "bg-[#222]" : "bg-gray-100"
                         }`}
                       >
                         <td
-                          className={`p-3 border ${modoNoche ? "border-[#353535]" : "border-gray-200"}`}
+                          className={`p-3 border ${
+                            modoNoche ? "border-[#353535]" : "border-gray-200"
+                          }`}
                         >
                           TOTAL
                         </td>
 
                         <td
-                          className={`p-3 border text-center ${modoNoche ? "border-[#353535]" : "border-gray-200"}`}
+                          className={`p-3 border text-center ${
+                            modoNoche ? "border-[#353535]" : "border-gray-200"
+                          }`}
                         >
-                          {registros.reduce((acc, r) => {
-                            return (
+                          {registros.reduce(
+                            (acc, r) =>
                               acc +
-                            Number(r.sanitarios_c || 0) +
-Number(r.orinales_c || 0) +
-Number(r.duchas_c || 0) +
-Number(r.lavamanos_c || 0) +
-Number(r.llaves_c || 0)
-                            );
-                          }, 0)}
+                              Number(r.sanitarios_c || 0) +
+                              Number(r.orinales_c || 0) +
+                              Number(r.duchas_c || 0) +
+                              Number(r.lavamanos_c || 0) +
+                              Number(r.llaves_c || 0),
+                            0
+                          )}
                         </td>
 
                         <td
-                          className={`p-3 border text-center ${modoNoche ? "border-[#353535]" : "border-gray-200"}`}
+                          className={`p-3 border text-center ${
+                            modoNoche ? "border-[#353535]" : "border-gray-200"
+                          }`}
                         >
-                          {registros.reduce((acc, r) => {
-                            return (
+                          {registros.reduce(
+                            (acc, r) =>
                               acc +
-                            Number(r.sanitarios_nc || 0) +
-Number(r.orinales_nc || 0) +
-Number(r.duchas_nc || 0) +
-Number(r.lavamanos_nc || 0) +
-Number(r.llaves_nc || 0)
-                            );
-                          }, 0)}
+                              Number(r.sanitarios_nc || 0) +
+                              Number(r.orinales_nc || 0) +
+                              Number(r.duchas_nc || 0) +
+                              Number(r.lavamanos_nc || 0) +
+                              Number(r.llaves_nc || 0),
+                            0
+                          )}
                         </td>
 
                         <td
-                          className={`p-3 border text-center ${modoNoche ? "border-[#353535]" : "border-gray-200"}`}
+                          className={`p-3 border text-center ${
+                            modoNoche ? "border-[#353535]" : "border-gray-200"
+                          }`}
                         >
                           {registros.reduce(
                             (acc, r) => acc + Number(r.total || 0),
-                            0,
+                            0
                           )}
                         </td>
                       </tr>
@@ -1171,17 +1257,12 @@ Number(r.llaves_nc || 0)
         </div>
       </>
 
-      {/* FOOTER */}
       <div className="mt-5 flex flex-col sm:flex-row items-center justify-between gap-3">
-        <div
-          className={`px-4 py-2 rounded-xl text-xs sm:text-sm ${estilos.chip}`}
-        >
+        <div className={`px-4 py-2 rounded-xl text-xs sm:text-sm ${estilos.chip}`}>
           Día actual: <span className="font-semibold">{fechaActual}</span>
         </div>
 
-        <div
-          className={`px-4 py-2 rounded-xl text-xs sm:text-sm ${estilos.chip}`}
-        >
+        <div className={`px-4 py-2 rounded-xl text-xs sm:text-sm ${estilos.chip}`}>
           Responsable:{" "}
           <span className="font-semibold">
             {responsable ? responsable : "Pendiente por asignar"}

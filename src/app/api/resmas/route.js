@@ -7,9 +7,19 @@ if (!BACKEND_URL) {
 /* =========================
    GET · LISTAR RESMAS
 ========================= */
-export async function GET() {
+export async function GET(request) {
   try {
-    const res = await fetch(`${BACKEND_URL}/resmas`);
+    const url = new URL(request.url);
+    const anio = url.searchParams.get("anio");
+
+    const endpoint = anio
+      ? `${BACKEND_URL}/resmas?anio=${encodeURIComponent(anio)}`
+      : `${BACKEND_URL}/resmas`;
+
+    const res = await fetch(endpoint, {
+      cache: "no-store",
+    });
+
     const data = await res.json();
 
     return Response.json(data, { status: res.status });

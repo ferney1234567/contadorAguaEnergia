@@ -1,22 +1,9 @@
 "use client";
 
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
-import {
-  Search,
-  Plus,
-  CalendarRange,
-  Files,
-  Building2,
-  CheckCircle2,
-  XCircle,
-  Loader2,
-  RefreshCcw,
-  Hash,
-  PencilLine,
-  Trash2,
-  Save,
-} from "lucide-react";
+import { Search, Plus, CalendarRange, Files, Building2, XCircle, Loader2, RefreshCcw, PencilLine, Trash2, Save, BarChart3, } from "lucide-react";
 import Swal from "sweetalert2";
+import React from "react";
 
 interface Props {
   modoNoche: boolean;
@@ -36,33 +23,20 @@ type ResmaRegistro = {
   cumple: boolean;
 };
 
+type ValorFila = {
+  mes: number;
+  cantidad: string;
+  cumple: number;
+  registroId?: number;
+};
+
 type FilaTabla = {
   id: number;
   nombre: string;
-  valores: {
-    mes: number;
-    cantidad: string;
-    cumple: number;
-    registroId?: number;
-  }[];
+  valores: ValorFila[];
 };
 
-const MESES = [
-  "Enero",
-  "Febrero",
-  "Marzo",
-  "Abril",
-  "Mayo",
-  "Junio",
-  "Julio",
-  "Agosto",
-  "Septiembre",
-  "Octubre",
-  "Noviembre",
-  "Diciembre",
-];
-
-const BLOQUES_MESES = [MESES.slice(0, 6), MESES.slice(6, 12)];
+const MESES = ["Enero", "Febrero", "Marzo", "Abril", "Mayo", "Junio", "Julio", "Agosto", "Septiembre", "Octubre", "Noviembre", "Diciembre",];
 
 export default function TablaResmasAvanzada({ modoNoche }: Props) {
   const [areas, setAreas] = useState<Area[]>([]);
@@ -79,45 +53,93 @@ export default function TablaResmasAvanzada({ modoNoche }: Props) {
   const [confirmarEliminarId, setConfirmarEliminarId] = useState<number | null>(null);
   const inputEditarRef = useRef<HTMLInputElement>(null);
 
-  const estilos = useMemo(
-    () => ({
-      fondo: modoNoche
-        ? "bg-[#121212] text-white border border-white/10"
-        : "bg-white text-slate-800 border border-slate-200",
-      tarjeta: modoNoche
-        ? "bg-[#121212] border border-white/10 shadow-[0_10px_30px_rgba(0,0,0,0.35)]"
-        : "bg-white border border-slate-200 shadow-[0_10px_30px_rgba(15,23,42,0.08)]",
-      tarjetaSuave: modoNoche
-        ? "bg-[#121212] border border-white/10"
-        : "bg-slate-50 border border-slate-200",
-      input: modoNoche
-        ? "bg-[#121212] border border-white/10 text-white placeholder:text-slate-400"
-        : "bg-white border border-slate-300 text-slate-800 placeholder:text-slate-400",
-      headerTabla: modoNoche ? "bg-[#121212]" : "bg-slate-100",
-      bordeTabla: modoNoche ? "border-white/10" : "border-slate-200",
-      miniCelda: modoNoche
-        ? "bg-[#121212] border border-white/10"
-        : "bg-white border border-slate-200",
-      textoSecundario: modoNoche ? "text-slate-300" : "text-slate-500",
-      hoverFila: modoNoche ? "hover:bg-white/5" : "hover:bg-slate-50",
-      botonPrimario:
-        "bg-black-600 hover:bg-blue-700 text-white border border-blue-500/60",
-      botonSecundario: modoNoche
-        ? "bg-white/5 hover:bg-white/10 text-white border border-white/10"
-        : "bg-white hover:bg-slate-50 text-slate-700 border border-slate-300",
-    }),
-    [modoNoche]
-  );
 
-  const obtenerAniosDesdeRegistros = useCallback((registros: ResmaRegistro[]) => {
-    const anios = [...new Set(registros.map((item) => Number(item?.anio)).filter(Boolean))].sort(
-      (a, b) => b - a
-    );
 
-    if (!anios.length) {
-      const actual = new Date().getFullYear();
-      return [actual];
+ const estilos = useMemo(
+  () => ({
+    fondo: modoNoche
+      ? "bg-[#0f0f0f] text-white border border-white/10"
+      : "bg-white text-gray-900 border border-gray-200",
+
+    tarjeta: modoNoche
+      ? "bg-[#121212] border border-white/10 shadow-[0_10px_30px_rgba(0,0,0,0.5)]"
+      : "bg-white border border-gray-200 shadow-[0_10px_25px_rgba(0,0,0,0.06)]",
+
+    tarjetaSuave: modoNoche
+      ? "bg-[#161616] border border-white/10"
+      : "bg-white border border-gray-200",
+
+    input: modoNoche
+      ? "bg-[#121212] border border-white/10 text-white placeholder:text-gray-400"
+      : "bg-white border border-gray-300 text-gray-900 placeholder:text-gray-400",
+
+    headerTabla: modoNoche
+      ? "bg-[#141414]"
+      : "bg-gray-100",
+
+    bordeTabla: modoNoche
+      ? "border-white/10"
+      : "border-gray-200",
+
+    textoSecundario: modoNoche
+      ? "text-gray-400"
+      : "text-gray-500",
+
+    hoverFila: modoNoche
+      ? "hover:bg-white/5"
+      : "hover:bg-gray-50",
+
+    botonSecundario: modoNoche
+      ? "bg-white/5 hover:bg-white/10 text-white border border-white/10"
+      : "bg-white hover:bg-gray-100 text-gray-700 border border-gray-300",
+
+    fondoSticky: modoNoche
+      ? "bg-[#121212]"
+      : "bg-white",
+  }),
+  [modoNoche]
+);
+
+  const toast = (icon: "success" | "error" | "warning", title: string) => {
+    Swal.fire({
+      toast: true,
+      position: "top-end",
+      icon,
+      title,
+      showConfirmButton: false,
+      timer: 1800,
+      timerProgressBar: true,
+      background: "#ffffff",
+      color: "#111",
+      customClass: {
+        popup: "rounded-xl shadow-lg",
+        title: "text-sm font-semibold",
+      },
+    });
+  };
+
+
+
+  const generarAnios = useCallback((): number[] => {
+    const anios: number[] = [];
+
+    for (let i = 2025; i <= 2031; i++) {
+      anios.push(i);
     }
+
+    return anios;
+  }, []);
+
+
+
+  const obtenerAniosDesdeRegistros = useCallback((registros: ResmaRegistro[]): number[] => {
+    const anios = [
+      ...new Set(
+        registros
+          .map((item) => Number(item?.anio))
+          .filter((anio) => Number.isFinite(anio) && anio > 0)
+      ),
+    ].sort((a, b) => b - a);
 
     return anios;
   }, []);
@@ -144,27 +166,33 @@ export default function TablaResmasAvanzada({ modoNoche }: Props) {
         const areasData = await areasRes.json();
         const resmasData = await resmasRes.json();
 
-        const areasLimpias = Array.isArray(areasData) ? areasData : [];
-        const resmasLimpias = Array.isArray(resmasData) ? resmasData : [];
+        const areasLimpias: Area[] = Array.isArray(areasData) ? areasData : [];
+        const resmasLimpias: ResmaRegistro[] = Array.isArray(resmasData) ? resmasData : [];
 
-        setAreas(areasLimpias);
+        setAreas((prev) => {
+          return areasLimpias.length ? areasLimpias : prev;
+        });
         setResmas(resmasLimpias);
 
-        const anios = obtenerAniosDesdeRegistros(resmasLimpias);
-        setAniosDisponibles((prev) => {
-          const combinados = [...new Set([...prev, ...anios, anioActual])].sort((a, b) => b - a);
-          return combinados;
-        });
+        const aniosBase = generarAnios();
+        const aniosDB = obtenerAniosDesdeRegistros(resmasLimpias);
+
+        const aniosFinales = [...new Set([...aniosBase, ...aniosDB, anioActual])].sort(
+          (a, b) => b - a
+        );
+
+        setAniosDisponibles(aniosFinales);
       } catch (error) {
         console.error(error);
         setErrorGeneral("No fue posible cargar la información. Revisa las rutas del backend.");
         setAreas([]);
         setResmas([]);
+        setAniosDisponibles(generarAnios());
       } finally {
         setCargando(false);
       }
     },
-    [anioSeleccionado, obtenerAniosDesdeRegistros]
+    [anioSeleccionado, generarAnios, obtenerAniosDesdeRegistros]
   );
 
   useEffect(() => {
@@ -220,43 +248,37 @@ export default function TablaResmasAvanzada({ modoNoche }: Props) {
       0
     );
 
-    return {
-      totalAreas,
-      totalRegistros,
-      totalCantidad,
-    };
+    return { totalAreas, totalRegistros, totalCantidad };
   }, [filas]);
 
   const crearArea = async () => {
-  const nombre = nuevaArea.trim();
-  if (!nombre) {
-    toast("warning", "Escribe un nombre");
-    return;
-  }
+    const nombre = nuevaArea.trim();
+    if (!nombre) {
+      toast("warning", "Escribe un nombre");
+      return;
+    }
 
-  setCargando(true);
+    setCargando(true);
 
-  try {
-    const res = await fetch("/api/areas-resmas", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ nombre }),
-    });
+    try {
+      const res = await fetch("/api/areas-resmas", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ nombre }),
+      });
 
-    if (!res.ok) throw new Error("Error creando área");
+      if (!res.ok) throw new Error("Error creando área");
 
-    setNuevaArea("");
-    await refreshData(anioSeleccionado);
-
-    toast("success", "Área creada");
-  } catch (error) {
-    toast("error", "No se pudo crear");
-  } finally {
-    setCargando(false);
-  }
-};
+      setNuevaArea("");
+      await refreshData(anioSeleccionado);
+      toast("success", "Área creada");
+    } catch (error) {
+      console.error(error);
+      toast("error", "No se pudo crear");
+    } finally {
+      setCargando(false);
+    }
+  };
 
   const iniciarEdicionArea = (area: Area) => {
     setEditandoAreaId(area.id);
@@ -270,143 +292,161 @@ export default function TablaResmasAvanzada({ modoNoche }: Props) {
   };
 
   const guardarEdicionArea = async () => {
-  const nombre = nombreEditado.trim();
-  if (!editandoAreaId || !nombre) return;
+    const nombre = nombreEditado.trim();
+    if (!editandoAreaId || !nombre) return;
 
-  setCargando(true);
+    setCargando(true);
 
-  try {
-    const res = await fetch("/api/areas-resmas", {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        id: editandoAreaId,
-        nombre,
-      }),
-    });
+    try {
+      const res = await fetch("/api/areas-resmas", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          id: editandoAreaId,
+          nombre,
+        }),
+      });
 
-    if (!res.ok) throw new Error();
+      if (!res.ok) throw new Error("Error actualizando área");
 
-    setEditandoAreaId(null);
-    setNombreEditado("");
-
-    await refreshData(anioSeleccionado);
-
-    toast("success", "Área actualizada");
-  } catch {
-    toast("error", "Error al editar");
-  } finally {
-    setCargando(false);
-  }
-};
+      setEditandoAreaId(null);
+      setNombreEditado("");
+      await refreshData(anioSeleccionado);
+      toast("success", "Área actualizada");
+    } catch (error) {
+      console.error(error);
+      toast("error", "Error al editar");
+    } finally {
+      setCargando(false);
+    }
+  };
 
   const eliminarArea = async (id: number) => {
-  const confirm = await Swal.fire({
-    title: "¿Eliminar área?",
-    text: "Se borrarán todos los datos",
-    icon: "warning",
-    showCancelButton: true,
-    confirmButtonColor: "#ef4444",
-    cancelButtonColor: "#6b7280",
-    confirmButtonText: "Sí, eliminar",
-  });
-
-  if (!confirm.isConfirmed) return;
-
-  setCargando(true);
-
-  try {
-    const res = await fetch(`/api/areas-resmas?id=${id}`, {
-      method: "DELETE",
+    const confirm = await Swal.fire({
+      title: "¿Eliminar área?",
+      text: "Se borrarán todos los datos",
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#ef4444",
+      cancelButtonColor: "#6b7280",
+      confirmButtonText: "Sí, eliminar",
+      cancelButtonText: "Cancelar",
     });
 
-    if (!res.ok) throw new Error();
+    if (!confirm.isConfirmed) return;
 
-    await refreshData(anioSeleccionado);
+    setCargando(true);
 
-    toast("success", "Área eliminada");
-  } catch {
-    toast("error", "Error al eliminar");
-  } finally {
-    setCargando(false);
-  }
-};
+    try {
+      const res = await fetch(`/api/areas-resmas?id=${id}`, {
+        method: "DELETE",
+      });
 
- const guardarDato = async ({ areaId, mes, cantidad, cumple }: any) => {
-  const clave = `${areaId}-${mes}`;
-  setGuardandoCelda(clave);
+      if (!res.ok) throw new Error("Error eliminando área");
 
-  try {
-    const res = await fetch("/api/resmas", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        area_id: areaId,
-        anio: anioSeleccionado,
-        mes,
-        cantidad,
-        cumple,
-      }),
-    });
+      await refreshData(anioSeleccionado);
+      toast("success", "Área eliminada");
+    } catch (error) {
+      console.error(error);
+      toast("error", "Error al eliminar");
+    } finally {
+      setCargando(false);
+    }
+  };
 
-    if (!res.ok) throw new Error();
-
-    await refreshData(anioSeleccionado);
-
-    toast("success", "Guardado");
-  } catch {
-    toast("error", "Error al guardar");
-  } finally {
-    setGuardandoCelda(null);
-  }
-};
-
- const manejarEnterCantidad = async (
-  e: React.KeyboardEvent<HTMLInputElement>,
-  areaId: number,
-  mes: number,
-  cumpleActual: number
-) => {
-  if (e.key !== "Enter") return;
-
-  const valor = e.currentTarget.value.replace(/[^0-9]/g, "");
-  const cantidad = Number(valor || 0);
-
-  await guardarDato({
+  const guardarDato = async ({
     areaId,
     mes,
     cantidad,
-    cumple: cumpleActual === 1,
-  });
-};
+    cumple,
+  }: {
+    areaId: number;
+    mes: number;
+    cantidad: number;
+    cumple: boolean;
+  }) => {
+    const clave = `${areaId}-${mes}`;
+    setGuardandoCelda(clave);
 
-  const toast = (icon: "success" | "error" | "warning", title: string) => {
-  Swal.fire({
-    toast: true,
-    position: "top-end",
-    icon,
-    title,
-    showConfirmButton: false,
-    timer: 1800,
-    timerProgressBar: true,
-    background: "#ffffff",
-    color: "#111",
-    customClass: {
-      popup: "rounded-xl shadow-lg",
-      title: "text-sm font-semibold",
-    },
-  });
-};
+    try {
+      const res = await fetch("/api/resmas", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          area_id: areaId,
+          anio: anioSeleccionado,
+          mes,
+          cantidad,
+          cumple,
+        }),
+      });
 
-  const manejarCambioVisualCantidad = (
+      if (!res.ok) throw new Error("Error al guardar");
+
+      await refreshData(anioSeleccionado);
+      toast("success", "Guardado");
+    } catch (error) {
+      console.error(error);
+      toast("error", "Error al guardar");
+    } finally {
+      setGuardandoCelda(null);
+    }
+  };
+
+  const manejarFlechas = (
+    e: React.KeyboardEvent<HTMLInputElement>,
+    filaIndex: number,
+    colIndex: number
+  ) => {
+    const key = e.key;
+
+    const siguiente = (f: number, c: number) => {
+      const id = `celda-${f}-${c}`;
+      const el = document.getElementById(id);
+      if (el) el.focus();
+    };
+
+    if (key === "ArrowRight") {
+      e.preventDefault();
+      siguiente(filaIndex, colIndex + 1);
+    }
+
+    if (key === "ArrowLeft") {
+      e.preventDefault();
+      siguiente(filaIndex, colIndex - 1);
+    }
+
+    if (key === "ArrowDown") {
+      e.preventDefault();
+      siguiente(filaIndex + 1, colIndex);
+    }
+
+    if (key === "ArrowUp") {
+      e.preventDefault();
+      siguiente(filaIndex - 1, colIndex);
+    }
+  };
+
+  const manejarEnterCantidad = async (
+    e: React.KeyboardEvent<HTMLInputElement>,
     areaId: number,
     mes: number,
-    valor: string
+    cumpleActual: number
   ) => {
+    if (e.key !== "Enter") return;
+
+    const valor = e.currentTarget.value.replace(/[^0-9]/g, "");
+    const cantidad = Number(valor || 0);
+
+    await guardarDato({
+      areaId,
+      mes,
+      cantidad,
+      cumple: cumpleActual === 1,
+    });
+  };
+
+  const manejarCambioVisualCantidad = (areaId: number, mes: number, valor: string) => {
     const limpio = valor.replace(/[^0-9]/g, "");
 
     setResmas((prev) => {
@@ -436,24 +476,24 @@ export default function TablaResmasAvanzada({ modoNoche }: Props) {
   };
 
   const toggleCumple = async (
-  areaId: number,
-  mes: number,
-  cantidadActual: number,
-  cumpleActual: number
-) => {
-  await guardarDato({
-    areaId,
-    mes,
-    cantidad: cantidadActual,
-    cumple: cumpleActual !== 1,
-  });
+    areaId: number,
+    mes: number,
+    cantidadActual: number,
+    cumpleActual: number
+  ) => {
+    await guardarDato({
+      areaId,
+      mes,
+      cantidad: cantidadActual,
+      cumple: cumpleActual !== 1,
+    });
 
-  toast("success", "Estado actualizado");
-};
+    toast("success", "Estado actualizado");
+  };
 
   const renderBloqueMeses = (inicio: number, fin: number) => (
     <div className={`overflow-x-auto rounded-3xl ${estilos.tarjeta}`}>
-      <div className="min-w-[1040px] p-3 md:p-4">
+      <div className="min-w-[1280px] p-3 md:p-4">
         <table className="w-full border-separate border-spacing-0 text-sm">
           <thead>
             <tr className={estilos.headerTabla}>
@@ -462,36 +502,39 @@ export default function TablaResmasAvanzada({ modoNoche }: Props) {
               >
                 Área / Gestión rápida
               </th>
+
               {MESES.slice(inicio, fin).map((mes) => (
-                <th
-                  key={mes}
-                  className={`min-w-[120px] border px-3 py-4 text-center text-sm font-semibold ${estilos.bordeTabla} ${estilos.headerTabla}`}
-                >
-                  <div className="flex flex-col items-center gap-1">
-                    <span>{mes}</span>
-                    <span className={`text-[11px] font-medium ${estilos.textoSecundario}`}>
-                      Cantidad + estado
-                    </span>
-                  </div>
-                </th>
+                <React.Fragment key={mes}>
+                  <th
+                    className={`min-w-[110px] border px-3 py-4 text-center text-sm font-semibold ${estilos.bordeTabla} ${estilos.headerTabla}`}
+                  >
+                    {mes}
+                  </th>
+                  <th
+                    className={`min-w-[58px] border px-2 py-4 text-center text-sm font-bold text-blue-500 ${estilos.bordeTabla} ${estilos.headerTabla}`}
+                  >
+                    T
+                  </th>
+                </React.Fragment>
               ))}
             </tr>
           </thead>
+
           <tbody>
             {filas.length === 0 ? (
               <tr>
                 <td
-                  colSpan={7}
+                  colSpan={1 + (fin - inicio) * 2}
                   className={`border px-4 py-10 text-center ${estilos.bordeTabla} ${estilos.textoSecundario}`}
                 >
                   No hay áreas para mostrar con el filtro actual.
                 </td>
               </tr>
             ) : (
-              filas.map((fila) => (
+              filas.map((fila, filaIndex) => (
                 <tr key={fila.id} className={`${estilos.hoverFila} transition`}>
                   <td
-                    className={`sticky left-0 z-10 border px-4 py-3 align-top ${estilos.bordeTabla} ${modoNoche ? "bg-[#101a2d]" : "bg-white"}`}
+                    className={`sticky left-0 z-10 border px-4 py-3 align-top ${estilos.bordeTabla} ${estilos.fondoSticky}`}
                   >
                     {editandoAreaId === fila.id ? (
                       <div className="space-y-2">
@@ -508,6 +551,7 @@ export default function TablaResmasAvanzada({ modoNoche }: Props) {
                             placeholder="Nombre del área"
                           />
                         </div>
+
                         <div className="flex flex-wrap gap-2">
                           <button
                             onClick={guardarEdicionArea}
@@ -516,6 +560,7 @@ export default function TablaResmasAvanzada({ modoNoche }: Props) {
                           >
                             <Save size={14} /> Guardar
                           </button>
+
                           <button
                             onClick={cancelarEdicionArea}
                             className="inline-flex items-center gap-2 rounded-2xl border border-rose-500/30 bg-rose-500/10 px-3 py-2 text-xs font-semibold text-rose-600"
@@ -544,7 +589,9 @@ export default function TablaResmasAvanzada({ modoNoche }: Props) {
 
                         <div className="flex flex-wrap gap-2">
                           <button
-                            onClick={() => iniciarEdicionArea({ id: fila.id, nombre: fila.nombre })}
+                            onClick={() =>
+                              iniciarEdicionArea({ id: fila.id, nombre: fila.nombre })
+                            }
                             className="inline-flex items-center gap-2 rounded-2xl border border-amber-500/30 bg-amber-500/10 px-3 py-2 text-xs font-semibold text-amber-600"
                           >
                             <PencilLine size={14} /> Editar
@@ -558,6 +605,7 @@ export default function TablaResmasAvanzada({ modoNoche }: Props) {
                               >
                                 <Trash2 size={14} /> Confirmar borrar
                               </button>
+
                               <button
                                 onClick={() => setConfirmarEliminarId(null)}
                                 className={`inline-flex items-center gap-2 rounded-2xl px-3 py-2 text-xs font-semibold ${estilos.botonSecundario}`}
@@ -583,35 +631,37 @@ export default function TablaResmasAvanzada({ modoNoche }: Props) {
                     const guardando = guardandoCelda === clave;
 
                     return (
-                      <td
-                        key={clave}
-                        className={`border px-3 py-3 align-top ${estilos.bordeTabla}`}
-                      >
-                        <div className={`rounded-2xl p-3 ${estilos.miniCelda}`}>
-                          <div className="mb-2 flex items-center justify-between gap-2">
-                            <span className={`text-[11px] font-semibold uppercase ${estilos.textoSecundario}`}>
-                              Cantidad
-                            </span>
+                      <React.Fragment key={clave}>
+                        <td className={`border px-2 py-2 align-middle ${estilos.bordeTabla}`}>
+                          <div className="relative">
+                            <input
+                              id={`celda-${filaIndex}-${valor.mes}`}
+                              inputMode="numeric"
+                              value={valor.cantidad}
+                              onChange={(e) =>
+                                manejarCambioVisualCantidad(
+                                  fila.id,
+                                  valor.mes,
+                                  e.target.value
+                                )
+                              }
+                              onKeyDown={(e) => {
+                                manejarEnterCantidad(e, fila.id, valor.mes, valor.cumple);
+                                manejarFlechas(e, filaIndex, valor.mes);
+                              }}
+                              placeholder="0"
+                              className={`w-full rounded-xl px-3 py-2 text-center text-sm font-bold outline-none ${estilos.input}`}
+                            />
                             {guardando ? (
-                              <Loader2 size={14} className="animate-spin text-blue-500" />
-                            ) : (
-                              <Hash size={14} className="text-blue-500" />
-                            )}
+                              <Loader2
+                                size={14}
+                                className="absolute right-2 top-1/2 -translate-y-1/2 animate-spin text-blue-500"
+                              />
+                            ) : null}
                           </div>
+                        </td>
 
-                          <input
-                            inputMode="numeric"
-                            value={valor.cantidad}
-                            onChange={(e) =>
-                              manejarCambioVisualCantidad(fila.id, valor.mes, e.target.value)
-                            }
-                            onKeyDown={(e) =>
-                              manejarEnterCantidad(e, fila.id, valor.mes, valor.cumple)
-                            }
-                            placeholder="0"
-                            className={`w-full rounded-2xl px-3 py-2.5 text-center text-sm font-bold outline-none ${estilos.input}`}
-                          />
-
+                        <td className={`border px-2 py-2 text-center align-middle ${estilos.bordeTabla}`}>
                           <button
                             onClick={() =>
                               toggleCumple(
@@ -621,24 +671,16 @@ export default function TablaResmasAvanzada({ modoNoche }: Props) {
                                 valor.cumple
                               )
                             }
-                            className={`mt-3 flex w-full items-center justify-center gap-2 rounded-2xl px-3 py-2 text-xs font-semibold transition ${
-                              valor.cumple === 1
-                                ? "border border-emerald-500/30 bg-emerald-500/10 text-emerald-600"
-                                : "border border-rose-500/30 bg-rose-500/10 text-rose-600"
-                            }`}
+                            className={`mx-auto flex h-9 w-9 items-center justify-center rounded-xl text-sm font-bold transition ${valor.cumple === 1
+                                ? "border border-emerald-400 bg-emerald-500/15 text-emerald-600"
+                                : "border border-rose-400 bg-rose-500/15 text-rose-600"
+                              }`}
+                            title={valor.cumple === 1 ? "Cumple" : "No cumple"}
                           >
-                            {valor.cumple === 1 ? (
-                              <>
-                                <CheckCircle2 size={15} /> Cumple
-                              </>
-                            ) : (
-                              <>
-                                <XCircle size={15} /> No cumple
-                              </>
-                            )}
+                            {valor.cumple === 1 ? "✔" : "✖"}
                           </button>
-                        </div>
-                      </td>
+                        </td>
+                      </React.Fragment>
                     );
                   })}
                 </tr>
@@ -667,12 +709,7 @@ export default function TablaResmasAvanzada({ modoNoche }: Props) {
               </div>
             </div>
 
-            <button
-              onClick={() => refreshData(anioSeleccionado)}
-              className={`inline-flex items-center justify-center gap-2 rounded-2xl px-4 py-3 text-sm font-semibold ${estilos.botonSecundario}`}
-            >
-              <RefreshCcw size={16} /> Recargar
-            </button>
+
           </div>
 
           <div className="mt-5 grid grid-cols-1 gap-3 lg:grid-cols-12">
@@ -714,43 +751,77 @@ export default function TablaResmasAvanzada({ modoNoche }: Props) {
                   value={nuevaArea}
                   onChange={(e) => setNuevaArea(e.target.value)}
                   onKeyDown={(e) => {
-                    if (e.key === "Enter") {
-                      crearArea();
-                    }
+                    if (e.key === "Enter") crearArea();
                   }}
                   placeholder="Crear área y guardar con Enter..."
                   className="w-full bg-transparent text-sm outline-none"
                 />
-                <button
-                  onClick={crearArea}
-                  disabled={cargando}
-                  className={`inline-flex shrink-0 items-center gap-2 rounded-2xl px-3 py-2 text-sm font-semibold ${estilos.botonPrimario}`}
-                >
-                  <Plus size={15} /> Crear
-                </button>
               </div>
             </div>
           </div>
 
-          <div className="mt-5 grid grid-cols-1 gap-3 md:grid-cols-3">
-            <div className={`rounded-3xl p-4 ${estilos.tarjetaSuave}`}>
-              <p className={`text-xs font-semibold uppercase ${estilos.textoSecundario}`}>
-                Áreas visibles
-              </p>
-              <p className="mt-2 text-2xl font-bold">{resumen.totalAreas}</p>
+          <div className="mt-5 grid grid-cols-1 gap-4 md:grid-cols-3">
+
+            {/* ÁREAS */}
+            <div className={`relative overflow-hidden rounded-3xl p-5 ${estilos.tarjetaSuave}`}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className={`text-xs font-semibold uppercase tracking-wide ${estilos.textoSecundario}`}>
+                    Áreas visibles
+                  </p>
+                  <p className="mt-2 text-3xl font-extrabold text-blue-500">
+                    {resumen.totalAreas}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl bg-blue-500/15 p-3">
+                  <Building2 className="text-blue-500" size={22} />
+                </div>
+              </div>
+
+              <div className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-blue-500/10 blur-2xl" />
             </div>
-            <div className={`rounded-3xl p-4 ${estilos.tarjetaSuave}`}>
-              <p className={`text-xs font-semibold uppercase ${estilos.textoSecundario}`}>
-                Registros con dato
-              </p>
-              <p className="mt-2 text-2xl font-bold">{resumen.totalRegistros}</p>
+
+            {/* REGISTROS */}
+            <div className={`relative overflow-hidden rounded-3xl p-5 ${estilos.tarjetaSuave}`}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className={`text-xs font-semibold uppercase tracking-wide ${estilos.textoSecundario}`}>
+                    Registros con dato
+                  </p>
+                  <p className="mt-2 text-3xl font-extrabold text-emerald-500">
+                    {resumen.totalRegistros}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl bg-emerald-500/15 p-3">
+                  <Files className="text-emerald-500" size={22} />
+                </div>
+              </div>
+
+              <div className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-emerald-500/10 blur-2xl" />
             </div>
-            <div className={`rounded-3xl p-4 ${estilos.tarjetaSuave}`}>
-              <p className={`text-xs font-semibold uppercase ${estilos.textoSecundario}`}>
-                Total general
-              </p>
-              <p className="mt-2 text-2xl font-bold text-blue-500">{resumen.totalCantidad}</p>
+
+            {/* TOTAL */}
+            <div className={`relative overflow-hidden rounded-3xl p-5 ${estilos.tarjetaSuave}`}>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className={`text-xs font-semibold uppercase tracking-wide ${estilos.textoSecundario}`}>
+                    Total general
+                  </p>
+                  <p className="mt-2 text-3xl font-extrabold text-violet-500">
+                    {resumen.totalCantidad}
+                  </p>
+                </div>
+
+                <div className="rounded-2xl bg-violet-500/15 p-3">
+                  <BarChart3 className="text-violet-500" size={22} />
+                </div>
+              </div>
+
+              <div className="absolute -right-6 -top-6 h-20 w-20 rounded-full bg-violet-500/10 blur-2xl" />
             </div>
+
           </div>
 
           {errorGeneral ? (

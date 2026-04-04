@@ -188,7 +188,7 @@ export default function MenuPrincipal() {
     }
 
     return {
-      titulo: `Consumo de agua y energía ${anioActual}`,
+      titulo: `Monitoreo de Agua, Energía y Gestión Ambiental ${anioActual}`,
       icono: null,
     };
 

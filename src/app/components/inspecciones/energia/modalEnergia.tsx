@@ -94,7 +94,7 @@ export default function MovilEnergia({
     Number(valores?.[4]?.c || 0) +
     Number(valores?.[4]?.nc || 0);
 
-  const guardar = async () => {
+const guardar = async () => {
   if (!responsable.trim() || !areaId) {
     Swal.fire({
       toast: true,
@@ -127,7 +127,7 @@ export default function MovilEnergia({
       toast: true,
       position: "top-end",
       icon: "warning",
-      title: "⚠️ Ya creaste esta área hoy",
+      title: "⚠️ Ya elegiste esta área hoy",
       timer: 1500,
       showConfirmButton: false,
     });
@@ -172,26 +172,31 @@ export default function MovilEnergia({
       throw new Error(errorText || "No se pudo guardar");
     }
 
+    // 🔥 refrescar tabla
     const res = await fetch("/api/inspecciones-energia");
     const data = await res.json();
     const dataFinal = Array.isArray(data) ? data : data?.data || [];
+
     setInspecciones(dataFinal);
 
+    // 🔥 LIMPIAR SOLO CAMPOS (NO RESPONSABLE)
     setValores({});
     setObservacion("");
     setAreaId("");
     setBusquedaArea("");
 
+    // 🔥 ALERTA BONITA
     Swal.fire({
       toast: true,
       position: "top-end",
       icon: "success",
-      title: "Inspección guardada correctamente",
+      title: "Guardado correctamente",
       timer: 1400,
       showConfirmButton: false,
     });
 
-    setMostrarModal(false);
+    // ❌ NO CERRAR MODAL (QUITAMOS ESTO)
+    // setMostrarModal(false);
 
   } catch (error: any) {
     Swal.fire({

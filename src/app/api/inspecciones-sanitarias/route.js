@@ -48,6 +48,33 @@ export async function POST(request) {
 }
 
 /* =========================
+   PUT · ACTUALIZAR INSPECCIÓN
+========================= */
+export async function PUT(request) {
+  try {
+    const body = await request.json();
+
+    const res = await fetch(`${BACKEND_URL}/inspecciones-sanitarias`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(body),
+    });
+
+    const data = await res.json();
+
+    return Response.json(data, { status: res.status });
+
+  } catch (error) {
+    return Response.json(
+      { error: "Error actualizando inspección sanitaria" },
+      { status: 500 }
+    );
+  }
+}
+
+/* =========================
    DELETE · BORRAR INSPECCIÓN
 ========================= */
 export async function DELETE(request) {
