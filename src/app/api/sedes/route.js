@@ -5,31 +5,31 @@ if (!BACKEND_URL) {
 }
 
 /* =========================
-   GET · LISTAR COMPARATIVO
+   GET · LISTAR SEDES
 ========================= */
 export async function GET() {
   try {
-    const res = await fetch(`${BACKEND_URL}/comparativoAgua`);
+    const res = await fetch(`${BACKEND_URL}/sedes`);
     const data = await res.json();
 
     return Response.json(data, { status: res.status });
 
   } catch (error) {
     return Response.json(
-      { error: "Error obteniendo comparativo de agua" },
+      { error: "Error obteniendo sedes" },
       { status: 500 }
     );
   }
 }
 
 /* =========================
-   POST · CREAR COMPARATIVO
+   POST · CREAR SEDE
 ========================= */
 export async function POST(request) {
   try {
     const body = await request.json();
 
-    const res = await fetch(`${BACKEND_URL}/comparativoAgua`, {
+    const res = await fetch(`${BACKEND_URL}/sedes`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json"
@@ -43,14 +43,48 @@ export async function POST(request) {
 
   } catch (error) {
     return Response.json(
-      { error: "Error guardando comparativo de agua" },
+      { error: "Error creando sede" },
       { status: 500 }
     );
   }
 }
 
 /* =========================
-   DELETE · ELIMINAR COMPARATIVO
+   PUT · ACTUALIZAR SEDE
+========================= */
+export async function PUT(request) {
+  try {
+    const body = await request.json();
+
+    if (!body.id) {
+      return Response.json(
+        { error: "Falta el id" },
+        { status: 400 }
+      );
+    }
+
+    const res = await fetch(`${BACKEND_URL}/sedes/${body.id}`, {
+      method: "PUT",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify(body)
+    });
+
+    const data = await res.json();
+
+    return Response.json(data, { status: res.status });
+
+  } catch (error) {
+    return Response.json(
+      { error: "Error actualizando sede" },
+      { status: 500 }
+    );
+  }
+}
+
+/* =========================
+   DELETE · ELIMINAR SEDE
 ========================= */
 export async function DELETE(request) {
   try {
@@ -64,19 +98,19 @@ export async function DELETE(request) {
       );
     }
 
-    const res = await fetch(`${BACKEND_URL}/comparativoAgua/${id}`, {
+    const res = await fetch(`${BACKEND_URL}/sedes/${id}`, {
       method: "DELETE"
     });
 
     if (!res.ok) {
       return Response.json(
-        { error: "Error eliminando en backend" },
+        { error: "Error eliminando sede en backend" },
         { status: res.status }
       );
     }
 
     return Response.json(
-      { mensaje: "Eliminado correctamente" },
+      { mensaje: "Sede eliminada correctamente" },
       { status: 200 }
     );
 

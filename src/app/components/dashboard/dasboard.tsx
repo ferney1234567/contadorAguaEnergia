@@ -856,7 +856,7 @@ cargarComparativoAgua();
 
 <h3 className={`font-bold text-lg mb-6 flex items-center gap-2 ${textColor}`}>
 <FaTint className="text-blue-500"/>
-Comparativo de Agua por Mes
+Comparativo de Agua por Mes PDS
 </h3>
 
 {/* LEYENDA DE MESES */}
@@ -939,7 +939,7 @@ Total anual
 
 <h3 className={`font-bold text-lg mb-6 flex items-center gap-2 ${textColor}`}>
 <FaLightbulb className="text-yellow-500"/>
-Comparativo de Energía por Mes
+Comparativo de Energía por Mes PDS
 </h3>
 
 {/* LEYENDA MESES */}
