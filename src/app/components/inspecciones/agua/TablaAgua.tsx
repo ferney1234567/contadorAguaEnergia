@@ -28,11 +28,11 @@ export default function InpeccionesSanitarios({
   );
 
   const campos = [
-    { key: 1, nombre: "Sanitarios", db: "sanitarios", img: "/img/sanitarios.png" },
-    { key: 2, nombre: "Orinales", db: "orinales", img: "/img/orinal.png" },
-    { key: 3, nombre: "Duchas", db: "duchas", img: "/img/ducha.png" },
+    { key: 1, nombre: "Sanitarios", db: "sanitarios", img: "/img/sanitario.png" },
+    { key: 2, nombre: "Orinales", db: "orinales", img: "/img/orinales.png" },
+    { key: 3, nombre: "Duchas", db: "duchas", img: "/img/duchas.png" },
     { key: 4, nombre: "Lavamanos", db: "lavamanos", img: "/img/lavamanos.png" },
-    { key: 5, nombre: "Llaves", db: "llaves", img: "/img/llave.png" },
+    { key: 5, nombre: "Llaves", db: "llaves", img: "/img/llaves.png" },
   ];
 
   const MESES = [

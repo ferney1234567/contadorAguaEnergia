@@ -30,10 +30,10 @@ export default function TablaEnergia({
     Array.isArray(dataInicial) ? dataInicial : [],
   );
   const campos = [
-    { key: 1, nombre: "Bombillas", img: "https://cdn.pixabay.com/animation/lightbulb.gif" },
-    { key: 2, nombre: "Reflectores", img: "https://cdn-icons-png.flaticon.com/animated/light.gif" },
-    { key: 3, nombre: "Lampara de piso", img: "https://cdn-icons-png.flaticon.com/animated/lamp.gif" },
-    { key: 4, nombre: "Aires Acondicionados", img: "https://cdn-icons-png.flaticon.com/animated/fan.gif" },
+    { key: 1, nombre: "Bombillas", img: "/img/bombillos.png" },
+    { key: 2, nombre: "Reflectores", img: "/img/reflectores.png" },
+    { key: 3, nombre: "Lampara de piso", img: "/img/lamparaPie.png" },
+    { key: 4, nombre: "Aires Acondicionados", img: "/img/aireAcondicionado.png" },
 
   ];
   const MESES = [

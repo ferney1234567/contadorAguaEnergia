@@ -22,10 +22,10 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
 
   const [dataBackend, setdataBackend] = useState<any[]>(Array.isArray(dataInicial) ? dataInicial : [],);
   const campos = [
-    { key: 1, nombre: "Reciclables", img: "/img/reciclable.png" },
+    { key: 1, nombre: "Reciclables", img: "/img/reciclables.png" },
     { key: 2, nombre: "Ordinarios", img: "/img/ordinarios.png" },
-    { key: 3, nombre: "Peligrosos", img: "/img/peligroso.png" },
-    { key: 4, nombre: "Presintos", img: "/img/presintos.png" },
+    { key: 3, nombre: "Peligrosos", img: "/img/peligros.png" },
+    { key: 4, nombre: "Presintos", img: "/img/precintos.png" },
   ];
   const MESES = [
     { value: "Todos", label: "Todos" },
