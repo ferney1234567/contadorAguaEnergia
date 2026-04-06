@@ -188,7 +188,7 @@ export default function MenuPrincipal() {
     }
 
     return {
-      titulo: `Monitoreo de Agua, Energía y Gestión Ambiental ${anioActual}`,
+      titulo: `Monitoreo de SGI ${anioActual}`,
       icono: null,
     };
 
