@@ -628,36 +628,38 @@ export default function TablaEnergia({
             </div>
           </div>
 
-          <div
-            className={`rounded-2xl px-4 py-3 flex items-center gap-3 ${estilos.inputSuave}`}
-          >
-            {/* BOTÓN NUEVA INSPECCIÓN */}
-            <button
-              onClick={() => setMostrarModal(true)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition
-    ${modoNoche
-                  ? "bg-gradient-to-r from-blue-700 to-blue-500 text-white shadow-md"
-                  : "bg-gradient-to-r from-blue-500 to-blue-400 text-white shadow-sm"
-                }
-    hover:scale-105 active:scale-95`}
-            >
-              <Plus size={16} />
-              Nueva inspección de Energía
-            </button>
+         <div
+  className={`rounded-2xl px-3 py-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 ${estilos.inputSuave}`}
+>
+  {/* BOTÓN NUEVA INSPECCIÓN */}
+  <button
+    onClick={() => setMostrarModal(true)}
+    className={`flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-3 sm:py-2 rounded-xl text-sm font-semibold transition
+      ${
+        modoNoche
+          ? "bg-gradient-to-r from-blue-700 to-blue-500 text-white shadow-md"
+          : "bg-gradient-to-r from-blue-500 to-blue-400 text-white shadow-sm"
+      }
+      hover:scale-105 active:scale-95`}
+  >
+    <Plus size={16} />
+    Nueva inspección de Energía
+  </button>
 
-            {/* 🔥 BOTÓN EXPORTAR PDF */}
-            <button
-              onClick={() => exportarEnergiaPDF(inspecciones)}
-              className={`flex items-center gap-2 px-4 py-2 rounded-xl text-sm font-semibold transition
-    ${modoNoche
-                  ? "bg-gradient-to-r from-green-700 to-green-500 text-white shadow-md"
-                  : "bg-gradient-to-r from-green-500 to-green-400 text-white shadow-sm"
-                }
-    hover:scale-105 active:scale-95`}
-            >
-              📄 Exportar PDF
-            </button>
-          </div>
+  {/* BOTÓN EXPORTAR PDF */}
+  <button
+    onClick={() => exportarEnergiaPDF(inspecciones)}
+    className={`flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-3 sm:py-2 rounded-xl text-sm font-semibold transition
+      ${
+        modoNoche
+          ? "bg-gradient-to-r from-green-700 to-green-500 text-white shadow-md"
+          : "bg-gradient-to-r from-green-500 to-green-400 text-white shadow-sm"
+      }
+      hover:scale-105 active:scale-95`}
+  >
+    📄 Exportar PDF
+  </button>
+</div>
         </div>
 
         {/* FILTROS */}

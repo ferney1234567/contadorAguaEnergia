@@ -20,13 +20,12 @@ type ResmaRegistro = {
   anio: number;
   mes: number;
   cantidad: number;
-  cumple: boolean;
+  
 };
 
 type ValorFila = {
   mes: number;
   cantidad: string;
-  cumple: number;
   registroId?: number;
 };
 
@@ -224,7 +223,6 @@ export default function TablaResmasAvanzada({ modoNoche }: Props) {
               registro && Number.isFinite(Number(registro.cantidad))
                 ? String(registro.cantidad)
                 : "",
-            cumple: registro?.cumple ? 1 : 0,
             registroId: registro?.id,
           };
         });
@@ -354,44 +352,98 @@ export default function TablaResmasAvanzada({ modoNoche }: Props) {
     }
   };
 
-  const guardarDato = async ({
-    areaId,
-    mes,
-    cantidad,
-    cumple,
-  }: {
-    areaId: number;
-    mes: number;
-    cantidad: number;
-    cumple: boolean;
-  }) => {
-    const clave = `${areaId}-${mes}`;
-    setGuardandoCelda(clave);
+const eliminarDato = async (areaId: number, mes: number) => {
+  try {
+    const registro = resmas.find(
+      (r) =>
+        Number(r.area_id) === Number(areaId) &&
+        Number(r.mes) === Number(mes)
+    );
 
-    try {
-      const res = await fetch("/api/resmas", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
+    if (!registro?.id) return;
+
+    const res = await fetch(`/api/resmas?id=${registro.id}`, {
+      method: "DELETE",
+    });
+
+    if (!res.ok) throw new Error("Error eliminando");
+
+    // 🔥 ELIMINA SOLO LOCAL (SIN REFRESH)
+    setResmas((prev) =>
+      prev.filter((r) => r.id !== registro.id)
+    );
+
+    toast("success", "Eliminado");
+  } catch (error) {
+    console.error(error);
+    toast("error", "No se pudo eliminar");
+  }
+};
+
+  const guardarDato = async ({
+  areaId,
+  mes,
+  cantidad,
+}: {
+  areaId: number;
+  mes: number;
+  cantidad: number;
+}) => {
+  const clave = `${areaId}-${mes}`;
+  setGuardandoCelda(clave);
+
+  try {
+    const res = await fetch("/api/resmas", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({
+        area_id: areaId,
+        anio: anioSeleccionado,
+        mes,
+        cantidad,
+      }),
+    });
+
+    if (!res.ok) throw new Error("Error al guardar");
+
+    // 🔥 ACTUALIZA SOLO ESA CELDA (SIN REFRESH)
+    setResmas((prev) => {
+      const existe = prev.find(
+        (r) =>
+          Number(r.area_id) === Number(areaId) &&
+          Number(r.mes) === Number(mes)
+      );
+
+      if (existe) {
+        return prev.map((r) =>
+          Number(r.area_id) === Number(areaId) &&
+          Number(r.mes) === Number(mes)
+            ? { ...r, cantidad }
+            : r
+        );
+      }
+
+      return [
+        ...prev,
+        {
           area_id: areaId,
           anio: anioSeleccionado,
           mes,
           cantidad,
-          cumple,
-        }),
-      });
+        },
+      ];
+    });
 
-      if (!res.ok) throw new Error("Error al guardar");
-
-      await refreshData(anioSeleccionado);
-      toast("success", "Guardado");
-    } catch (error) {
-      console.error(error);
-      toast("error", "Error al guardar");
-    } finally {
-      setGuardandoCelda(null);
-    }
-  };
+    toast("success", "Guardado");
+  } catch (error) {
+    console.error(error);
+    toast("error", "Error al guardar");
+  } finally {
+    setGuardandoCelda(null); // 🔥 SIEMPRE se apaga el loader
+  }
+};
 
   const manejarFlechas = (
     e: React.KeyboardEvent<HTMLInputElement>,
@@ -427,24 +479,34 @@ export default function TablaResmasAvanzada({ modoNoche }: Props) {
     }
   };
 
-  const manejarEnterCantidad = async (
-    e: React.KeyboardEvent<HTMLInputElement>,
-    areaId: number,
-    mes: number,
-    cumpleActual: number
-  ) => {
-    if (e.key !== "Enter") return;
+ const manejarEnterCantidad = async (
+  e: React.KeyboardEvent<HTMLInputElement>,
+  areaId: number,
+  mes: number
+) => {
+  if (e.key !== "Enter") return;
 
-    const valor = e.currentTarget.value.replace(/[^0-9]/g, "");
-    const cantidad = Number(valor || 0);
+  const valor = e.currentTarget.value.replace(/[^0-9]/g, "");
+  const cantidad = Number(valor || 0);
 
-    await guardarDato({
-      areaId,
-      mes,
-      cantidad,
-      cumple: cumpleActual === 1,
-    });
-  };
+  // 🔥 eliminar si vacío
+  if (!valor || cantidad === 0) {
+    await eliminarDato(areaId, mes);
+    return;
+  }
+
+  // 🔥 guardar
+  await guardarDato({
+    areaId,
+    mes,
+    cantidad,
+  });
+};
+const comparar = (valor: number, referencia: number) => {
+  if (valor === referencia) return "=";
+  if (valor < referencia) return "↑";
+  return "↓";
+};
 
   const manejarCambioVisualCantidad = (areaId: number, mes: number, valor: string) => {
     const limpio = valor.replace(/[^0-9]/g, "");
@@ -469,31 +531,23 @@ export default function TablaResmasAvanzada({ modoNoche }: Props) {
           anio: anioSeleccionado,
           mes,
           cantidad: Number(limpio || 0),
-          cumple: false,
+          
         },
       ];
     });
   };
 
-  const toggleCumple = async (
-    areaId: number,
-    mes: number,
-    cantidadActual: number,
-    cumpleActual: number
-  ) => {
-    await guardarDato({
-      areaId,
-      mes,
-      cantidad: cantidadActual,
-      cumple: cumpleActual !== 1,
-    });
-
-    toast("success", "Estado actualizado");
-  };
+  
 
   const renderBloqueMeses = (inicio: number, fin: number) => (
-    <div className={`overflow-x-auto rounded-3xl ${estilos.tarjeta}`}>
-      <div className="min-w-[1280px] p-3 md:p-4">
+   <div
+  className={`overflow-x-auto rounded-3xl ${estilos.tarjeta} touch-pan-x scroll-smooth`}
+  style={{
+    WebkitOverflowScrolling: "touch",
+    scrollSnapType: "x mandatory",
+  }}
+>
+      <div className="min-w-[900px] sm:min-w-[1100px] lg:min-w-[1280px] p-2 sm:p-3 md:p-4">
         <table className="w-full border-separate border-spacing-0 text-sm">
           <thead>
             <tr className={estilos.headerTabla}>
@@ -513,7 +567,7 @@ export default function TablaResmasAvanzada({ modoNoche }: Props) {
                   <th
                     className={`min-w-[58px] border px-2 py-4 text-center text-sm font-bold text-blue-500 ${estilos.bordeTabla} ${estilos.headerTabla}`}
                   >
-                    T
+                   Comp
                   </th>
                 </React.Fragment>
               ))}
@@ -646,7 +700,7 @@ export default function TablaResmasAvanzada({ modoNoche }: Props) {
                                 )
                               }
                               onKeyDown={(e) => {
-                                manejarEnterCantidad(e, fila.id, valor.mes, valor.cumple);
+                                manejarEnterCantidad(e, fila.id, valor.mes);
                                 manejarFlechas(e, filaIndex, valor.mes);
                               }}
                               placeholder="0"
@@ -661,25 +715,34 @@ export default function TablaResmasAvanzada({ modoNoche }: Props) {
                           </div>
                         </td>
 
-                        <td className={`border px-2 py-2 text-center align-middle ${estilos.bordeTabla}`}>
-                          <button
-                            onClick={() =>
-                              toggleCumple(
-                                fila.id,
-                                valor.mes,
-                                Number(valor.cantidad || 0),
-                                valor.cumple
-                              )
-                            }
-                            className={`mx-auto flex h-9 w-9 items-center justify-center rounded-xl text-sm font-bold transition ${valor.cumple === 1
-                                ? "border border-emerald-400 bg-emerald-500/15 text-emerald-600"
-                                : "border border-rose-400 bg-rose-500/15 text-rose-600"
-                              }`}
-                            title={valor.cumple === 1 ? "Cumple" : "No cumple"}
-                          >
-                            {valor.cumple === 1 ? "✔" : "✖"}
-                          </button>
-                        </td>
+                       <td className={`border px-2 py-2 text-center align-middle ${estilos.bordeTabla}`}>
+  {(() => {
+    const valorActual = Number(valor.cantidad || 0);
+
+    const valorAnterior =
+      fila.valores[valor.mes - 2]?.cantidad
+        ? Number(fila.valores[valor.mes - 2].cantidad)
+        : 0;
+
+    const referencia = valorAnterior || valorActual;
+
+    const resultado = comparar(valorActual, referencia);
+
+    return (
+      <span
+        className={`text-lg font-bold ${
+          resultado === "="
+            ? "text-gray-500"
+            : resultado === "↑"
+            ? "text-emerald-500"
+            : "text-rose-500"
+        }`}
+      >
+        {resultado}
+      </span>
+    );
+  })()}
+</td>
                       </React.Fragment>
                     );
                   })}
