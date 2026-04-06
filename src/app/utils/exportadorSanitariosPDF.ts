@@ -1,26 +1,14 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-export const exportarSanitariosPDF = (registros: any[]) => {
+export const exportarSanitariosPDF = (registros: any[] = []) => {
   const doc = new jsPDF();
 
   /* =========================
      🎨 COLORES
   ========================= */
-  const azul = [0, 150, 255];
-  const verde = [16, 185, 129];
-  const gris = [100, 100, 100];
-
-  /* =========================
-     🖼️ LOGO EMPRESA (CAMBIA ESTO)
-  ========================= */
-  const logo = "/img/logo.png"; // 🔥 pon tu logo aquí
-
-  try {
-    doc.addImage(logo, "PNG", 14, 8, 30, 15);
-  } catch {
-    console.log("No se pudo cargar el logo");
-  }
+  const azul: [number, number, number] = [0, 150, 255];
+  const gris: [number, number, number] = [100, 100, 100];
 
   /* =========================
      🧾 TÍTULO
@@ -39,22 +27,11 @@ export const exportarSanitariosPDF = (registros: any[]) => {
   );
 
   /* =========================
-     💧 LÍNEA DECORATIVA
+     💧 LÍNEA
   ========================= */
   doc.setDrawColor(...azul);
   doc.setLineWidth(1);
   doc.line(14, 26, 196, 26);
-
-  /* =========================
-     🖼️ ICONOS (CAMBIA ESTO)
-  ========================= */
-  const iconos = {
-    sanitarios: "/img/sanitario.png",
-    orinales: "/img/orinal.png",
-    duchas: "/img/ducha.png",
-    lavamanos: "/img/lavamanos.png",
-    llaves: "/img/llave.png",
-  };
 
   /* =========================
      🔥 COLUMNAS
@@ -73,25 +50,28 @@ export const exportarSanitariosPDF = (registros: any[]) => {
   ];
 
   /* =========================
-     🔥 FILAS
+     🔥 FILAS (SEGURAS)
   ========================= */
   const filas = registros.map((r) => [
-    new Date(r.fecha).toLocaleDateString("es-CO"),
-    r.responsable,
-    r.area || r.area_id,
+    r?.fecha
+      ? new Date(r.fecha).toLocaleDateString("es-CO")
+      : "-",
 
-    `${r.sanitarios_c}/${r.sanitarios_nc}`,
-    `${r.orinales_c}/${r.orinales_nc}`,
-    `${r.duchas_c}/${r.duchas_nc}`,
-    `${r.lavamanos_c}/${r.lavamanos_nc}`,
-    `${r.llaves_c}/${r.llaves_nc}`,
+    r?.responsable || "-",
+    r?.area || r?.area_id || "-",
 
-    r.total,
-    r.observacion || "",
+    `${r?.sanitarios_c || 0}/${r?.sanitarios_nc || 0}`,
+    `${r?.orinales_c || 0}/${r?.orinales_nc || 0}`,
+    `${r?.duchas_c || 0}/${r?.duchas_nc || 0}`,
+    `${r?.lavamanos_c || 0}/${r?.lavamanos_nc || 0}`,
+    `${r?.llaves_c || 0}/${r?.llaves_nc || 0}`,
+
+    r?.total || 0,
+    r?.observacion || "",
   ]);
 
   /* =========================
-     📊 TABLA BONITA
+     📊 TABLA
   ========================= */
   autoTable(doc, {
     head: [columnas],
@@ -112,7 +92,7 @@ export const exportarSanitariosPDF = (registros: any[]) => {
     },
 
     alternateRowStyles: {
-      fillColor: [240, 248, 255], // azul suave
+      fillColor: [240, 248, 255],
     },
 
     columnStyles: {
@@ -122,16 +102,9 @@ export const exportarSanitariosPDF = (registros: any[]) => {
     },
 
     didDrawPage: () => {
-      /* =========================
-         🔥 FOOTER
-      ========================= */
       doc.setFontSize(8);
       doc.setTextColor(...gris);
-      doc.text(
-        "Sistema de Monitoreo Ambiental 💧",
-        14,
-        290
-      );
+      doc.text("Sistema de Monitoreo Ambiental 💧", 14, 290);
     },
   });
 
