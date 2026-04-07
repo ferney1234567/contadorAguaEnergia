@@ -51,8 +51,7 @@ export default function TablaResmasAvanzada({ modoNoche }: Props) {
   const [nombreEditado, setNombreEditado] = useState("");
   const [confirmarEliminarId, setConfirmarEliminarId] = useState<number | null>(null);
   const inputEditarRef = useRef<HTMLInputElement>(null);
-
-
+ 
 
  const estilos = useMemo(
   () => ({
@@ -495,6 +494,8 @@ const eliminarDato = async (areaId: number, mes: number) => {
     return;
   }
 
+
+
   // 🔥 guardar
   await guardarDato({
     areaId,
@@ -507,6 +508,25 @@ const comparar = (valor: number, referencia: number) => {
   if (valor < referencia) return "↑";
   return "↓";
 };
+
+const totalesPorMes = useMemo(() => {
+  return MESES.map((_, index) => {
+    const mes = index + 1;
+
+    return filas.reduce((total, fila) => {
+      const valor = fila.valores.find(v => v.mes === mes);
+      return total + Number(valor?.cantidad || 0);
+    }, 0);
+  });
+}, [filas]);
+
+const mesActual = new Date().getMonth(); // 0-11
+
+const totalMesActual = useMemo(() => {
+  return totalesPorMes[mesActual] || 0;
+}, [totalesPorMes]);
+
+const nombreMesActual = MESES[mesActual];
 
   const manejarCambioVisualCantidad = (areaId: number, mes: number, valor: string) => {
     const limpio = valor.replace(/[^0-9]/g, "");
@@ -524,6 +544,8 @@ const comparar = (valor: number, referencia: number) => {
         );
       }
 
+      
+
       return [
         ...prev,
         {
@@ -537,7 +559,7 @@ const comparar = (valor: number, referencia: number) => {
     });
   };
 
-  
+
 
   const renderBloqueMeses = (inicio: number, fin: number) => (
    <div
@@ -749,6 +771,27 @@ const comparar = (valor: number, referencia: number) => {
                 </tr>
               ))
             )}
+
+            <tr className="bg-blue-500/10 font-bold">
+  <td
+    className={`sticky left-0 z-10 border px-4 py-3 ${estilos.bordeTabla} ${estilos.fondoSticky}`}
+  >
+    TOTAL MES
+  </td>
+
+  {totalesPorMes.slice(inicio, fin).map((total, i) => (
+    <React.Fragment key={i}>
+      <td
+        className={`border px-2 py-2 text-center text-blue-600 font-extrabold ${estilos.bordeTabla}`}
+      >
+        {total}
+      </td>
+
+      {/* columna comparación vacía */}
+      <td className={`border ${estilos.bordeTabla}`} />
+    </React.Fragment>
+  ))}
+</tr>
           </tbody>
         </table>
       </div>
@@ -849,12 +892,14 @@ const comparar = (valor: number, referencia: number) => {
             <div className={`relative overflow-hidden rounded-3xl p-5 ${estilos.tarjetaSuave}`}>
               <div className="flex items-center justify-between">
                 <div>
-                  <p className={`text-xs font-semibold uppercase tracking-wide ${estilos.textoSecundario}`}>
-                    Registros con dato
-                  </p>
-                  <p className="mt-2 text-3xl font-extrabold text-emerald-500">
-                    {resumen.totalRegistros}
-                  </p>
+    <p className={`text-xs font-semibold uppercase tracking-wide ${estilos.textoSecundario}`}>
+  Total mes actual ({nombreMesActual})
+</p>
+
+<p className="mt-2 text-3xl font-extrabold text-emerald-500">
+  {totalMesActual}
+</p>
+
                 </div>
 
                 <div className="rounded-2xl bg-emerald-500/15 p-3">

@@ -126,11 +126,11 @@ export default function MenuPrincipal() {
 
     { id: "energía", nombre: "Energía", icono: <Zap size={28} /> },
 
+    { id: "lecturas", nombre: "Lecturas", icono: <BookOpen size={28} /> },
+
     { id: "comparativoagua", nombre: "Comparativo ", icono: <FaFaucet size={28} /> },
 
     { id: "comparativoenergia", nombre: "Comparativo ", icono: <Plug size={28} /> },
-
-    { id: "lecturas", nombre: "Lecturas", icono: <BookOpen size={28} /> },
 
     { id: "inspecciones", nombre: "Inspecciones ", icono: <Recycle size={28} /> },
 
@@ -153,6 +153,12 @@ export default function MenuPrincipal() {
         icono: <Zap size={28} />,
       };
     }
+    if (vistaActual === "lecturas") {
+      return {
+        titulo: "Registrar lecturas",
+        icono: <BookOpen size={28} />,
+      };
+    }
 
     if (vistaActual === "comparativoagua") {
       return {
@@ -168,12 +174,6 @@ export default function MenuPrincipal() {
       };
     }
 
-    if (vistaActual === "lecturas") {
-      return {
-        titulo: "Registrar lecturas",
-        icono: <BookOpen size={28} />,
-      };
-    }
      if (vistaActual === "inspecciones") {
       return {
         titulo: "Registrar Inspecciones",
@@ -188,7 +188,7 @@ export default function MenuPrincipal() {
     }
 
     return {
-      titulo: `Monitoreo de SGI ${anioActual}`,
+      titulo: `Monitoreo de SGA ${anioActual}`,
       icono: null,
     };
 
@@ -322,11 +322,11 @@ export default function MenuPrincipal() {
 
           {vistaActual === "energía" && <ConsumoEnergia modoNoche={modoNoche} />}
 
+          {vistaActual === "lecturas" && <Lecturas modoNoche={modoNoche} />}
+
           {vistaActual === "comparativoagua" && <ComparativoAgua modoNoche={modoNoche} />}
 
           {vistaActual === "comparativoenergia" && <ComparativoEnergia modoNoche={modoNoche} />}
-
-          {vistaActual === "lecturas" && <Lecturas modoNoche={modoNoche} />}
 
           {vistaActual === "inspecciones" && <Inspecciones modoNoche={modoNoche} />}
 
@@ -367,7 +367,7 @@ export default function MenuPrincipal() {
     <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs md:text-sm mt-2">
       <div>
         <span className="font-semibold">Sistema</span><br />
-        Comparativo de SGI
+        Comparativo de SGA
       </div>
 
       <div>

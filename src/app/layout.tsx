@@ -7,7 +7,7 @@ const inter = Inter({ subsets: ['latin'] });
 
 export const metadata: Metadata = {
   title: 'Consumo de Agua y Energía',
-  description: 'Aprende Next.js construyendo una Pokédex',
+  description: 'Una aplicación para monitorear y comparar el consumo de agua y energía en diferentes sistemas de gestión integrada (SGI).',
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
