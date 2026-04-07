@@ -213,7 +213,7 @@ export default function MenuPrincipal() {
         <div className="flex items-center gap-3">
 
           <Image
-            src="/img/envia3.png"
+            src="/img/logo.png"
             alt="Envia logo"
             width={60}
             height={40}
