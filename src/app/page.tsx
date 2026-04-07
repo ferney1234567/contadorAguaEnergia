@@ -367,7 +367,7 @@ export default function MenuPrincipal() {
     <div className="grid grid-cols-1 md:grid-cols-3 gap-3 text-xs md:text-sm mt-2">
       <div>
         <span className="font-semibold">Sistema</span><br />
-        Gestión de Consumo de Agua y Energía
+        Comparativo de SGI
       </div>
 
       <div>
