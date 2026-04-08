@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CalendarDays, Search, User2, Filter, Plus } from "lucide-react";
+import { CalendarDays, Search, User2, Filter, Plus, Recycle, Trash2, AlertTriangle, ShieldCheck } from "lucide-react";
 import Swal from "sweetalert2";
 import MovilReciclaje from "./modalReciclaje";
 import { exportarResiduosPDF } from "@/app/utils/exportadorResiduosPDF";
@@ -22,10 +22,10 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
 
   const [dataBackend, setdataBackend] = useState<any[]>(Array.isArray(dataInicial) ? dataInicial : [],);
   const campos = [
-    { key: 1, nombre: "Reciclables", img: "/img/reciclables.png" },
-    { key: 2, nombre: "Ordinarios", img: "/img/ordinarios.png" },
-    { key: 3, nombre: "Peligrosos", img: "/img/peligros.png" },
-    { key: 4, nombre: "Presintos", img: "/img/precintos.png" },
+    { key: 1, nombre: "Reciclables", icon: Recycle, color: "text-green-500" },
+    { key: 2, nombre: "Ordinarios", icon: Trash2, color: "text-gray-500" },
+    { key: 3, nombre: "Peligrosos", icon: AlertTriangle, color: "text-red-500" },
+    { key: 4, nombre: "Presintos", icon: ShieldCheck, color: "text-blue-500" },
   ];
   const MESES = [
     { value: "Todos", label: "Todos" },
@@ -120,7 +120,7 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
     const nuevosValores: RegistroValores = {};
     const nuevasObservaciones: RegistroObservaciones = {};
     dataBackend.forEach((area) => {
-  const filaKey = `${fechaSesion}__${responsable}__${area.id}`;
+      const filaKey = `${fechaSesion}__${responsable}__${area.id}`;
       const inspeccion = inspecciones
         .filter(
           (i) =>
@@ -130,7 +130,7 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
         )
         .slice(-1)[0];
       if (!inspeccion) return;
-     nuevosValores[filaKey] = {
+      nuevosValores[filaKey] = {
         1: {
           c: String(inspeccion.reciclables_c || ""),
           nc: String(inspeccion.reciclables_nc || ""),
@@ -322,11 +322,11 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
   }, [inspecciones]);
 
   const obtenerSemana = (fecha: string) => {
-  const d = new Date(fecha);
-  const inicio = new Date(d.getFullYear(), 0, 1);
-  const dias = Math.floor((d.getTime() - inicio.getTime()) / (1000 * 60 * 60 * 24));
-  return Math.ceil((dias + inicio.getDay() + 1) / 7);
-};
+    const d = new Date(fecha);
+    const inicio = new Date(d.getFullYear(), 0, 1);
+    const dias = Math.floor((d.getTime() - inicio.getTime()) / (1000 * 60 * 60 * 24));
+    return Math.ceil((dias + inicio.getDay() + 1) / 7);
+  };
 
 
   const dataBackendFiltrada = useMemo(() => {
@@ -388,41 +388,41 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
   };
 
   const inspeccionesPorFecha = useMemo(() => {
-  const grupos: Record<string, any[]> = {};
+    const grupos: Record<string, any[]> = {};
 
-  inspecciones.forEach((item) => {
-    const fecha = normalizarFecha(item.fecha);
-    const responsable = item.responsable || "sin-responsable";
+    inspecciones.forEach((item) => {
+      const fecha = normalizarFecha(item.fecha);
+      const responsable = item.responsable || "sin-responsable";
 
-    const semana = obtenerSemana(fecha);
-    const anio = new Date(fecha).getFullYear();
+      const semana = obtenerSemana(fecha);
+      const anio = new Date(fecha).getFullYear();
 
-    const clave = `${anio}__semana${semana}__${responsable}`;
+      const clave = `${anio}__semana${semana}__${responsable}`;
 
-    if (!grupos[clave]) {
-      grupos[clave] = [];
-    }
+      if (!grupos[clave]) {
+        grupos[clave] = [];
+      }
 
-    grupos[clave].push(item);
-  });
+      grupos[clave].push(item);
+    });
 
-  return grupos;
-}, [inspecciones]);
+    return grupos;
+  }, [inspecciones]);
 
   const inspeccionesFiltradas = useMemo(() => {
-  return Object.entries(inspeccionesPorFecha)
-    .filter(([clave]) => {
-      const [anio] = clave.split("__");
+    return Object.entries(inspeccionesPorFecha)
+      .filter(([clave]) => {
+        const [anio] = clave.split("__");
 
-      const coincideAnio =
-        anioFiltro === "Todos" || anio === anioFiltro;
+        const coincideAnio =
+          anioFiltro === "Todos" || anio === anioFiltro;
 
-      return coincideAnio;
-    })
-    .sort((a, b) => {
-      return b[0].localeCompare(a[0]);
-    });
-}, [inspeccionesPorFecha, anioFiltro]);
+        return coincideAnio;
+      })
+      .sort((a, b) => {
+        return b[0].localeCompare(a[0]);
+      });
+  }, [inspeccionesPorFecha, anioFiltro]);
 
 
   const obtenerValor = (
@@ -445,132 +445,132 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
     return 0;
   };
 
- const guardarFila = async (
-  filaKey: string,
-  area: any,
-  registro: any
-) => {
-  try {
-    // =========================
-    // 🔒 VALIDACIONES
-    // =========================
-    if (!area || !area.id) return;
+  const guardarFila = async (
+    filaKey: string,
+    area: any,
+    registro: any
+  ) => {
+    try {
+      // =========================
+      // 🔒 VALIDACIONES
+      // =========================
+      if (!area || !area.id) return;
 
-    // ❌ NO PERMITIR CREAR
-    if (!registro?.id) {
-      Swal.fire({
-        toast: true,
-        position: "top-end",
-        icon: "warning",
-        title: "No puedes crear registros aquí",
-        timer: 1500,
-        showConfirmButton: false,
+      // ❌ NO PERMITIR CREAR
+      if (!registro?.id) {
+        Swal.fire({
+          toast: true,
+          position: "top-end",
+          icon: "warning",
+          title: "No puedes crear registros aquí",
+          timer: 1500,
+          showConfirmButton: false,
+        });
+        return;
+      }
+
+      const responsableFinal =
+        (typeof responsable === "string" && responsable.trim()) ||
+        registro?.responsable ||
+        "";
+
+      if (!responsableFinal) {
+        Swal.fire({
+          toast: true,
+          position: "top-end",
+          icon: "warning",
+          title: "Falta responsable",
+          timer: 1200,
+          showConfirmButton: false,
+        });
+        return;
+      }
+
+      // =========================
+      // 📦 ARMAR BODY
+      // =========================
+      const body = {
+        id: registro.id, // 🔥 SOLO UPDATE
+
+        fecha: registro.fecha, // 🔥 IMPORTANTE → NO CAMBIAR FECHA
+        responsable: responsableFinal,
+        area_id: area.id,
+
+        reciclables_c: obtenerValor(filaKey, 1, "c", registro),
+        reciclables_nc: obtenerValor(filaKey, 1, "nc", registro),
+
+        ordinarios_c: obtenerValor(filaKey, 2, "c", registro),
+        ordinarios_nc: obtenerValor(filaKey, 2, "nc", registro),
+
+        peligrosos_c: obtenerValor(filaKey, 3, "c", registro),
+        peligrosos_nc: obtenerValor(filaKey, 3, "nc", registro),
+
+        presintos_c: obtenerValor(filaKey, 4, "c", registro),
+        presintos_nc: obtenerValor(filaKey, 4, "nc", registro),
+
+        observacion:
+          observaciones[filaKey] ||
+          registro?.observacion ||
+          "",
+      };
+
+      console.log("📤 ACTUALIZANDO:", body);
+
+      // =========================
+      // 🔥 SOLO PUT (UPDATE)
+      // =========================
+      const response = await fetch("/api/inspecciones-residuos", {
+        method: "PUT", // 🔥 FORZADO
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
       });
-      return;
-    }
 
-    const responsableFinal =
-      (typeof responsable === "string" && responsable.trim()) ||
-      registro?.responsable ||
-      "";
+      // =========================
+      // ❌ ERROR BACKEND
+      // =========================
+      if (!response.ok) {
+        const errorText = await response.text();
 
-    if (!responsableFinal) {
+        Swal.fire({
+          icon: "error",
+          title: "Error del servidor",
+          text: errorText,
+        });
+
+        return;
+      }
+
+      // =========================
+      // 🔄 REFRESCAR
+      // =========================
+      const res = await fetch("/api/inspecciones-residuos");
+      const data = await res.json();
+      setInspecciones(data);
+
+      // =========================
+      // ✅ MENSAJE
+      // =========================
       Swal.fire({
         toast: true,
         position: "top-end",
-        icon: "warning",
-        title: "Falta responsable",
+        icon: "success",
+        title: "Actualizado correctamente",
         timer: 1200,
         showConfirmButton: false,
       });
-      return;
-    }
 
-    // =========================
-    // 📦 ARMAR BODY
-    // =========================
-    const body = {
-      id: registro.id, // 🔥 SOLO UPDATE
-
-      fecha: registro.fecha, // 🔥 IMPORTANTE → NO CAMBIAR FECHA
-      responsable: responsableFinal,
-      area_id: area.id,
-
-      reciclables_c: obtenerValor(filaKey, 1, "c", registro),
-      reciclables_nc: obtenerValor(filaKey, 1, "nc", registro),
-
-      ordinarios_c: obtenerValor(filaKey, 2, "c", registro),
-      ordinarios_nc: obtenerValor(filaKey, 2, "nc", registro),
-
-      peligrosos_c: obtenerValor(filaKey, 3, "c", registro),
-      peligrosos_nc: obtenerValor(filaKey, 3, "nc", registro),
-
-      presintos_c: obtenerValor(filaKey, 4, "c", registro),
-      presintos_nc: obtenerValor(filaKey, 4, "nc", registro),
-
-      observacion:
-        observaciones[filaKey] ||
-        registro?.observacion ||
-        "",
-    };
-
-    console.log("📤 ACTUALIZANDO:", body);
-
-    // =========================
-    // 🔥 SOLO PUT (UPDATE)
-    // =========================
-    const response = await fetch("/api/inspecciones-residuos", {
-      method: "PUT", // 🔥 FORZADO
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify(body),
-    });
-
-    // =========================
-    // ❌ ERROR BACKEND
-    // =========================
-    if (!response.ok) {
-      const errorText = await response.text();
+    } catch (error) {
+      console.error("🔥 ERROR GENERAL:", error);
 
       Swal.fire({
         icon: "error",
-        title: "Error del servidor",
-        text: errorText,
+        title: "Error inesperado",
+        text: "No se pudo actualizar",
       });
-
-      return;
     }
-
-    // =========================
-    // 🔄 REFRESCAR
-    // =========================
-    const res = await fetch("/api/inspecciones-residuos");
-    const data = await res.json();
-    setInspecciones(data);
-
-    // =========================
-    // ✅ MENSAJE
-    // =========================
-    Swal.fire({
-      toast: true,
-      position: "top-end",
-      icon: "success",
-      title: "Actualizado correctamente",
-      timer: 1200,
-      showConfirmButton: false,
-    });
-
-  } catch (error) {
-    console.error("🔥 ERROR GENERAL:", error);
-
-    Swal.fire({
-      icon: "error",
-      title: "Error inesperado",
-      text: "No se pudo actualizar",
-    });
-  }
-};
+  };
 
   return (
     <div className={`w-full rounded-3xl p-3 sm:p-4 md:p-6 ${estilos.tarjeta}`}>
@@ -605,34 +605,32 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
           </div>
 
 
-        <div
-  className={`rounded-2xl px-3 py-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 ${estilos.inputSuave}`}
->
-  {/* BOTÓN NUEVA INSPECCIÓN */}
-  <button
-    onClick={() => setMostrarModal(true)}
-    className={`flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-3 sm:py-2 rounded-xl text-sm font-semibold transition ${
-      modoNoche
-        ? "bg-gradient-to-r from-blue-700 to-blue-500 text-white shadow-md"
-        : "bg-gradient-to-r from-blue-500 to-blue-400 text-white shadow-sm"
-    } hover:scale-105 active:scale-95`}
-  >
-    <Plus size={16} />
-    Nueva inspección de residuos
-  </button>
+          <div
+            className={`rounded-2xl px-3 py-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 ${estilos.inputSuave}`}
+          >
+            {/* BOTÓN NUEVA INSPECCIÓN */}
+            <button
+              onClick={() => setMostrarModal(true)}
+              className={`flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-3 sm:py-2 rounded-xl text-sm font-semibold transition ${modoNoche
+                  ? "bg-gradient-to-r from-blue-700 to-blue-500 text-white shadow-md"
+                  : "bg-gradient-to-r from-blue-500 to-blue-400 text-white shadow-sm"
+                } hover:scale-105 active:scale-95`}
+            >
+              <Plus size={16} />
+              Nueva inspección de residuos
+            </button>
 
-  {/* BOTÓN EXPORTAR PDF */}
-  <button
-    onClick={() => exportarResiduosPDF(inspecciones)}
-    className={`flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-3 sm:py-2 rounded-xl text-sm font-semibold transition ${
-      modoNoche
-        ? "bg-gradient-to-r from-orange-700 to-orange-500 text-white shadow-md"
-        : "bg-gradient-to-r from-orange-500 to-orange-400 text-white shadow-sm"
-    } hover:scale-105 active:scale-95`}
-  >
-    ♻️ Exportar PDF
-  </button>
-</div>
+            {/* BOTÓN EXPORTAR PDF */}
+            <button
+              onClick={() => exportarResiduosPDF(inspecciones)}
+              className={`flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-3 sm:py-2 rounded-xl text-sm font-semibold transition ${modoNoche
+                  ? "bg-gradient-to-r from-orange-700 to-orange-500 text-white shadow-md"
+                  : "bg-gradient-to-r from-orange-500 to-orange-400 text-white shadow-sm"
+                } hover:scale-105 active:scale-95`}
+            >
+              ♻️ Exportar PDF
+            </button>
+          </div>
         </div>
 
 
@@ -663,7 +661,7 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
               <input
                 type="text"
                 value={busqueda}
-                
+
                 onChange={(e) => setBusqueda(e.target.value)}
                 placeholder="Buscar por área"
                 className={`w-full rounded-xl pl-10 pr-3 py-2.5 text-sm outline-none ${estilos.input}`}
@@ -784,7 +782,7 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
             }`}
         >
           {inspeccionesFiltradas.map(([clave, registros]) => {
-           const [anio, semana, responsableGrupo] = clave.split("__");
+            const [anio, semana, responsableGrupo] = clave.split("__");
 
             return (
               <div
@@ -797,8 +795,8 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
                 {/* HEADER */}
                 <div className="mb-5 text-center">
                   <h2>
-  Semana {semana.replace("semana", "")} - {anio}
-</h2>
+                    Semana {semana.replace("semana", "")} - {anio}
+                  </h2>
 
                   <div className="flex justify-center gap-3 mt-3 flex-wrap">
                     <span
@@ -851,12 +849,19 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
                         {campos.map((c) => (
                           <th
                             key={c.key}
-                            className={`p-3 border ${modoNoche ? "border-[#353535]" : "border-gray-200"
-                              }`}
+                            className={`p-3 border ${modoNoche ? "border-[#353535]" : "border-gray-200"}`}
                           >
                             <div className="flex flex-col items-center gap-1">
-                              <img src={c.img} className="w-8 h-8 opacity-80" />
+
+                              {/* ICONO */}
+                              {(() => {
+                                const Icono = c.icon;
+                                return <Icono className={`w-6 h-6 ${c.color}`} />;
+                              })()}
+
+                              {/* TEXTO */}
                               <span>{c.nombre}</span>
+
                             </div>
                           </th>
                         ))}
@@ -876,8 +881,8 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
                         const filaKey = `${anio}__${semana}__${responsableGrupo}__${area.id}`;
 
                         const registro = registros.find(
-  (r) => r.area_id === area.id
-);
+                          (r) => r.area_id === area.id
+                        );
                         return (
                           <tr
                             key={filaKey}
@@ -1092,10 +1097,10 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
                                 }`}
                             >
                               <div className="flex flex-col gap-2">
-                                  <textarea
+                                <textarea
                                   disabled={!registro}
-                               value={
-                               
+                                  value={
+
                                     observaciones[filaKey] !== undefined
                                       ? observaciones[filaKey]
                                       : registro?.observacion || ""

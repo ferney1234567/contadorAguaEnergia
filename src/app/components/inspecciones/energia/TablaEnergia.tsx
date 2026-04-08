@@ -7,6 +7,8 @@ import {
 import Swal from "sweetalert2";
 import MovilEnergia from "./modalEnergia";
 import { exportarEnergiaPDF } from "@/app/utils/exportadorEnergiaPDF";
+import { Lightbulb, Sun, LampFloor, Wind } from "lucide-react";
+
 
 type RegistroValores = {
   [filaKey: string]: { [campo: number]: { c?: string; nc?: string } };
@@ -29,12 +31,12 @@ export default function TablaEnergia({
   const [dataBackend, setdataBackend] = useState<any[]>(
     Array.isArray(dataInicial) ? dataInicial : [],
   );
-  const campos = [
-    { key: 1, nombre: "Bombillas", img: "/img/bombillos.png" },
-    { key: 2, nombre: "Reflectores", img: "/img/reflectores.png" },
-    { key: 3, nombre: "Lampara de piso", img: "/img/lamparaPie.png" },
-    { key: 4, nombre: "Aires Acondicionados", img: "/img/aireAcondicionado.png" },
 
+  const campos = [
+    { key: 1, nombre: "Bombillas", icon: Lightbulb, color: "text-yellow-500" },
+    { key: 2, nombre: "Reflectores", icon: Sun, color: "text-orange-500" },
+    { key: 3, nombre: "Lámpara piso", icon: LampFloor, color: "text-purple-500" },
+    { key: 4, nombre: "Aires", icon: Wind, color: "text-cyan-500" },
   ];
   const MESES = [
     { value: "Todos", label: "Todos" },
@@ -628,38 +630,36 @@ export default function TablaEnergia({
             </div>
           </div>
 
-         <div
-  className={`rounded-2xl px-3 py-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 ${estilos.inputSuave}`}
->
-  {/* BOTÓN NUEVA INSPECCIÓN */}
-  <button
-    onClick={() => setMostrarModal(true)}
-    className={`flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-3 sm:py-2 rounded-xl text-sm font-semibold transition
-      ${
-        modoNoche
-          ? "bg-gradient-to-r from-blue-700 to-blue-500 text-white shadow-md"
-          : "bg-gradient-to-r from-blue-500 to-blue-400 text-white shadow-sm"
-      }
+          <div
+            className={`rounded-2xl px-3 py-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 ${estilos.inputSuave}`}
+          >
+            {/* BOTÓN NUEVA INSPECCIÓN */}
+            <button
+              onClick={() => setMostrarModal(true)}
+              className={`flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-3 sm:py-2 rounded-xl text-sm font-semibold transition
+      ${modoNoche
+                  ? "bg-gradient-to-r from-blue-700 to-blue-500 text-white shadow-md"
+                  : "bg-gradient-to-r from-blue-500 to-blue-400 text-white shadow-sm"
+                }
       hover:scale-105 active:scale-95`}
-  >
-    <Plus size={16} />
-    Nueva inspección de Energía
-  </button>
+            >
+              <Plus size={16} />
+              Nueva inspección de Energía
+            </button>
 
-  {/* BOTÓN EXPORTAR PDF */}
-  <button
-    onClick={() => exportarEnergiaPDF(inspecciones)}
-    className={`flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-3 sm:py-2 rounded-xl text-sm font-semibold transition
-      ${
-        modoNoche
-          ? "bg-gradient-to-r from-green-700 to-green-500 text-white shadow-md"
-          : "bg-gradient-to-r from-green-500 to-green-400 text-white shadow-sm"
-      }
+            {/* BOTÓN EXPORTAR PDF */}
+            <button
+              onClick={() => exportarEnergiaPDF(inspecciones)}
+              className={`flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-3 sm:py-2 rounded-xl text-sm font-semibold transition
+      ${modoNoche
+                  ? "bg-gradient-to-r from-green-700 to-green-500 text-white shadow-md"
+                  : "bg-gradient-to-r from-green-500 to-green-400 text-white shadow-sm"
+                }
       hover:scale-105 active:scale-95`}
-  >
-    📄 Exportar PDF
-  </button>
-</div>
+            >
+              📄 Exportar PDF
+            </button>
+          </div>
         </div>
 
         {/* FILTROS */}
@@ -894,12 +894,17 @@ export default function TablaEnergia({
                         {campos.map((c) => (
                           <th
                             key={c.key}
-                            className={`p-3 border ${modoNoche ? "border-[#353535]" : "border-gray-200"
-                              }`}
+                            className={`p-3 border ${modoNoche ? "border-[#353535]" : "border-gray-200"}`}
                           >
                             <div className="flex flex-col items-center gap-1">
-                              <img src={c.img} className="w-8 h-8 opacity-80" />
+
+                              {(() => {
+                                const Icono = c.icon;
+                                return <Icono className={`w-6 h-6 ${c.color}`} />;
+                              })()}
+
                               <span>{c.nombre}</span>
+
                             </div>
                           </th>
                         ))}

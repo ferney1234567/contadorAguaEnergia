@@ -5,6 +5,8 @@ import { CalendarDays, Search, Filter, Plus } from "lucide-react";
 import Swal from "sweetalert2";
 import MovilAgua from "./modalAgua";
 import { exportarSanitariosPDF } from "@/app/utils/exportadorSanitariosPDF";
+ import { Toilet, ShowerHead, Droplets, Wrench, Waves } from "lucide-react";
+
 
 type RegistroValores = {
   [filaKey: string]: { [campo: number]: { c?: string; nc?: string } };
@@ -27,13 +29,13 @@ export default function InpeccionesSanitarios({
     Array.isArray(dataInicial) ? dataInicial : []
   );
 
-  const campos = [
-    { key: 1, nombre: "Sanitarios", db: "sanitarios", img: "/img/sanitario.png" },
-    { key: 2, nombre: "Orinales", db: "orinales", img: "/img/orinales.png" },
-    { key: 3, nombre: "Duchas", db: "duchas", img: "/img/duchas.png" },
-    { key: 4, nombre: "Lavamanos", db: "lavamanos", img: "/img/lavamanos.png" },
-    { key: 5, nombre: "Llaves", db: "llaves", img: "/img/llaves.png" },
-  ];
+const campos = [
+  { key: 1, nombre: "Sanitarios", db: "sanitarios", icon: Toilet, color: "text-blue-500" },
+  { key: 2, nombre: "Orinales", db: "orinales", icon: Droplets, color: "text-yellow-500" },
+  { key: 3, nombre: "Duchas", db: "duchas", icon: ShowerHead, color: "text-cyan-500" },
+  { key: 4, nombre: "Lavamanos", db: "lavamanos", icon: Waves, color: "text-indigo-500" },
+  { key: 5, nombre: "Llaves", db: "llaves", icon: Wrench, color: "text-gray-500" },
+];
 
   const MESES = [
     { value: "Todos", label: "Todos" },
@@ -799,16 +801,20 @@ export default function InpeccionesSanitarios({
 
                         {campos.map((c) => (
                           <th
-                            key={c.key}
-                            className={`p-3 border ${
-                              modoNoche ? "border-[#353535]" : "border-gray-200"
-                            }`}
-                          >
-                            <div className="flex flex-col items-center gap-1">
-                              <img src={c.img} className="w-8 h-8 opacity-80" />
-                              <span>{c.nombre}</span>
-                            </div>
-                          </th>
+  key={c.key}
+  className={`p-3 border ${modoNoche ? "border-[#353535]" : "border-gray-200"}`}
+>
+  <div className="flex flex-col items-center gap-1">
+
+    {(() => {
+      const Icono = c.icon;
+      return <Icono className={`w-6 h-6 ${c.color}`} />;
+    })()}
+
+    <span>{c.nombre}</span>
+
+  </div>
+</th>
                         ))}
 
                         <th

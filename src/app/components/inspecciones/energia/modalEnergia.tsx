@@ -248,7 +248,7 @@ const guardar = async () => {
       {/* 🔴 HEADER ENVIA */}
       <div className="bg-gradient-to-r from-red-700 to-red-500 text-white px-5 py-4 flex items-center gap-3">
         
-        <img src="/img/envia3.png" className="w-9 h-9 rounded-full shadow-md" />
+        <img src="/img/logo.png" className="w-9 h-9 rounded-full shadow-md" />
 
         <div className="flex flex-col">
           <span className="font-semibold text-sm">

@@ -174,20 +174,21 @@ export default function MovilSanitario({
   return (
     <>
     {mostrarModal && (
-  <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-center justify-center z-50 px-3">
-
-    <div
-      className={`w-full max-w-md rounded-3xl overflow-hidden shadow-[0_20px_60px_rgba(0,0,0,0.25)] border transition-all
-      ${
-        modoNoche
-          ? "bg-[#0f0f0f] border-[#2a2a2a] text-white"
-          : "bg-white border-gray-200 text-gray-800"
-      }`}
-    >
+ <div className="fixed inset-0 bg-black/60 backdrop-blur-sm flex items-end justify-center z-50 px-2 sm:px-4">
+  
+  <div
+  className={`w-full max-w-sm sm:max-w-md md:max-w-lg rounded-2xl overflow-hidden 
+  shadow-[0_15px_40px_rgba(0,0,0,0.25)] border transition-all
+  ${
+    modoNoche
+      ? "bg-[#0f0f0f] border-[#2a2a2a] text-white"
+      : "bg-white border-gray-200 text-gray-800"
+  }`}
+>
 
       {/* 🔴 HEADER */}
-      <div className="bg-gradient-to-r from-red-600 to-red-500 text-white px-5 py-4 flex items-center gap-3">
-        <img src="/img/envia3.png" className="w-8 h-8 rounded-full shadow-md" />
+      <div className="bg-gradient-to-r from-red-600 to-red-500 text-white px-4 py-3 flex items-center gap-3">
+        <img src="/img/logo.png" className="w-6 h-6 rounded-full shadow-md" />
 
         <div className="flex flex-col">
           <span className="font-semibold text-sm">

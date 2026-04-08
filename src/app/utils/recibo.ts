@@ -40,7 +40,7 @@ export const generarReciboPDF = async (datosEnergia: any[]) => {
   // 🖼️ LOGO DESDE PUBLIC
   // =========================
   try {
-    const logoBase64 = await cargarImagen("/img/envia3.png");
+    const logoBase64 = await cargarImagen("/img/logo.png");
     doc.addImage(logoBase64, "PNG", 15, 5, 25, 25);
   } catch (error) {
     console.log("Error cargando logo");

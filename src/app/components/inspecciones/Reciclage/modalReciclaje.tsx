@@ -195,7 +195,7 @@ export default function MovilReciclaje({
             <div className="bg-red-600 text-white px-4 py-3 flex items-center gap-3">
 
               {/* LOGO */}
-              <img src="/img/envia3.png" className="w-7 h-7" />
+              <img src="/img/logo.png" className="w-7 h-7" />
 
               <span className="font-semibold text-sm">
                 Nueva inspección
