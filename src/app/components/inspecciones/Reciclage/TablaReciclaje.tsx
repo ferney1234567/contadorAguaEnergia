@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CalendarDays, Search, User2, Filter, Plus, Recycle, Trash2, AlertTriangle, ShieldCheck } from "lucide-react";
+import { CalendarDays, Search, User2, Filter, Plus, Recycle, Trash2, AlertTriangle, ShieldCheck, Edit } from "lucide-react";
 import Swal from "sweetalert2";
 import MovilReciclaje from "./modalReciclaje";
 import { exportarResiduosPDF } from "@/app/utils/exportadorResiduosPDF";
@@ -56,6 +56,7 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
   const [responsable, setResponsable] = useState("");
   const [fechaSesion, setFechaSesion] = useState(new Date().toISOString().split("T")[0],);
   const [mostrarModal, setMostrarModal] = useState(false);
+  const [editandoGrupo, setEditandoGrupo] = useState<string | null>(null);
 
   useEffect(() => {
     const guardado = localStorage.getItem("responsable");
@@ -451,28 +452,9 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
     registro: any
   ) => {
     try {
-      // =========================
-      // 🔒 VALIDACIONES
-      // =========================
       if (!area || !area.id) return;
 
-      // ❌ NO PERMITIR CREAR
-      if (!registro?.id) {
-        Swal.fire({
-          toast: true,
-          position: "top-end",
-          icon: "warning",
-          title: "No puedes crear registros aquí",
-          timer: 1500,
-          showConfirmButton: false,
-        });
-        return;
-      }
-
-      const responsableFinal =
-        (typeof responsable === "string" && responsable.trim()) ||
-        registro?.responsable ||
-        "";
+      const responsableFinal = responsable;
 
       if (!responsableFinal) {
         Swal.fire({
@@ -486,13 +468,9 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
         return;
       }
 
-      // =========================
-      // 📦 ARMAR BODY
-      // =========================
       const body = {
-        id: registro.id, // 🔥 SOLO UPDATE
-
-        fecha: registro.fecha, // 🔥 IMPORTANTE → NO CAMBIAR FECHA
+        id: registro?.id || null, // 🔥 si no existe → crea
+       fecha: fechaSesion,
         responsable: responsableFinal,
         area_id: area.id,
 
@@ -514,60 +492,88 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
           "",
       };
 
-      console.log("📤 ACTUALIZANDO:", body);
+      // =========================
+      // 🔥 ELIMINAR SI TODO ESTÁ VACÍO
+      // =========================
+      const total =
+        body.reciclables_c +
+        body.reciclables_nc +
+        body.ordinarios_c +
+        body.ordinarios_nc +
+        body.peligrosos_c +
+        body.peligrosos_nc +
+        body.presintos_c +
+        body.presintos_nc;
 
-      // =========================
-      // 🔥 SOLO PUT (UPDATE)
-      // =========================
-      const response = await fetch("/api/inspecciones-residuos", {
-        method: "PUT", // 🔥 FORZADO
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
-      });
-
-      // =========================
-      // ❌ ERROR BACKEND
-      // =========================
-      if (!response.ok) {
-        const errorText = await response.text();
-
-        Swal.fire({
-          icon: "error",
-          title: "Error del servidor",
-          text: errorText,
+      if (total === 0 && registro?.id) {
+        await fetch(`/api/inspecciones-residuos/${registro.id}`, {
+          method: "DELETE",
         });
 
-        return;
+        Swal.fire({
+          toast: true,
+          position: "top-end",
+          icon: "success",
+          title: "Registro eliminado",
+          timer: 1200,
+          showConfirmButton: false,
+        });
       }
 
       // =========================
-      // 🔄 REFRESCAR
+      // ✏️ UPDATE
+      // =========================
+      else if (registro?.id) {
+        await fetch("/api/inspecciones-residuos", {
+          method: "PUT",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+
+        Swal.fire({
+          toast: true,
+          position: "top-end",
+          icon: "success",
+          title: "Actualizado",
+          timer: 1000,
+          showConfirmButton: false,
+        });
+      }
+
+      // =========================
+      // ➕ CREATE
+      // =========================
+      else {
+        await fetch("/api/inspecciones-residuos", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+
+        Swal.fire({
+          toast: true,
+          position: "top-end",
+          icon: "success",
+          title: "Creado",
+          timer: 1000,
+          showConfirmButton: false,
+        });
+      }
+
+      // =========================
+      // 🔄 REFRESH
       // =========================
       const res = await fetch("/api/inspecciones-residuos");
       const data = await res.json();
       setInspecciones(data);
 
-      // =========================
-      // ✅ MENSAJE
-      // =========================
-      Swal.fire({
-        toast: true,
-        position: "top-end",
-        icon: "success",
-        title: "Actualizado correctamente",
-        timer: 1200,
-        showConfirmButton: false,
-      });
-
     } catch (error) {
-      console.error("🔥 ERROR GENERAL:", error);
+      console.error(error);
 
       Swal.fire({
         icon: "error",
-        title: "Error inesperado",
-        text: "No se pudo actualizar",
+        title: "Error",
+        text: "No se pudo guardar",
       });
     }
   };
@@ -612,8 +618,8 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
             <button
               onClick={() => setMostrarModal(true)}
               className={`flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-3 sm:py-2 rounded-xl text-sm font-semibold transition ${modoNoche
-                  ? "bg-gradient-to-r from-blue-700 to-blue-500 text-white shadow-md"
-                  : "bg-gradient-to-r from-blue-500 to-blue-400 text-white shadow-sm"
+                ? "bg-gradient-to-r from-blue-700 to-blue-500 text-white shadow-md"
+                : "bg-gradient-to-r from-blue-500 to-blue-400 text-white shadow-sm"
                 } hover:scale-105 active:scale-95`}
             >
               <Plus size={16} />
@@ -624,8 +630,8 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
             <button
               onClick={() => exportarResiduosPDF(inspecciones)}
               className={`flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-3 sm:py-2 rounded-xl text-sm font-semibold transition ${modoNoche
-                  ? "bg-gradient-to-r from-orange-700 to-orange-500 text-white shadow-md"
-                  : "bg-gradient-to-r from-orange-500 to-orange-400 text-white shadow-sm"
+                ? "bg-gradient-to-r from-orange-700 to-orange-500 text-white shadow-md"
+                : "bg-gradient-to-r from-orange-500 to-orange-400 text-white shadow-sm"
                 } hover:scale-105 active:scale-95`}
             >
               ♻️ Exportar PDF
@@ -798,6 +804,69 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
                     Semana {semana.replace("semana", "")} - {anio}
                   </h2>
 
+                  {/* 🔥 FECHA REAL DE LA SEMANA */}
+                  {registros.length > 0 && (
+                    <p className={`text-sm mt-1 ${modoNoche ? "text-gray-300" : "text-gray-600"}`}>
+                      📅 {new Date(registros[0].fecha).toLocaleDateString("es-CO", {
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                      })}
+                    </p>
+                  )}
+
+                  <div className="flex flex-col sm:flex-row justify-center items-center gap-3 mt-4">
+
+                    {/* ✏️ EDITAR */}
+                    <button
+                      onClick={() => {
+                        setEditandoGrupo(clave);
+
+                        Swal.fire({
+                          toast: true,
+                          position: "top-end",
+                          icon: "info",
+                          title: "Modo edición activado",
+                          timer: 1200,
+                          showConfirmButton: false,
+                        });
+                      }}
+                      className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 
+    ${modoNoche
+                          ? "bg-gradient-to-r from-red-600 to-pink-500 text-white shadow-lg shadow-red-900/30"
+                          : "bg-gradient-to-r from-red-500 to-pink-400 text-white shadow-md"
+                        }
+    hover:scale-105 hover:shadow-xl active:scale-95`}
+                    >
+                      <Edit size={16} />
+                      Editar
+                    </button>
+
+                    {/* ❌ QUITAR EDICIÓN */}
+                    <button
+                      onClick={() => {
+                        setEditandoGrupo(null);
+
+                        Swal.fire({
+                          toast: true,
+                          position: "top-end",
+                          icon: "info",
+                          title: "Edición desactivada",
+                          timer: 1200,
+                          showConfirmButton: false,
+                        });
+                      }}
+                      className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 
+    ${modoNoche
+                          ? "bg-gradient-to-r from-gray-700 to-gray-600 text-white shadow-lg shadow-black/30"
+                          : "bg-gradient-to-r from-gray-300 to-gray-200 text-gray-800 shadow-md"
+                        }
+    hover:scale-105 hover:shadow-xl active:scale-95`}
+                    >
+                      ❌ Quitar edición
+                    </button>
+
+                  </div>
                   <div className="flex justify-center gap-3 mt-3 flex-wrap">
                     <span
                       className={`px-3 py-1 rounded-full text-xs font-semibold ${modoNoche
@@ -881,8 +950,12 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
                         const filaKey = `${anio}__${semana}__${responsableGrupo}__${area.id}`;
 
                         const registro = registros.find(
-                          (r) => r.area_id === area.id
+                          (r) =>
+                            r.area_id === area.id &&
+                            r.responsable === responsableGrupo &&
+                            r.fecha?.split("T")[0] === registros[0]?.fecha?.split("T")[0]
                         );
+
                         return (
                           <tr
                             key={filaKey}
@@ -899,6 +972,7 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
                                 }`}
                             >
                               <input
+                                disabled={editandoGrupo !== clave}
                                 value={area.nombre || ""}
                                 onChange={(e) => {
                                   const nuevo = e.target.value;
@@ -1029,7 +1103,9 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
                                       }`}
                                   >
                                     <div className="grid grid-cols-2 gap-2">
+                                      {/* ✔ CUMPLE */}
                                       <input
+                                        disabled={editandoGrupo !== clave}
                                         value={
                                           valores?.[filaKey]?.[c.key]?.c !== undefined
                                             ? valores[filaKey][c.key].c
@@ -1045,14 +1121,19 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
                                             guardarFila(filaKey, area, registro);
                                           }
                                         }}
-
-                                        className={`w-full text-center rounded-lg py-1 border font-semibold ${modoNoche
-                                          ? "bg-[#111] text-white border-[#2f2f2f]"
-                                          : "bg-white text-gray-700 border-gray-200"
+                                        placeholder="0"
+                                        className={`w-full text-center rounded-lg py-1 border font-semibold transition ${editandoGrupo === clave
+                                            ? "ring-2 ring-green-500"
+                                            : ""
+                                          } ${modoNoche
+                                            ? "bg-[#111] text-white border-[#2f2f2f]"
+                                            : "bg-white text-gray-700 border-gray-200"
                                           }`}
                                       />
 
+                                      {/* ❌ NO CUMPLE */}
                                       <input
+                                        disabled={editandoGrupo !== clave}
                                         value={
                                           valores?.[filaKey]?.[c.key]?.nc !== undefined
                                             ? valores[filaKey][c.key].nc
@@ -1068,9 +1149,13 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
                                             guardarFila(filaKey, area, registro);
                                           }
                                         }}
-                                        className={`w-full text-center rounded-lg py-1 border font-semibold ${modoNoche
-                                          ? "bg-[#111] text-white border-[#2f2f2f]"
-                                          : "bg-white text-gray-700 border-gray-200"
+                                        placeholder="0"
+                                        className={`w-full text-center rounded-lg py-1 border font-semibold transition ${editandoGrupo === clave
+                                            ? "ring-2 ring-red-500"
+                                            : ""
+                                          } ${modoNoche
+                                            ? "bg-[#111] text-white border-[#2f2f2f]"
+                                            : "bg-white text-gray-700 border-gray-200"
                                           }`}
                                       />
                                     </div>
@@ -1098,24 +1183,25 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
                             >
                               <div className="flex flex-col gap-2">
                                 <textarea
-                                  disabled={!registro}
+                                  disabled={editandoGrupo !== clave || !registro}
                                   value={
-
                                     observaciones[filaKey] !== undefined
                                       ? observaciones[filaKey]
                                       : registro?.observacion || ""
                                   }
-                                  onChange={(e) =>
-                                    handleObs(filaKey, e.target.value)
-                                  }
+                                  onChange={(e) => handleObs(filaKey, e.target.value)}
                                   onKeyDown={(e) => {
                                     if (e.key === "Enter") {
                                       guardarFila(filaKey, area, registro);
                                     }
                                   }}
-                                  className={`w-full p-2 rounded-xl border ${modoNoche
-                                    ? "bg-[#222] text-white border-[#2f2f2f]"
-                                    : "bg-gray-50 text-gray-800 border-gray-200"
+                                  placeholder="Escribe una observación..."
+                                  className={`w-full p-2 rounded-xl border transition ${editandoGrupo === clave
+                                      ? "ring-2 ring-blue-500"
+                                      : ""
+                                    } ${modoNoche
+                                      ? "bg-[#222] text-white border-[#2f2f2f]"
+                                      : "bg-gray-50 text-gray-800 border-gray-200"
                                     }`}
                                 />
 
