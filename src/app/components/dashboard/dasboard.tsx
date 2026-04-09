@@ -38,15 +38,15 @@ const totalAnual = (lecturas: any) =>
   }, 0);
 
 const obtenerColorAguaPorRango = (valor: number) => {
-  if (valor <= 54) return "#3b82f6"; // azul
-  if (valor <= 59) return "#22c55e"; // verde
+  if (valor <= 54) return "#0000CC"; // azul
+  if (valor <= 59) return "#3E6102 "; // verde
   if (valor <= 64) return "#facc15"; // amarillo
   return "#ef4444"; // rojo
 };
 
 const obtenerColorEnergiaPorRango = (valor: number) => {
-  if (valor <= 1514) return "#3b82f6"; // 🔵 Azul
-  if (valor <= 1683) return "#22c55e"; // 🟢 Verde
+  if (valor <= 1514) return "#0000CC"; // 🔵 Azul
+  if (valor <= 1683) return "#3E6102 "; // 🟢 Verde
   if (valor <= 1852) return "#facc15"; // 🟡 Amarillo
   return "#ef4444"; // 🔴 Rojo
 };
@@ -113,7 +113,7 @@ const DashboardInicio: FC<Props> = ({ modoNoche }) => {
 
 
   const colores = {
-    agua: "#0ea5e9",
+    agua: "#0000CC ",
     aguaGradient: "rgba(14,165,233,0.25)",
     energia: "#f59e0b",
     energiaGradient: "rgba(245,158,11,0.25)",
@@ -121,7 +121,7 @@ const DashboardInicio: FC<Props> = ({ modoNoche }) => {
   };
 
   const coloresMeses = [
-    "#3b82f6", // Ene
+    "#0000CC ", // Ene
     "#0ea5e9", // Feb
     "#22c55e", // Mar
     "#84cc16", // Abr
@@ -185,18 +185,18 @@ const DashboardInicio: FC<Props> = ({ modoNoche }) => {
         data: consumoAguaMensual,
         backgroundColor: consumoAguaMensual.map((valor) => {
           if (valor <= 54) {
-            return "#3b82f6"; // 🔵 Azul (bien)
+            return "#0000CC "; // 🔵 Azul (bien)
           }
 
           if (valor <= 59) {
-            return "#22c55e"; // 🟢 Verde (normal)
+            return "#005200 "; // 🟢 Verde (normal)
           }
 
           if (valor <= 64) {
             return "#facc15"; // 🟡 Amarillo (alerta)
           }
 
-          return "#ef4444"; // 🔴 Rojo (alto consumo)
+          return "#C40000"; // 🔴 Rojo (alto consumo)
         }),
         borderRadius: 10,
       },
@@ -211,18 +211,18 @@ const DashboardInicio: FC<Props> = ({ modoNoche }) => {
       data: consumoEnergiaMensual,
       backgroundColor: consumoEnergiaMensual.map((valor) => {
         if (valor <= 1514) {
-          return "#3b82f6"; // 🔵 Azul (óptimo)
+          return "#0000CC "; // 🔵 Azul (óptimo)
         }
 
         if (valor <= 1683) {
-          return "#22c55e"; // 🟢 Verde (normal)
+          return "#005200 "; // 🟢 Verde (normal)
         }
 
         if (valor <= 1852) {
           return "#facc15"; // 🟡 Amarillo (alerta)
         }
 
-        return "#ef4444"; // 🔴 Rojo (crítico)
+        return "#C40000"; // 🔴 Rojo (crítico)
       }),
       borderRadius: 10,
     },
@@ -248,12 +248,12 @@ const DashboardInicio: FC<Props> = ({ modoNoche }) => {
           // 🔥 usa el último valor (mes actual o último con datos)
           const ultimoValor = consumoAguaMensual.findLast(v => v > 0) || 0;
 
-          let color = "#3b82f6"; // default azul
+          let color = "#0000CC "; // default azul
 
           if (ultimoValor <= 54) color = "#3b82f6"; // azul
-          else if (ultimoValor <= 59) color = "#22c55e"; // verde
-          else if (ultimoValor <= 64) color = "#facc15"; // amarillo
-          else color = "#ef4444"; // rojo
+          else if (ultimoValor <= 59) color = "#005200"; // verde
+          else if (ultimoValor <= 64) color = "#efb810"; // amarillo
+          else color = "#C40000"; // rojo
 
           gradient.addColorStop(0, color + "80"); // arriba fuerte
           gradient.addColorStop(1, color + "05"); // abajo suave
@@ -269,18 +269,18 @@ const DashboardInicio: FC<Props> = ({ modoNoche }) => {
         // 🔥 COLORES POR RANGO
         pointBackgroundColor: consumoAguaMensual.map((v) => {
           if (v <= 54) {
-            return "#3b82f6"; // 🔵 Azul
+            return "#0000CC "; // 🔵 Azul
           }
 
           if (v <= 59) {
-            return "#22c55e"; // 🟢 Verde
+            return "#005200"; // 🟢 Verde
           }
 
           if (v <= 64) {
             return "#facc15"; // 🟡 Amarillo
           }
 
-          return "#ef4444"; // 🔴 Rojo
+          return "#C40000"; // 🔴 Rojo
         }),
 
         pointBorderColor: "#ffffff",
@@ -321,12 +321,12 @@ const dataAreaEnergia = {
 
         const ultimoValor = consumoEnergiaMensual.findLast(v => v > 0) || 0;
 
-        let color = "#3b82f6";
+        let color = "#0000CC ";
 
         if (ultimoValor <= 1514) color = "#3b82f6"; // 🔵 Azul
-        else if (ultimoValor <= 1683) color = "#22c55e"; // 🟢 Verde
+        else if (ultimoValor <= 1683) color = "#005200"; // 🟢 Verde
         else if (ultimoValor <= 1852) color = "#facc15"; // 🟡 Amarillo
-        else color = "#ef4444"; // 🔴 Rojo
+        else color = "#C40000"; // 🔴 Rojo
 
         gradient.addColorStop(0, color + "80");
         gradient.addColorStop(1, color + "05");
@@ -343,9 +343,9 @@ const dataAreaEnergia = {
       // 🔥 PUNTOS POR RANGO
       pointBackgroundColor: consumoEnergiaMensual.map((v) => {
         if (v <= 1514) return "#3b82f6"; // 🔵 Azul
-        if (v <= 1683) return "#22c55e"; // 🟢 Verde
+        if (v <= 1683) return "#005200"; // 🟢 Verde
         if (v <= 1852) return "#facc15"; // 🟡 Amarillo
-        return "#ef4444"; // 🔴 Rojo
+        return "#C40000"; // 🔴 Rojo
       }),
 
       pointBorderColor: "#ffffff",
@@ -600,18 +600,18 @@ const dataAreaEnergia = {
         data: consumoAguaMensual,
         backgroundColor: consumoAguaMensual.map((v) => {
           if (v <= 54) {
-            return "#3b82f6"; // 🔵 Azul
+            return "#0000CC"; // 🔵 Azul
           }
 
           if (v <= 59) {
-            return "#22c55e"; // 🟢 Verde
+            return "#005200"; // 🟢 Verde
           }
 
           if (v <= 64) {
             return "#facc15"; // 🟡 Amarillo
           }
 
-          return "#ef4444"; // 🔴 Rojo
+          return "#C40000"; // 🔴 Rojo
         }),
         borderRadius: 6,
         barThickness: 14,
@@ -636,18 +636,18 @@ const dataAreaEnergia = {
       data: consumoEnergiaMensual,
       backgroundColor: consumoEnergiaMensual.map((v) => {
         if (v <= 1514) {
-          return "#3b82f6"; // 🔵 Azul (óptimo)
+          return "#0000CC"; // 🔵 Azul (óptimo)
         }
 
         if (v <= 1683) {
-          return "#22c55e"; // 🟢 Verde (normal)
+          return "#005200"; // 🟢 Verde (normal)
         }
 
         if (v <= 1852) {
           return "#facc15"; // 🟡 Amarillo (alerta)
         }
 
-        return "#ef4444"; // 🔴 Rojo (alto consumo)
+        return "#C40000"; // 🔴 Rojo (alto consumo)
       }),
       borderRadius: 6,
       barThickness: 14,
