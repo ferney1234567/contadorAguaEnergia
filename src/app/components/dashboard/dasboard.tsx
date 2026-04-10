@@ -99,6 +99,10 @@ const DashboardInicio: FC<Props> = ({ modoNoche }) => {
   const [metasEnergiaMensual, setMetasEnergiaMensual] = useState<number[]>(Array(12).fill(0));
   const [comparativoEnergia, setComparativoEnergia] = useState<number[]>(Array(12).fill(0));
   const [comparativoAgua, setComparativoAgua] = useState<number[]>(Array(12).fill(0));
+  const [resmasMensual, setResmasMensual] = useState<number[]>(Array(12).fill(0));
+const [tonnerMensual, setTonnerMensual] = useState<number[]>(Array(12).fill(0));
+const totalResmas = resmasMensual.reduce((a, b) => a + b, 0);
+const totalTonner = tonnerMensual.reduce((a, b) => a + b, 0);
 
   const totalAguaComparativo = comparativoAgua.reduce((a, b) => a + b, 0)
   const totalEnergiaComparativo = comparativoEnergia.reduce((a, b) => a + b, 0)
@@ -583,6 +587,103 @@ const dataAreaEnergia = {
   }, [anio]);
 
 
+  useEffect(() => {
+  const cargarResmas = async () => {
+    try {
+      const res = await fetch("/api/resmas");
+      const data = await res.json();
+
+      const meses = Array(12).fill(0);
+
+      data.forEach((item: any) => {
+        if (Number(item.anio) === Number(anio)) {
+          const mesIndex = Number(item.mes) - 1;
+          meses[mesIndex] += Number(item.cantidad || 0);
+        }
+      });
+
+      setResmasMensual(meses);
+    } catch (error) {
+      console.error("Error resmas", error);
+    }
+  };
+
+  const cargarTonner = async () => {
+    try {
+      const res = await fetch("/api/tonners");
+      const data = await res.json();
+
+      const meses = Array(12).fill(0);
+
+      data.forEach((item: any) => {
+        const fecha = new Date(item.fecha);
+        if (fecha.getFullYear() === anio) {
+          const mesIndex = fecha.getMonth();
+          meses[mesIndex] += Number(item.cantidad || 0);
+        }
+      });
+
+      setTonnerMensual(meses);
+    } catch (error) {
+      console.error("Error tonner", error);
+    }
+  };
+
+  cargarResmas();
+  cargarTonner();
+}, [anio]);
+
+
+const dataResmas = {
+  labels: meses,
+  datasets: [
+    {
+      label: "Consumo de papel (resmas)",
+      data: resmasMensual,
+      borderColor: "#22c55e",
+      backgroundColor: "rgba(34,197,94,0.25)",
+      fill: true,
+      tension: 0.5,
+      pointRadius: 4,
+      pointBackgroundColor: "#22c55e",
+    },
+  ],
+};
+
+const dataTonner = {
+  labels: meses,
+  datasets: [
+    {
+      label: "Uso de tonner",
+      data: tonnerMensual,
+      backgroundColor: "rgba(59,130,246,0.2)",
+      borderColor: "#3b82f6",
+      pointBackgroundColor: "#8b5cf6",
+      borderWidth: 2,
+    },
+  ],
+};
+
+const opcionesRadar = {
+  responsive: true,
+  scales: {
+    r: {
+      ticks: {
+        color: modoNoche ? "#ccc" : "#444",
+      },
+      grid: {
+        color: modoNoche ? "#333" : "#ddd",
+      },
+    },
+  },
+  plugins: {
+    legend: {
+      labels: { color: modoNoche ? "#fff" : "#000" },
+    },
+  },
+};
+
+
 
 
   const dataDiferenciaAguaMensual = {
@@ -912,7 +1013,7 @@ const dataAreaEnergia = {
   <Bar data={dataEnergia} options={opcionesBarras} />
 
 </div>
-      </div>|
+      </div>
 
 
       {/* ÁREAS */}
@@ -1148,11 +1249,56 @@ const dataAreaEnergia = {
 
           </div>
 
+          
+
         </div>
 
 
 
       </div>
+
+      {/* ================= RESMAS Y TONNER ================= */}
+<div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-12">
+
+  {/* RESMAS */}
+  <div className={`p-6 rounded-xl shadow-lg border ${cardBg} ${cardBorder}`}>
+    
+    <h3 className={`font-bold text-lg mb-4 flex items-center gap-2 ${textColor}`}>
+      📄 Consumo de Resmas
+    </h3>
+
+    {/* TOTAL ANUAL */}
+    <div className="mb-4 text-center">
+      <p className="text-3xl font-bold text-green-500">
+        {totalResmas.toLocaleString()}
+      </p>
+      <span className={textSoft}>Total anual</span>
+    </div>
+
+    <Line data={dataResmas} options={opcionesArea} />
+
+  </div>
+
+  {/* TONNER */}
+  <div className={`p-6 rounded-xl shadow-lg border ${cardBg} ${cardBorder}`}>
+    
+    <h3 className={`font-bold text-lg mb-4 flex items-center gap-2 ${textColor}`}>
+      🖨️ Consumo de Tonner
+    </h3>
+
+    {/* TOTAL ANUAL */}
+    <div className="mb-4 text-center">
+      <p className="text-3xl font-bold text-blue-500">
+        {totalTonner.toLocaleString()}
+      </p>
+      <span className={textSoft}>Total anual</span>
+    </div>
+
+    <Bar data={dataTonner} options={opcionesBarras} />
+
+  </div>
+
+</div>
 
     </div>
 

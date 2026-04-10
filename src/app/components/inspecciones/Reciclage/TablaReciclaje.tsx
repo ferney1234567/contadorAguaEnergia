@@ -121,45 +121,61 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
   };
 
   useEffect(() => {
-    if (!dataBackend.length) return;
-    if (modoNuevaInspeccion) return;
-    const nuevosValores: RegistroValores = {};
-    const nuevasObservaciones: RegistroObservaciones = {};
-    dataBackend.forEach((area) => {
-      const filaKey = `${fechaSesion}__${responsable}__${area.id}`;
-      const inspeccion = inspecciones
-        .filter(
-          (i) =>
-            i.area_id === area.id &&
-            i.responsable === responsable &&
-            i.fecha?.split("T")[0] === fechaSesion,
-        )
-        .slice(-1)[0];
-      if (!inspeccion) return;
-      nuevosValores[filaKey] = {
-        1: {
-          c: String(inspeccion.reciclables_c || ""),
-          nc: String(inspeccion.reciclables_nc || ""),
-        },
-        2: {
-          c: String(inspeccion.ordinarios_c || ""),
-          nc: String(inspeccion.ordinarios_nc || ""),
-        },
-        3: {
-          c: String(inspeccion.peligrosos_c || ""),
-          nc: String(inspeccion.peligrosos_nc || ""),
-        },
-        4: {
-          c: String(inspeccion.presintos_c || ""),
-          nc: String(inspeccion.presintos_nc || ""),
-        },
-      };
-      nuevasObservaciones[filaKey] = inspeccion.observacion || "";
-    });
-    setValores(nuevosValores);
-    setObservaciones(nuevasObservaciones);
-  }, [dataBackend, inspecciones, responsable, fechaSesion]);
+  if (!dataBackend.length) return;
+  if (modoNuevaInspeccion) return;
+  if (editandoGrupo) return; // 🔥 CLAVE
 
+  const nuevosValores: RegistroValores = {};
+  const nuevasObservaciones: RegistroObservaciones = {};
+
+  dataBackend.forEach((area) => {
+    const filaKey = `${fechaSesion}__${responsable}__${area.id}`;
+
+    const inspeccion = inspecciones
+      .filter(
+        (i) =>
+          i.area_id === area.id &&
+          i.responsable === responsable &&
+          i.fecha?.split("T")[0] === fechaSesion
+      )
+      .slice(-1)[0];
+
+    if (!inspeccion) return;
+
+    nuevosValores[filaKey] = {
+      1: {
+        c: String(inspeccion.reciclables_c || ""),
+        nc: String(inspeccion.reciclables_nc || ""),
+      },
+      2: {
+        c: String(inspeccion.ordinarios_c || ""),
+        nc: String(inspeccion.ordinarios_nc || ""),
+      },
+      3: {
+        c: String(inspeccion.peligrosos_c || ""),
+        nc: String(inspeccion.peligrosos_nc || ""),
+      },
+      4: {
+        c: String(inspeccion.presintos_c || ""),
+        nc: String(inspeccion.presintos_nc || ""),
+      },
+    };
+
+    nuevasObservaciones[filaKey] = inspeccion.observacion || "";
+  });
+
+  // 🔥 IMPORTANTE: NO REEMPLAZAR → MEZCLAR
+  setValores((prev) => ({
+    ...nuevosValores,
+    ...prev,
+  }));
+
+  setObservaciones((prev) => ({
+    ...nuevasObservaciones,
+    ...prev,
+  }));
+
+}, [dataBackend, inspecciones, responsable, fechaSesion, editandoGrupo]);
 
   useEffect(() => {
     const init = async () => {
@@ -452,156 +468,139 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
     return 0;
   };
 
-  const guardarTodo = async (responsableGrupo: string, fecha: string) => {
-    try {
-      if (!responsableGrupo) return;
+  const guardarFila = async (
+  filaKey: string,
+  area: any,
+  registro: any
+) => {
+  try {
+    if (!area?.id) return;
 
-      const promesas: Promise<any>[] = [];
+    const responsableFinal = responsable;
 
-      dataBackend.forEach((area: any) => {
-        const filaKey = `${fecha}__${responsableGrupo}__${area.id}`;
-
-        const registro = inspecciones.find(
-          (r) =>
-            r.area_id === area.id &&
-            r.responsable === responsableGrupo &&
-            r.fecha?.split("T")[0] === fecha
-        );
-
-        const body = {
-          id: registro?.id || null,
-          fecha,
-          responsable: responsableGrupo,
-          area_id: area.id,
-
-          reciclables_c: Number(valores?.[filaKey]?.[1]?.c || 0),
-          reciclables_nc: Number(valores?.[filaKey]?.[1]?.nc || 0),
-
-          ordinarios_c: Number(valores?.[filaKey]?.[2]?.c || 0),
-          ordinarios_nc: Number(valores?.[filaKey]?.[2]?.nc || 0),
-
-          peligrosos_c: Number(valores?.[filaKey]?.[3]?.c || 0),
-          peligrosos_nc: Number(valores?.[filaKey]?.[3]?.nc || 0),
-
-          presintos_c: Number(valores?.[filaKey]?.[4]?.c || 0),
-          presintos_nc: Number(valores?.[filaKey]?.[4]?.nc || 0),
-
-          observacion: observaciones[filaKey] || "",
-        };
-
-        const total =
-          body.reciclables_c +
-          body.reciclables_nc +
-          body.ordinarios_c +
-          body.ordinarios_nc +
-          body.peligrosos_c +
-          body.peligrosos_nc +
-          body.presintos_c +
-          body.presintos_nc;
-
-        // ❌ eliminar
-        if (total === 0) {
-          if (registro?.id) {
-            promesas.push(
-              fetch(`/api/inspecciones-residuos?id=${registro.id}`, {
-                method: "DELETE",
-              })
-            );
-          }
-
-          // 🔥 LIMPIAR FRONT TAMBIÉN
-          delete valores[filaKey];
-          delete observaciones[filaKey];
-
-          return;
-        } else {
-          // 🔥 UPSERT
-          promesas.push(
-            fetch("/api/inspecciones-residuos", {
-              method: "POST",
-              headers: {
-                "Content-Type": "application/json",
-              },
-              body: JSON.stringify(body),
-            })
-          );
-        }
-      });
-
-      await Promise.all(promesas);
-
-      const res = await fetch("/api/inspecciones-residuos");
-      const data = await res.json();
-      setInspecciones(data);
-
+    if (!responsableFinal) {
       Swal.fire({
-        icon: "success",
-        title: "Guardado completo",
+        toast: true,
+        position: "top-end",
+        icon: "warning",
+        title: "Debes seleccionar un responsable",
         timer: 1500,
         showConfirmButton: false,
       });
+      return;
+    }
 
-      setEditandoGrupo(null);
-    } catch (error) {
-      console.error(error);
+    let registroSeguro = registro;
+    if (registro && registro.responsable !== responsableFinal) {
+      registroSeguro = null;
+    }
+
+    const body = {
+      id: registroSeguro?.id || null,
+      fecha: fechaSesion,
+      responsable: responsableFinal,
+      area_id: area.id,
+
+      reciclables_c: obtenerValor(filaKey, 1, "c", registroSeguro),
+      reciclables_nc: obtenerValor(filaKey, 1, "nc", registroSeguro),
+
+      ordinarios_c: obtenerValor(filaKey, 2, "c", registroSeguro),
+      ordinarios_nc: obtenerValor(filaKey, 2, "nc", registroSeguro),
+
+      peligrosos_c: obtenerValor(filaKey, 3, "c", registroSeguro),
+      peligrosos_nc: obtenerValor(filaKey, 3, "nc", registroSeguro),
+
+      presintos_c: obtenerValor(filaKey, 4, "c", registroSeguro),
+      presintos_nc: obtenerValor(filaKey, 4, "nc", registroSeguro),
+
+      observacion:
+        observaciones[filaKey] ||
+        registroSeguro?.observacion ||
+        "",
+    };
+
+    const total =
+      body.reciclables_c +
+      body.reciclables_nc +
+      body.ordinarios_c +
+      body.ordinarios_nc +
+      body.peligrosos_c +
+      body.peligrosos_nc +
+      body.presintos_c +
+      body.presintos_nc;
+
+    // 🔥 SOLO GUARDAR SI HAY DATOS
+    if (total > 0) {
+      await fetch("/api/inspecciones-residuos", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(body),
+      });
 
       Swal.fire({
-        icon: "error",
-        title: "Error al guardar",
+        toast: true,
+        position: "top-end",
+        icon: "success",
+        title: registroSeguro?.id
+          ? "Registro actualizado"
+          : "Registro creado",
+        timer: 1200,
+        showConfirmButton: false,
       });
     }
-  };
 
-  const guardarFila = async (
-    filaKey: string,
-    area: any,
-    registro: any
-  ) => {
-    try {
-      if (!area?.id) return;
+    // 🚫 YA NO ELIMINAMOS AUTOMÁTICO
 
-      const responsableFinal = responsable;
+    const res = await fetch("/api/inspecciones-residuos");
+    const data = await res.json();
+    setInspecciones(data);
 
-      if (!responsableFinal) {
-        Swal.fire({
-          toast: true,
-          position: "top-end",
-          icon: "warning",
-          title: "Debes seleccionar un responsable",
-          timer: 1500,
-          showConfirmButton: false,
-        });
-        return;
-      }
+  } catch (error) {
+    console.error(error);
 
-      // 🔥 EVITA CRUZAR RESPONSABLES
-      let registroSeguro = registro;
-      if (registro && registro.responsable !== responsableFinal) {
-        registroSeguro = null;
-      }
+    Swal.fire({
+      icon: "error",
+      title: "Error",
+      text: "No se pudo guardar el registro",
+    });
+  }
+};
+
+  const guardarTodo = async (responsableGrupo: string, fecha: string) => {
+  try {
+    if (!responsableGrupo) return;
+
+    const promesas: Promise<any>[] = [];
+
+    dataBackend.forEach((area: any) => {
+      const filaKey = `${fecha}__${responsableGrupo}__${area.id}`;
+
+      const registro = inspecciones.find(
+        (r) =>
+          r.area_id === area.id &&
+          r.responsable === responsableGrupo &&
+          r.fecha?.split("T")[0] === fecha
+      );
 
       const body = {
-        id: registroSeguro?.id || null,
-        fecha: fechaSesion,
-        responsable: responsableFinal,
+        id: registro?.id || null,
+        fecha,
+        responsable: responsableGrupo,
         area_id: area.id,
 
-        reciclables_c: obtenerValor(filaKey, 1, "c", registroSeguro),
-        reciclables_nc: obtenerValor(filaKey, 1, "nc", registroSeguro),
+        reciclables_c: Number(valores?.[filaKey]?.[1]?.c || 0),
+        reciclables_nc: Number(valores?.[filaKey]?.[1]?.nc || 0),
 
-        ordinarios_c: obtenerValor(filaKey, 2, "c", registroSeguro),
-        ordinarios_nc: obtenerValor(filaKey, 2, "nc", registroSeguro),
+        ordinarios_c: Number(valores?.[filaKey]?.[2]?.c || 0),
+        ordinarios_nc: Number(valores?.[filaKey]?.[2]?.nc || 0),
 
-        peligrosos_c: obtenerValor(filaKey, 3, "c", registroSeguro),
-        peligrosos_nc: obtenerValor(filaKey, 3, "nc", registroSeguro),
+        peligrosos_c: Number(valores?.[filaKey]?.[3]?.c || 0),
+        peligrosos_nc: Number(valores?.[filaKey]?.[3]?.nc || 0),
 
-        presintos_c: obtenerValor(filaKey, 4, "c", registroSeguro),
-        presintos_nc: obtenerValor(filaKey, 4, "nc", registroSeguro),
+        presintos_c: Number(valores?.[filaKey]?.[4]?.c || 0),
+        presintos_nc: Number(valores?.[filaKey]?.[4]?.nc || 0),
 
-        observacion:
-          observaciones[filaKey] ||
-          registroSeguro?.observacion ||
-          "",
+        observacion: observaciones[filaKey] || "",
       };
 
       const total =
@@ -614,63 +613,50 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
         body.presintos_c +
         body.presintos_nc;
 
-      // =========================
-      // ❌ ELIMINAR
-      // =========================
-      if (total === 0 && registroSeguro?.id) {
-        await fetch(`/api/inspecciones-residuos?id=${registroSeguro.id}`, {
-          method: "DELETE",
-        });
-
-        Swal.fire({
-          toast: true,
-          position: "top-end",
-          icon: "success",
-          title: "Registro eliminado",
-          timer: 1200,
-          showConfirmButton: false,
-        });
+      // 🔥 SOLO GUARDAR (NO BORRAR AUTOMÁTICAMENTE)
+      if (total > 0) {
+        promesas.push(
+          fetch("/api/inspecciones-residuos", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(body),
+          })
+        );
       }
 
-      // =========================
-      // 🔥 UPSERT (CREAR / EDITAR)
-      // =========================
-      else {
-        await fetch("/api/inspecciones-residuos", {
-          method: "POST", // 🔥 SOLO POST
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        });
+      // 🚨 IMPORTANTE:
+      // YA NO BORRAMOS AUTOMÁTICAMENTE
+      // SOLO se elimina con botón manual (si quieres luego lo agregamos)
+    });
 
-        Swal.fire({
-          toast: true,
-          position: "top-end",
-          icon: "success",
-          title: registroSeguro?.id
-            ? "Registro actualizado"
-            : "Registro creado",
-          timer: 1200,
-          showConfirmButton: false,
-        });
-      }
+    await Promise.all(promesas);
 
-      // =========================
-      // 🔄 REFRESH
-      // =========================
-      const res = await fetch("/api/inspecciones-residuos");
-      const data = await res.json();
-      setInspecciones(data);
+    const res = await fetch("/api/inspecciones-residuos");
+    const data = await res.json();
+    setInspecciones(data);
 
-    } catch (error) {
-      console.error(error);
+    Swal.fire({
+      icon: "success",
+      title: "Guardado completo",
+      timer: 1500,
+      showConfirmButton: false,
+    });
 
-      Swal.fire({
-        icon: "error",
-        title: "Error",
-        text: "No se pudo guardar el registro",
-      });
-    }
-  };
+    setEditandoGrupo(null);
+
+  } catch (error) {
+    console.error(error);
+
+    Swal.fire({
+      icon: "error",
+      title: "Error al guardar",
+    });
+  }
+};
+
+  
 
   return (
     <div className={`w-full rounded-3xl p-3 sm:p-4 md:p-6 ${estilos.tarjeta}`}>
