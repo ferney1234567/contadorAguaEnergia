@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { Search, Plus, Printer, Layers, Pencil, Trash2, Save, CalendarDays, Package, User, ScanLine, Filter, RefreshCcw, FileText, } from "lucide-react";
+import { Search, Plus, Printer, Layers, Pencil, Trash2, Save, CalendarDays, Package, User, ScanLine, Filter, RefreshCcw, FileText, Settings, } from "lucide-react";
 import Swal from "sweetalert2";
 import ModalAreasTonner from "./ModalAreasTonner";
 
@@ -18,6 +18,8 @@ interface Tonner {
   modelo_impresora: string;
   cantidad: number;
   fecha: string;
+  created_at?: string; // 🔥 nuevo
+  updated_at?: string; // 🔥 nuevo
 }
 
 export default function TablaTonners({ modoNoche }: { modoNoche: boolean }) {
@@ -256,23 +258,23 @@ export default function TablaTonners({ modoNoche }: { modoNoche: boolean }) {
   };
 
   const filtrados = tonners.filter((t) => {
-  const nombreArea = areas.find((a) => a.id === t.area_id)?.nombre || "";
-  const q = busqueda.toLowerCase();
+    const nombreArea = areas.find((a) => a.id === t.area_id)?.nombre || "";
+    const q = busqueda.toLowerCase();
 
-  const anio = t.fecha?.split("-")[0];
-  const mes = t.fecha?.split("-")[1];
+    const anio = t.fecha?.split("-")[0];
+    const mes = t.fecha?.split("-")[1];
 
-  const cumpleBusqueda =
-    (t.modelo_impresora || "").toLowerCase().includes(q) ||
-    (t.responsable || "").toLowerCase().includes(q) ||
-    nombreArea.toLowerCase().includes(q);
+    const cumpleBusqueda =
+      (t.modelo_impresora || "").toLowerCase().includes(q) ||
+      (t.responsable || "").toLowerCase().includes(q) ||
+      nombreArea.toLowerCase().includes(q);
 
-  const cumpleArea = filtroArea ? String(t.area_id) === filtroArea : true;
-  const cumpleAnio = filtroAnio ? anio === filtroAnio : true;
-  const cumpleMes = filtroMes ? mes === filtroMes : true;
+    const cumpleArea = filtroArea ? String(t.area_id) === filtroArea : true;
+    const cumpleAnio = filtroAnio ? anio === filtroAnio : true;
+    const cumpleMes = filtroMes ? mes === filtroMes : true;
 
-  return cumpleBusqueda && cumpleArea && cumpleAnio && cumpleMes;
-});
+    return cumpleBusqueda && cumpleArea && cumpleAnio && cumpleMes;
+  });
 
   const totalRegistros = tonners.length;
   const totalCantidad = tonners.reduce((acc, item) => acc + (item.cantidad || 0), 0);
@@ -283,8 +285,8 @@ export default function TablaTonners({ modoNoche }: { modoNoche: boolean }) {
       {/* HEADER PRINCIPAL */}
       <div
         className={`rounded-3xl p-5 sm:p-6 mb-6 ${estilos.card} bg-gradient-to-r ${modoNoche
-            ? "from-[#161616] to-[#101010]"
-            : "from-white to-gray-50"
+          ? "from-[#161616] to-[#101010]"
+          : "from-white to-gray-50"
           }`}
       >
         <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-5">
@@ -347,6 +349,7 @@ export default function TablaTonners({ modoNoche }: { modoNoche: boolean }) {
           </div>
         </div>
 
+
         <div className={`rounded-2xl p-5 ${estilos.card}`}>
           <div className="flex items-center justify-between">
             <div>
@@ -373,13 +376,7 @@ export default function TablaTonners({ modoNoche }: { modoNoche: boolean }) {
             </p>
           </div>
 
-          <button
-            onClick={() => setMostrarModalAreas(true)}
-            className="flex items-center justify-center gap-2 px-4 py-3 rounded-2xl bg-gradient-to-r from-red-600 to-red-500 text-white shadow-md hover:scale-105 transition"
-          >
-            <Pencil size={18} />
-            Administrar áreas
-          </button>
+
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-[1fr_auto] gap-3">
@@ -514,13 +511,33 @@ export default function TablaTonners({ modoNoche }: { modoNoche: boolean }) {
           </div>
 
 
+          <div className={`p-4 rounded-2xl ${estilos.subCard}`}>
+            <label className="text-sm font-semibold opacity-80 flex items-center gap-2 mb-2">
+              <CalendarDays size={16} className="text-blue-500" />
+              Fecha del registro
+            </label>
+
+            <input
+              type="date"
+              value={nuevo.fecha}
+              className={`w-full p-3 rounded-2xl outline-none ${estilos.input}`}
+              onChange={(e) =>
+                setNuevo({ ...nuevo, fecha: e.target.value })
+              }
+            />
+
+            <p className="text-xs opacity-60 mt-1">
+              Puedes cambiar la fecha manualmente
+            </p>
+          </div>
+
 
           <div className="flex items-end">
             <button
               onClick={guardar}
               className={`w-full flex items-center justify-center gap-2 px-5 py-4 rounded-2xl text-white font-bold shadow-lg transition hover:scale-[1.02] active:scale-95 ${editandoId
-                  ? "bg-gradient-to-r from-amber-500 to-amber-400"
-                  : "bg-gradient-to-r from-green-600 to-green-500"
+                ? "bg-gradient-to-r from-amber-500 to-amber-400"
+                : "bg-gradient-to-r from-green-600 to-green-500"
                 }`}
             >
               <Save size={18} />
@@ -531,105 +548,101 @@ export default function TablaTonners({ modoNoche }: { modoNoche: boolean }) {
       </div>
 
       {/* FILTROS */}
-   <div className={`p-5 sm:p-6 mb-6 rounded-3xl ${estilos.card}`}>
-  <div className="flex items-center gap-3 mb-5">
-    <div className="p-3 rounded-2xl bg-red-500/10">
-      <Filter className="text-red-500" size={22} />
-    </div>
-    <div>
-      <h3 className="font-bold text-xl">Filtros avanzados</h3>
-      <p className="text-sm opacity-70">
-        Filtra por búsqueda, área, año y mes (formato BD).
-      </p>
-    </div>
-  </div>
+      <div className={`p-5 sm:p-6 mb-6 rounded-3xl ${estilos.card}`}>
+        <div className="flex items-center gap-3 mb-5">
+          <div className="p-3 rounded-2xl bg-red-500/10">
+            <Filter className="text-red-500" size={22} />
+          </div>
+          <div>
+            <h3 className="font-bold text-xl">Filtros avanzados</h3>
+            <p className="text-sm opacity-70">
+              Filtra por búsqueda, área, año y mes (formato BD).
+            </p>
+          </div>
+        </div>
 
-  <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 lg:grid-cols-4 gap-4">
 
-    {/* BUSCADOR */}
-    <div className={`flex items-center gap-3 p-4 rounded-2xl ${estilos.subCard}`}>
-      <Search className="text-blue-500" size={20} />
-      <input
-        value={busqueda}
-        onChange={(e) => setBusqueda(e.target.value)}
-        placeholder="Buscar..."
-        className="w-full bg-transparent outline-none"
-      />
-    </div>
+          {/* BUSCADOR */}
+          <div className={`flex items-center gap-3 p-4 rounded-2xl ${estilos.subCard}`}>
+            <Search className="text-blue-500" size={20} />
+            <input
+              value={busqueda}
+              onChange={(e) => setBusqueda(e.target.value)}
+              placeholder="Buscar..."
+              className="w-full bg-transparent outline-none"
+            />
+          </div>
 
-    {/* ÁREA */}
-    <div className={`flex items-center gap-3 p-4 rounded-2xl ${estilos.subCard}`}>
-      <Layers className="text-red-500" size={20} />
-      <select
-        value={filtroArea}
-        onChange={(e) => setFiltroArea(e.target.value)}
-        className="w-full bg-transparent outline-none"
-      >
-        <option value="">Todas</option>
-        {areas.map((a) => (
-          <option key={a.id} value={a.id}>
-            {a.nombre}
-          </option>
-        ))}
-      </select>
-    </div>
+          {/* ÁREA */}
+          <div className={`flex items-center gap-3 p-4 rounded-2xl ${estilos.subCard}`}>
+            <Layers className="text-red-500" size={20} />
+            <select
+              value={filtroArea}
+              onChange={(e) => setFiltroArea(e.target.value)}
+              className="w-full bg-transparent outline-none"
+            >
+              <option value="">Todas</option>
+              {areas.map((a) => (
+                <option key={a.id} value={a.id}>
+                  {a.nombre}
+                </option>
+              ))}
+            </select>
+          </div>
 
-    {/* AÑO */}
-    <div className={`flex items-center gap-3 p-4 rounded-2xl ${estilos.subCard}`}>
-      <CalendarDays className="text-purple-500" size={20} />
-      <select
-  value={filtroAnio}
-  onChange={(e) => setFiltroAnio(e.target.value)}
-  className="w-full bg-transparent outline-none"
->
-  <option value="">Año</option>
+          {/* AÑO */}
+          <div className={`flex items-center gap-3 p-4 rounded-2xl ${estilos.subCard}`}>
+            <CalendarDays className="text-purple-500" size={20} />
+            <select
+              value={filtroAnio}
+              onChange={(e) => setFiltroAnio(e.target.value)}
+              className="w-full bg-transparent outline-none"
+            >
+              <option value="">Año</option>
 
-  {[2026, 2027, 2028, 2029, 2030, 2031, 2032].map((anio) => (
-    <option key={anio} value={anio}>
-      {anio}
-    </option>
-  ))}
-</select>
-    </div>
+              {[2026, 2027, 2028, 2029, 2030, 2031, 2032].map((anio) => (
+                <option key={anio} value={anio}>
+                  {anio}
+                </option>
+              ))}
+            </select>
+          </div>
 
-    {/* MES NUMÉRICO */}
-    <div className={`flex items-center gap-3 p-4 rounded-2xl ${estilos.subCard}`}>
-      <CalendarDays className="text-green-500" size={20} />
-      <select
-  value={filtroMes}
-  onChange={(e) => setFiltroMes(e.target.value)}
-  className="w-full bg-transparent outline-none"
->
-  <option value="">Mes</option>
+          {/* MES NUMÉRICO */}
+         {/* MES */}
+<div className={`flex items-center gap-3 p-4 rounded-2xl ${estilos.subCard}`}>
+  <CalendarDays className="text-green-500" size={20} />
+  <select
+    value={filtroMes}
+    onChange={(e) => setFiltroMes(e.target.value)}
+    className="w-full bg-transparent outline-none"
+  >
+    <option value="">Todos los meses</option>
 
-  {Array.from({ length: 12 }, (_, i) => {
-    const mes = String(i + 1).padStart(2, "0");
-
-    // 🔥 SOLO mostrar si hay registros en ese mes (y año si está seleccionado)
-    const existe = tonners.some((t) => {
-      const anio = t.fecha?.split("-")[0];
-      const m = t.fecha?.split("-")[1];
-
-      if (filtroAnio) {
-        return anio === filtroAnio && m === mes;
-      }
-
-      return m === mes;
-    });
-
-    if (!existe) return null;
-
-    return (
-      <option key={mes} value={mes}>
-        {mes}
+    {[
+      { valor: "01", nombre: "Enero" },
+      { valor: "02", nombre: "Febrero" },
+      { valor: "03", nombre: "Marzo" },
+      { valor: "04", nombre: "Abril" },
+      { valor: "05", nombre: "Mayo" },
+      { valor: "06", nombre: "Junio" },
+      { valor: "07", nombre: "Julio" },
+      { valor: "08", nombre: "Agosto" },
+      { valor: "09", nombre: "Septiembre" },
+      { valor: "10", nombre: "Octubre" },
+      { valor: "11", nombre: "Noviembre" },
+      { valor: "12", nombre: "Diciembre" },
+    ].map((mes) => (
+      <option key={mes.valor} value={mes.valor}>
+        {mes.nombre}
       </option>
-    );
-  })}
-</select>
-    </div>
-
-  </div>
+    ))}
+  </select>
 </div>
+
+        </div>
+      </div>
 
       {/* TABLA */}
       {/* TABLA TONNERS ENVÍA */}
@@ -668,12 +681,68 @@ export default function TablaTonners({ modoNoche }: { modoNoche: boolean }) {
                     ? "bg-[#1a1a1a] text-gray-300 border-b border-white/10"
                     : "bg-gray-100 text-gray-700 border-b border-gray-200"}`}
               >
-                <th className="px-5 py-4 text-left">🏢 Área</th>
-                <th className="px-5 py-4 text-left">👤 Responsable</th>
-                <th className="px-5 py-4 text-left">🖨️ Tonner</th>
-                <th className="px-5 py-4 text-left">💻 Impresora</th>
-                <th className="px-5 py-4 text-center">📦 Cantidad</th>
-                <th className="px-5 py-4 text-center">⚙️ Acciones</th>
+                <th className="px-5 py-4 text-left">
+                  <div className="flex items-center gap-2">
+                    <Layers size={16} className="text-red-500" />
+                    <span>Área</span>
+                  </div>
+                </th>
+
+                <th className="px-5 py-4 text-left">
+                  <div className="flex items-center gap-2">
+                    <User size={16} className="text-blue-500" />
+                    <span>Responsable</span>
+                  </div>
+                </th>
+
+                <th className="px-5 py-4 text-left">
+                  <div className="flex items-center gap-2">
+                    <ScanLine size={16} className="text-purple-500" />
+                    <span>Tonner</span>
+                  </div>
+                </th>
+
+                <th className="px-5 py-4 text-left">
+                  <div className="flex items-center gap-2">
+                    <Printer size={16} className="text-green-500" />
+                    <span>Impresora</span>
+                  </div>
+                </th>
+
+                <th className="px-5 py-4 text-center">
+                  <div className="flex items-center justify-center gap-2">
+                    <Package size={16} className="text-amber-500" />
+                    <span>Cantidad</span>
+                  </div>
+                </th>
+
+                <th className="px-5 py-4 text-center">
+                  <div className="flex items-center justify-center gap-2">
+                    <CalendarDays size={16} className="text-cyan-500" />
+                    <span>Fecha</span>
+                  </div>
+                </th>
+
+                <th className="px-5 py-4 text-center">
+                  <div className="flex items-center justify-center gap-2">
+                    <FileText size={16} className="text-emerald-500" />
+                    <span>Creado</span>
+                  </div>
+                </th>
+
+                <th className="px-5 py-4 text-center">
+                  <div className="flex items-center justify-center gap-2">
+                    <RefreshCcw size={16} className="text-yellow-500" />
+                    <span>Editado</span>
+                  </div>
+                </th>
+
+                <th className="px-5 py-4 text-center">
+                  <div className="flex items-center justify-center gap-2">
+                    <Settings size={16} className="text-gray-500" />
+                    <span>Acciones</span>
+                  </div>
+                </th>
               </tr>
             </thead>
 
@@ -733,6 +802,26 @@ export default function TablaTonners({ modoNoche }: { modoNoche: boolean }) {
                       >
                         {t.cantidad}
                       </span>
+                    </td>
+                    {/* FECHA */}
+                    <td className="px-5 py-4 text-center">
+                      {t.fecha || "-"}
+                    </td>
+
+                    {/* CREATED */}
+                    <td className="px-5 py-4 text-center text-xs">
+                      {t.created_at
+                        ? new Date(t.created_at).toLocaleString()
+                        : "-"}
+                    </td>
+
+                    {/* UPDATED */}
+                    <td className="px-5 py-4 text-center text-xs">
+                      {t.updated_at ? (
+                        <span className="px-2 py-1 rounded-full bg-yellow-100 text-yellow-700">
+                          {new Date(t.updated_at).toLocaleString()}
+                        </span>
+                      ) : "-"}
                     </td>
 
                     {/* ACCIONES */}

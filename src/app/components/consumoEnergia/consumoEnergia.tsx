@@ -750,6 +750,18 @@ async function eliminarMetaMensual() {
       .toFixed(2);
   };
 
+  const obtenerPromedioMes = (mes: number) => {
+  const lecturasMes = lecturas?.[anioSeleccionado]?.[mes] ?? {};
+
+  const consumos = Object.values(lecturasMes)
+    .map((d) => d.total2 + d.total4)
+    .filter((v) => v > 0);
+
+  if (!consumos.length) return 0;
+
+  return consumos.reduce((a, b) => a + b, 0) / consumos.length;
+};
+
 
   const totalDia = (mes: number, dia: number) => {
     const d =
@@ -828,7 +840,7 @@ async function eliminarMetaMensual() {
       <div className="w-full max-w-[1400px] mx-auto space-y-8">
 
         {/* ======================= 4 CONTENEDORES · ENERGÍA ======================= */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-6">
 
           {/* ================= META MENSUAL ENERGÍA ================= */}
           <div className={`p-6 rounded-xl ${tarjetaClase}`}>
@@ -920,6 +932,58 @@ async function eliminarMetaMensual() {
               {fechaColombia}
             </p>
           </div>
+
+          {/* Promedio actual mensual energía */}
+<div className={`p-6 rounded-xl ${tarjetaClase} relative overflow-hidden`}>
+
+  {/* efecto glow */}
+  <div className="absolute top-0 right-0 w-24 h-24 bg-yellow-500/10 rounded-full blur-2xl"></div>
+
+  <div className="flex items-center justify-between mb-4 relative z-10">
+    <h4 className="text-sm font-semibold opacity-80">
+      Promedio actual mensual
+    </h4>
+
+    <div className="p-2 rounded-lg bg-yellow-100 text-yellow-600 shadow-sm">
+      <Zap size={30} />
+    </div>
+  </div>
+
+  <div className="relative z-10">
+    <p className="text-3xl font-extrabold text-yellow-500 tracking-tight">
+      {mesSeleccionado === "todos"
+        ? "—"
+        : `${obtenerPromedioMes(mesSeleccionado).toFixed(2)} kWh`}
+    </p>
+
+    <p className="text-xs mt-2 opacity-70">
+      {mesSeleccionado === "todos"
+        ? "Selecciona un mes para ver el promedio"
+        : `Promedio diario de consumo en ${meses[mesSeleccionado]} ${anioSeleccionado}`}
+    </p>
+
+    {mesSeleccionado !== "todos" && (
+      <div className="mt-4">
+        <div
+          className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold ${
+            obtenerPromedioMes(mesSeleccionado) > 63.32
+              ? modoNoche
+                ? "bg-red-950 text-red-300 border border-red-800"
+                : "bg-red-100 text-red-700 border border-red-200"
+              : modoNoche
+              ? "bg-emerald-950 text-emerald-300 border border-emerald-800"
+              : "bg-emerald-100 text-emerald-700 border border-emerald-200"
+          }`}
+        >
+          <span className="w-2 h-2 rounded-full bg-current opacity-80"></span>
+          {obtenerPromedioMes(mesSeleccionado) > 63.32
+            ? "Consumo promedio alto"
+            : "Consumo promedio estable"}
+        </div>
+      </div>
+    )}
+  </div>
+</div>
 
           {/* ================= CLASIFICACIÓN DE DÍAS ================= */}
           <div className={`p-5 rounded-xl ${tarjetaClase}`}>

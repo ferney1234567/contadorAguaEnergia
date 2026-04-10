@@ -868,7 +868,7 @@ const resumenConsumo = (() => {
       <div className="w-full max-w-[1400px] mx-auto space-y-8">
 
         {/* ======================= 4 CONTENEDORES · AGUA ======================= */}
-        <div className="grid grid-cols-1 md:grid-cols-4 gap-6">
+       <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-5 gap-6">
 
           {/* Meta mensual AGUA */}
           <div className={`p-6 rounded-xl ${tarjetaClase}`}>
@@ -959,6 +959,56 @@ const resumenConsumo = (() => {
 
             
           </div>
+
+          {/* Promedio actual mensual de agua */}
+<div className={`p-6 rounded-xl ${tarjetaClase} relative overflow-hidden`}>
+  <div className="absolute top-0 right-0 w-24 h-24 bg-cyan-500/10 rounded-full blur-2xl"></div>
+
+  <div className="flex items-center justify-between mb-4 relative z-10">
+    <h4 className="text-sm font-semibold opacity-80">
+      Promedio actual mensual
+    </h4>
+
+    <div className="p-2 rounded-lg bg-cyan-100 text-cyan-600 shadow-sm">
+      <Droplets size={30} />
+    </div>
+  </div>
+
+  <div className="relative z-10">
+    <p className="text-3xl font-extrabold text-cyan-500 tracking-tight">
+      {mesSeleccionado === "todos"
+        ? "—"
+        : `${obtenerPromedioMes(mesSeleccionado).toFixed(2)} m³`}
+    </p>
+
+    <p className="text-xs mt-2 opacity-70">
+      {mesSeleccionado === "todos"
+        ? "Selecciona un mes para ver el promedio diario del consumo"
+        : `Promedio diario consumido en ${meses[mesSeleccionado]} de ${anioSeleccionado}`}
+    </p>
+
+    {mesSeleccionado !== "todos" && (
+      <div className="mt-4">
+        <div
+          className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-full text-xs font-semibold ${
+            obtenerPromedioMes(mesSeleccionado) > 2.36
+              ? modoNoche
+                ? "bg-red-950 text-red-300 border border-red-800"
+                : "bg-red-100 text-red-700 border border-red-200"
+              : modoNoche
+              ? "bg-emerald-950 text-emerald-300 border border-emerald-800"
+              : "bg-emerald-100 text-emerald-700 border border-emerald-200"
+          }`}
+        >
+          <span className="w-2 h-2 rounded-full bg-current opacity-80"></span>
+          {obtenerPromedioMes(mesSeleccionado) > 2.36
+            ? "Consumo promedio alto"
+            : "Consumo promedio estable"}
+        </div>
+      </div>
+    )}
+  </div>
+</div>
 
           {/* Clasificación de días */}
           <div className={`p-5 rounded-xl ${tarjetaClase}`}>

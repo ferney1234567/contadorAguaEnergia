@@ -1,11 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { CalendarDays, Search, Filter, Plus } from "lucide-react";
+import { CalendarDays, Search, Filter, Plus, Edit } from "lucide-react";
 import Swal from "sweetalert2";
 import MovilAgua from "./modalAgua";
 import { exportarSanitariosPDF } from "@/app/utils/exportadorSanitariosPDF";
- import { Toilet, ShowerHead, Droplets, Wrench, Waves } from "lucide-react";
+import { Toilet, ShowerHead, Droplets, Wrench, Waves } from "lucide-react";
 
 
 type RegistroValores = {
@@ -29,13 +29,13 @@ export default function InpeccionesSanitarios({
     Array.isArray(dataInicial) ? dataInicial : []
   );
 
-const campos = [
-  { key: 1, nombre: "Sanitarios", db: "sanitarios", icon: Toilet, color: "text-blue-500" },
-  { key: 2, nombre: "Orinales", db: "orinales", icon: Droplets, color: "text-yellow-500" },
-  { key: 3, nombre: "Duchas", db: "duchas", icon: ShowerHead, color: "text-cyan-500" },
-  { key: 4, nombre: "Lavamanos", db: "lavamanos", icon: Waves, color: "text-indigo-500" },
-  { key: 5, nombre: "Llaves", db: "llaves", icon: Wrench, color: "text-gray-500" },
-];
+  const campos = [
+    { key: 1, nombre: "Sanitarios", db: "sanitarios", icon: Toilet, color: "text-blue-500" },
+    { key: 2, nombre: "Orinales", db: "orinales", icon: Droplets, color: "text-yellow-500" },
+    { key: 3, nombre: "Duchas", db: "duchas", icon: ShowerHead, color: "text-cyan-500" },
+    { key: 4, nombre: "Lavamanos", db: "lavamanos", icon: Waves, color: "text-indigo-500" },
+    { key: 5, nombre: "Llaves", db: "llaves", icon: Wrench, color: "text-gray-500" },
+  ];
 
   const MESES = [
     { value: "Todos", label: "Todos" },
@@ -56,7 +56,6 @@ const campos = [
   const STORAGE_DATA = "sanitarios_data";
   const STORAGE_MODO = "modo_nueva_inspeccion_sanitarios";
   const STORAGE_RESPONSABLE = "responsable";
-
   const [valores, setValores] = useState<RegistroValores>({});
   const [observaciones, setObservaciones] = useState<RegistroObservaciones>({});
   const [fechaActual, setFechaActual] = useState("");
@@ -64,17 +63,13 @@ const campos = [
   const [modoNuevaInspeccion, setModoNuevaInspeccion] = useState(false);
   const [inspecciones, setInspecciones] = useState<any[]>([]);
   const [responsable, setResponsable] = useState("");
-  const [fechaSesion, setFechaSesion] = useState(
-    new Date().toISOString().split("T")[0]
-  );
+  const [fechaSesion, setFechaSesion] = useState(new Date().toISOString().split("T")[0]);
   const [mostrarModal, setMostrarModal] = useState(false);
-
   const obtenerAnioActual = () => String(new Date().getFullYear());
-  const obtenerMesActual = () =>
-    String(new Date().getMonth() + 1).padStart(2, "0");
-
+  const obtenerMesActual = () => String(new Date().getMonth() + 1).padStart(2, "0");
   const [anioFiltro, setAnioFiltro] = useState(obtenerAnioActual());
   const [mesFiltro, setMesFiltro] = useState(obtenerMesActual());
+  const [editandoGrupo, setEditandoGrupo] = useState<string | null>(null);
 
   const estilos = {
     fondo: modoNoche
@@ -97,7 +92,7 @@ const campos = [
       : "bg-gray-50 border border-gray-200 text-gray-700",
 
     chip: modoNoche
-      ? "bg-[#202020] text-gray-200 border border-[#353535]"
+      ? "bg-[#202020] text-gray-200 border border-gray-200"
       : "bg-gray-100 text-gray-700 border border-gray-200",
   };
 
@@ -111,6 +106,20 @@ const campos = [
     setResponsable(valor);
     localStorage.setItem(STORAGE_RESPONSABLE, valor);
     localStorage.removeItem(STORAGE_MODO);
+  };
+
+  const limpiarEstadoFila = (filaKey: string) => {
+    setValores((prev) => {
+      const copia = { ...prev };
+      delete copia[filaKey];
+      return copia;
+    });
+
+    setObservaciones((prev) => {
+      const copia = { ...prev };
+      delete copia[filaKey];
+      return copia;
+    });
   };
 
   useEffect(() => {
@@ -178,14 +187,14 @@ const campos = [
         const areasFinal = Array.isArray(areasData)
           ? areasData
           : Array.isArray(areasData?.data)
-          ? areasData.data
-          : [];
+            ? areasData.data
+            : [];
 
         const inspeccionesFinal = Array.isArray(inspeccionesData)
           ? inspeccionesData
           : Array.isArray(inspeccionesData?.data)
-          ? inspeccionesData.data
-          : [];
+            ? inspeccionesData.data
+            : [];
 
         setdataBackend(areasFinal);
         setInspecciones(inspeccionesFinal);
@@ -207,14 +216,11 @@ const campos = [
     dataBackend.forEach((area) => {
       const filaKey = `${fechaSesion}__${responsable}__${area.id}`;
 
-      const inspeccion = inspecciones
-        .filter(
-          (i) =>
-            i.area_id === area.id &&
-            i.responsable === responsable &&
-            i.fecha?.split("T")[0] === fechaSesion
-        )
-        .slice(-1)[0];
+      const inspeccion = inspecciones.find(
+        (i) =>
+          i.area_id === area.id &&
+          i.responsable === responsable
+      );
 
       if (!inspeccion) return;
 
@@ -410,7 +416,7 @@ const campos = [
     if (registro) {
       const campoDef = campos.find((c) => c.key === campo);
       if (!campoDef) return 0;
-      return Number(registro[`${campoDef.db}_${tipo}`] || 0);
+      return Number(registro?.[`${campoDef.db}_${tipo}`] || 0);
     }
 
     return 0;
@@ -419,18 +425,6 @@ const campos = [
   const guardarFila = async (filaKey: string, area: any, registro: any) => {
     try {
       if (!area?.id) return;
-
-      if (!registro?.id) {
-        Swal.fire({
-          toast: true,
-          position: "top-end",
-          icon: "warning",
-          title: "No puedes crear registros aquí",
-          timer: 1500,
-          showConfirmButton: false,
-        });
-        return;
-      }
 
       const responsableFinal =
         (typeof responsable === "string" && responsable.trim()) ||
@@ -442,78 +436,206 @@ const campos = [
           toast: true,
           position: "top-end",
           icon: "warning",
-          title: "Falta responsable",
-          timer: 1200,
+          title: "Debes seleccionar un responsable",
+          timer: 1500,
           showConfirmButton: false,
         });
         return;
       }
 
+      let registroSeguro = registro;
+      if (registro && registro.responsable !== responsableFinal) {
+        registroSeguro = null;
+      }
+
       const body = {
-        id: registro.id,
-        fecha: registro.fecha,
+        id: registroSeguro?.id || null,
+        fecha: registroSeguro?.fecha?.split("T")[0] || fechaSesion,
         responsable: responsableFinal,
         area_id: area.id,
 
-        sanitarios_c: obtenerValor(filaKey, 1, "c", registro),
-        sanitarios_nc: obtenerValor(filaKey, 1, "nc", registro),
+        sanitarios_c: obtenerValor(filaKey, 1, "c", registroSeguro),
+        sanitarios_nc: obtenerValor(filaKey, 1, "nc", registroSeguro),
 
-        orinales_c: obtenerValor(filaKey, 2, "c", registro),
-        orinales_nc: obtenerValor(filaKey, 2, "nc", registro),
+        orinales_c: obtenerValor(filaKey, 2, "c", registroSeguro),
+        orinales_nc: obtenerValor(filaKey, 2, "nc", registroSeguro),
 
-        duchas_c: obtenerValor(filaKey, 3, "c", registro),
-        duchas_nc: obtenerValor(filaKey, 3, "nc", registro),
+        duchas_c: obtenerValor(filaKey, 3, "c", registroSeguro),
+        duchas_nc: obtenerValor(filaKey, 3, "nc", registroSeguro),
 
-        lavamanos_c: obtenerValor(filaKey, 4, "c", registro),
-        lavamanos_nc: obtenerValor(filaKey, 4, "nc", registro),
+        lavamanos_c: obtenerValor(filaKey, 4, "c", registroSeguro),
+        lavamanos_nc: obtenerValor(filaKey, 4, "nc", registroSeguro),
 
-        llaves_c: obtenerValor(filaKey, 5, "c", registro),
-        llaves_nc: obtenerValor(filaKey, 5, "nc", registro),
+        llaves_c: obtenerValor(filaKey, 5, "c", registroSeguro),
+        llaves_nc: obtenerValor(filaKey, 5, "nc", registroSeguro),
 
-        observacion: observaciones[filaKey] || registro?.observacion || "",
+        observacion: observaciones[filaKey] || registroSeguro?.observacion || "",
       };
 
-      const response = await fetch("/api/inspecciones-sanitarias", {
-        method: "PUT",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(body),
-      });
+      const total =
+        body.sanitarios_c +
+        body.sanitarios_nc +
+        body.orinales_c +
+        body.orinales_nc +
+        body.duchas_c +
+        body.duchas_nc +
+        body.lavamanos_c +
+        body.lavamanos_nc +
+        body.llaves_c +
+        body.llaves_nc;
 
-      if (!response.ok) {
-        const errorText = await response.text();
-
-        Swal.fire({
-          icon: "error",
-          title: "Error del servidor",
-          text: errorText,
+      if (total === 0 && registroSeguro?.id) {
+        await fetch(`/api/inspecciones-sanitarias?id=${registroSeguro.id}`, {
+          method: "DELETE",
         });
 
-        return;
+        limpiarEstadoFila(filaKey);
+
+        Swal.fire({
+          toast: true,
+          position: "top-end",
+          icon: "success",
+          title: "Registro eliminado",
+          timer: 1200,
+          showConfirmButton: false,
+        });
+      } else if (total > 0) {
+        const response = await fetch("/api/inspecciones-sanitarias", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify(body),
+        });
+
+        if (!response.ok) {
+          const errorText = await response.text();
+          throw new Error(errorText || "No se pudo guardar");
+        }
+
+        Swal.fire({
+          toast: true,
+          position: "top-end",
+          icon: "success",
+          title: registroSeguro?.id ? "Registro actualizado" : "Registro creado",
+          timer: 1200,
+          showConfirmButton: false,
+        });
       }
 
       const res = await fetch("/api/inspecciones-sanitarias");
       const data = await res.json();
       const dataFinal = Array.isArray(data) ? data : data?.data || [];
-
       setInspecciones(dataFinal);
-
-      Swal.fire({
-        toast: true,
-        position: "top-end",
-        icon: "success",
-        title: "Actualizado correctamente",
-        timer: 1200,
-        showConfirmButton: false,
-      });
     } catch (error) {
       console.error("ERROR GENERAL:", error);
 
       Swal.fire({
         icon: "error",
         title: "Error inesperado",
-        text: "No se pudo actualizar",
+        text: "No se pudo guardar el registro",
+      });
+    }
+  };
+
+  const guardarTodo = async (responsableGrupo: string, fecha: string) => {
+    try {
+      if (!responsableGrupo) return;
+
+      const promesas: Promise<any>[] = [];
+
+      dataBackend.forEach((area: any) => {
+        const filaKey = `${fecha}__${responsableGrupo}__${area.id}`;
+
+        const registro = inspecciones.find(
+          (r) =>
+            r.area_id === area.id &&
+            r.responsable === responsableGrupo &&
+            r.fecha?.split("T")[0] === fecha
+        );
+
+        const body = {
+          id: registro?.id || null,
+          fecha,
+          responsable: responsableGrupo,
+          area_id: area.id,
+
+          sanitarios_c: Number(valores?.[filaKey]?.[1]?.c || 0),
+          sanitarios_nc: Number(valores?.[filaKey]?.[1]?.nc || 0),
+
+          orinales_c: Number(valores?.[filaKey]?.[2]?.c || 0),
+          orinales_nc: Number(valores?.[filaKey]?.[2]?.nc || 0),
+
+          duchas_c: Number(valores?.[filaKey]?.[3]?.c || 0),
+          duchas_nc: Number(valores?.[filaKey]?.[3]?.nc || 0),
+
+          lavamanos_c: Number(valores?.[filaKey]?.[4]?.c || 0),
+          lavamanos_nc: Number(valores?.[filaKey]?.[4]?.nc || 0),
+
+          llaves_c: Number(valores?.[filaKey]?.[5]?.c || 0),
+          llaves_nc: Number(valores?.[filaKey]?.[5]?.nc || 0),
+
+          observacion: observaciones[filaKey] || "",
+        };
+
+        const total =
+          body.sanitarios_c +
+          body.sanitarios_nc +
+          body.orinales_c +
+          body.orinales_nc +
+          body.duchas_c +
+          body.duchas_nc +
+          body.lavamanos_c +
+          body.lavamanos_nc +
+          body.llaves_c +
+          body.llaves_nc;
+
+        if (total === 0) {
+          if (registro?.id) {
+            promesas.push(
+              fetch(`/api/inspecciones-sanitarias?id=${registro.id}`, {
+                method: "DELETE",
+              })
+            );
+          }
+
+          limpiarEstadoFila(filaKey);
+          return;
+        }
+
+        promesas.push(
+          fetch("/api/inspecciones-sanitarias", {
+            method: "POST",
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify(body),
+          })
+        );
+      });
+
+      await Promise.all(promesas);
+
+      const res = await fetch("/api/inspecciones-sanitarias");
+      const data = await res.json();
+      const dataFinal = Array.isArray(data) ? data : data?.data || [];
+      setInspecciones(dataFinal);
+
+      Swal.fire({
+        icon: "success",
+        title: "Guardado completo",
+        timer: 1500,
+        showConfirmButton: false,
+      });
+
+      setEditandoGrupo(null);
+    } catch (error) {
+      console.error(error);
+
+      Swal.fire({
+        icon: "error",
+        title: "Error al guardar",
+        text: "No se pudieron guardar los cambios",
       });
     }
   };
@@ -547,39 +669,37 @@ const campos = [
             </div>
           </div>
 
-    <div
-  className={`rounded-2xl px-3 py-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 ${estilos.inputSuave}`}
->
-  {/* BOTÓN NUEVA INSPECCIÓN */}
-  <button
-    onClick={() => setMostrarModal(true)}
-    className={`flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-3 sm:py-2 rounded-xl text-sm font-semibold transition
-      ${
-        modoNoche
-          ? "bg-gradient-to-r from-blue-700 to-blue-500 text-white shadow-md"
-          : "bg-gradient-to-r from-blue-500 to-blue-400 text-white shadow-sm"
-      }
+          <div
+            className={`rounded-2xl px-3 py-3 flex flex-col sm:flex-row items-stretch sm:items-center gap-3 ${estilos.inputSuave}`}
+          >
+            {/* BOTÓN NUEVA INSPECCIÓN */}
+            <button
+              onClick={() => setMostrarModal(true)}
+              className={`flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-3 sm:py-2 rounded-xl text-sm font-semibold transition
+      ${modoNoche
+                  ? "bg-gradient-to-r from-blue-700 to-blue-500 text-white shadow-md"
+                  : "bg-gradient-to-r from-blue-500 to-blue-400 text-white shadow-sm"
+                }
       hover:scale-105 active:scale-95`}
-  >
-    <Plus size={16} />
-    Nueva inspección sanitaria
-  </button>
+            >
+              <Plus size={16} />
+              Nueva inspección sanitaria
+            </button>
 
-  {/* BOTÓN EXPORTAR PDF */}
-  <button
-    onClick={() => exportarSanitariosPDF(inspecciones)}
-    className={`flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-3 sm:py-2 rounded-xl text-sm font-semibold transition
-      ${
-        modoNoche
-          ? "bg-gradient-to-r from-green-700 to-green-500 text-white shadow-md"
-          : "bg-gradient-to-r from-green-500 to-green-400 text-white shadow-sm"
-      }
+            {/* BOTÓN EXPORTAR PDF */}
+            <button
+              onClick={() => exportarSanitariosPDF(inspecciones)}
+              className={`flex items-center justify-center gap-2 w-full sm:w-auto px-4 py-3 sm:py-2 rounded-xl text-sm font-semibold transition
+      ${modoNoche
+                  ? "bg-gradient-to-r from-green-700 to-green-500 text-white shadow-md"
+                  : "bg-gradient-to-r from-green-500 to-green-400 text-white shadow-sm"
+                }
       hover:scale-105 active:scale-95`}
-  >
-    📄 Exportar PDF
-  </button>
-</div>
-</div>
+            >
+              📄 Exportar PDF
+            </button>
+          </div>
+        </div>
 
         <div className={`rounded-2xl p-4 ${estilos.inputSuave}`}>
           <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
@@ -724,9 +844,8 @@ const campos = [
         />
 
         <div
-          className={`lg:block p-4 rounded-2xl ${
-            modoNoche ? "bg-[#0f0f0f]" : "bg-gray-100"
-          }`}
+          className={`lg:block p-4 rounded-2xl ${modoNoche ? "bg-[#0f0f0f]" : "bg-gray-100"
+            }`}
         >
           {inspeccionesFiltradas.map(([clave, registros]) => {
             const [anio, semana, responsableGrupo] = clave.split("__");
@@ -734,38 +853,113 @@ const campos = [
             return (
               <div
                 key={clave}
-                className={`mb-10 rounded-2xl p-5 shadow-sm ${
-                  modoNoche
-                    ? "bg-[#161616] border border-[#2a2a2a]"
-                    : "bg-white border border-gray-200"
-                }`}
+                className={`mb-10 rounded-2xl p-5 shadow-sm ${modoNoche
+                  ? "bg-[#161616] border border-[#2a2a2a]"
+                  : "bg-white border border-gray-200"
+                  }`}
               >
+                {/* HEADER */}
                 <div className="mb-5 text-center">
-                  <h2
-                    className={`text-xl font-bold tracking-wide ${
-                      modoNoche ? "text-white" : "text-gray-800"
-                    }`}
-                  >
+                  <h2>
                     Semana {semana.replace("semana", "")} - {anio}
                   </h2>
 
+                  {/* 🔥 FECHA REAL DE LA SEMANA */}
+                  {registros.length > 0 && (
+                    <p className={`text-sm mt-1 ${modoNoche ? "text-gray-300" : "text-gray-600"}`}>
+                      📅 {new Date(registros[0].fecha).toLocaleDateString("es-CO", {
+                        day: "numeric",
+                        month: "long",
+                        year: "numeric",
+                      })}
+                    </p>
+                  )}
+
+                  <div className="flex flex-col sm:flex-row justify-center items-center gap-3 mt-4">
+
+                    {/* ✏️ EDITAR */}
+                    <button
+                      onClick={() => {
+                        setEditandoGrupo(clave);
+
+                        Swal.fire({
+                          toast: true,
+                          position: "top-end",
+                          icon: "info",
+                          title: "Modo edición activado",
+                          timer: 1200,
+                          showConfirmButton: false,
+                        });
+                      }}
+                      className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 
+              ${modoNoche
+                          ? "bg-gradient-to-r from-red-600 to-pink-500 text-white shadow-lg shadow-red-900/30"
+                          : "bg-gradient-to-r from-red-500 to-pink-400 text-white shadow-md"
+                        }
+              hover:scale-105 hover:shadow-xl active:scale-95`}
+                    >
+                      <Edit size={16} />
+                      Editar
+                    </button>
+
+                    {/* 💾 GUARDAR */}
+                    <button
+                      onClick={() =>
+                        guardarTodo(
+                          responsableGrupo,
+                          registros[0]?.fecha?.split("T")[0]
+                        )
+                      }
+                      className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all
+              ${modoNoche
+                          ? "bg-green-700 text-white"
+                          : "bg-green-500 text-white"
+                        }`}
+                    >
+                      💾 Guardar
+                    </button>
+
+                    {/* ❌ QUITAR EDICIÓN */}
+                    <button
+                      onClick={() => {
+                        setEditandoGrupo(null);
+
+                        Swal.fire({
+                          toast: true,
+                          position: "top-end",
+                          icon: "info",
+                          title: "Edición desactivada",
+                          timer: 1200,
+                          showConfirmButton: false,
+                        });
+                      }}
+                      className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all duration-300 
+              ${modoNoche
+                          ? "bg-gradient-to-r from-gray-700 to-gray-600 text-white shadow-lg shadow-black/30"
+                          : "bg-gradient-to-r from-gray-300 to-gray-200 text-gray-800 shadow-md"
+                        }
+              hover:scale-105 hover:shadow-xl active:scale-95`}
+                    >
+                      ❌ Quitar edición
+                    </button>
+
+                  </div>
                   <div className="flex justify-center gap-3 mt-3 flex-wrap">
                     <span
-                      className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                        modoNoche
-                          ? "bg-blue-900/30 text-blue-300 border border-blue-800"
-                          : "bg-blue-50 text-blue-600 border border-blue-200"
-                      }`}
+                      className={`px-3 py-1 rounded-full text-xs font-semibold ${modoNoche
+                        ? "bg-blue-900/30 text-blue-300 border border-blue-800"
+                        : "bg-blue-50 text-blue-600 border border-blue-200"
+                        }`}
                     >
                       📊 {registros.length} registros
                     </span>
 
+
                     <span
-                      className={`px-3 py-1 rounded-full text-xs font-semibold ${
-                        modoNoche
-                          ? "bg-purple-900/30 text-purple-300 border border-purple-800"
-                          : "bg-purple-50 text-purple-600 border border-purple-200"
-                      }`}
+                      className={`px-3 py-1 rounded-full text-xs font-semibold ${modoNoche
+                        ? "bg-purple-900/30 text-purple-300 border border-purple-800"
+                        : "bg-purple-50 text-purple-600 border border-purple-200"
+                        }`}
                     >
                       👤 Responsable:{" "}
                       {responsableGrupo ||
@@ -775,52 +969,50 @@ const campos = [
                   </div>
                 </div>
 
+
+
                 <div
-                  className={`overflow-auto rounded-2xl border ${
-                    modoNoche
-                      ? "bg-[#1a1a1a] border-[#2f2f2f]"
-                      : "bg-white border-gray-200"
-                  }`}
+                  className={`overflow-auto rounded-2xl border ${modoNoche
+                    ? "bg-[#1a1a1a] border-[#2f2f2f]"
+                    : "bg-white border-gray-200"
+                    }`}
                 >
                   <table className="w-full text-sm border-collapse">
                     <thead>
                       <tr
-                        className={`text-center text-xs uppercase ${
-                          modoNoche
-                            ? "text-gray-300 bg-[#202020]"
-                            : "text-gray-600 bg-gray-50"
-                        }`}
+                        className={`text-center text-xs uppercase ${modoNoche
+                          ? "text-gray-300 bg-[#202020]"
+                          : "text-gray-600 bg-gray-50"
+                          }`}
                       >
                         <th
-                          className={`p-3 border ${
-                            modoNoche ? "border-[#353535]" : "border-gray-200"
-                          }`}
+                          className={`p-3 border ${modoNoche ? "border-[#353535]" : "border-gray-200"
+                            }`}
                         >
                           Área / Puesto
                         </th>
 
                         {campos.map((c) => (
                           <th
-  key={c.key}
-  className={`p-3 border ${modoNoche ? "border-[#353535]" : "border-gray-200"}`}
->
-  <div className="flex flex-col items-center gap-1">
+                            key={c.key}
+                            className={`p-3 border ${modoNoche ? "border-[#353535]" : "border-gray-200"}`}
+                          >
+                            <div className="flex flex-col items-center gap-1">
 
-    {(() => {
-      const Icono = c.icon;
-      return <Icono className={`w-6 h-6 ${c.color}`} />;
-    })()}
+                              {(() => {
+                                const Icono = c.icon;
+                                return <Icono className={`w-6 h-6 ${c.color}`} />;
+                              })()}
 
-    <span>{c.nombre}</span>
+                              <span>{c.nombre}</span>
 
-  </div>
-</th>
+                            </div>
+                          </th>
                         ))}
 
                         <th
-                          className={`p-3 border ${
-                            modoNoche ? "border-[#353535]" : "border-gray-200"
-                          }`}
+                          className={`p-3 border ${modoNoche ? "border-[#353535]" : "border-gray-200"
+                            }`}
                         >
                           Observaciones
                         </th>
@@ -828,7 +1020,7 @@ const campos = [
                     </thead>
 
                     <tbody>
-                    {dataBackend.map((area: any) => {
+                      {dataBackend.map((area: any) => {
                         const registro = registros.find((r) => r.area_id === area.id);
 
                         const filaKey = getFilaKey(
@@ -840,18 +1032,17 @@ const campos = [
                         return (
                           <tr
                             key={filaKey}
-                            className={`transition ${
-                              modoNoche
-                                ? "bg-[#181818] hover:bg-[#1f1f1f]"
-                                : "bg-white hover:bg-gray-50"
-                            }`}
+                            className={`transition ${modoNoche
+                              ? "bg-[#181818] hover:bg-[#1f1f1f]"
+                              : "bg-white hover:bg-gray-50"
+                              }`}
                           >
                             <td
-                              className={`p-3 border ${
-                                modoNoche ? "border-[#353535]" : "border-gray-200"
-                              }`}
+                              className={`p-3 border ${modoNoche ? "border-[#353535]" : "border-gray-200"
+                                }`}
                             >
                               <input
+                                disabled={editandoGrupo !== clave}
                                 value={area.nombre || ""}
                                 onChange={(e) => {
                                   const nuevo = e.target.value;
@@ -901,7 +1092,7 @@ const campos = [
                                         (a) =>
                                           a.id !== area.id &&
                                           String(a?.nombre || "").toLowerCase().trim() ===
-                                            valor.toLowerCase()
+                                          valor.toLowerCase()
                                       );
 
                                       if (duplicada) {
@@ -958,47 +1149,51 @@ const campos = [
                                     }
                                   }
                                 }}
-                                className={`w-full text-center font-semibold rounded-xl px-3 py-2 ${
-                                  modoNoche
-                                    ? "bg-[#222] text-white"
-                                    : "bg-gray-50 text-gray-800"
-                                }`}
+                                className={`w-full text-center font-semibold rounded-xl px-3 py-2 ${modoNoche
+                                  ? "bg-[#222] text-white"
+                                  : "bg-gray-50 text-gray-800"
+                                  }`}
                               />
                             </td>
 
                             {campos.map((c) => {
-                              const cVal = registro
-                                ? Number(registro?.[`${c.db}_c`] || 0)
-                                : 0;
+                              const cVal =
+                                valores?.[filaKey]?.[c.key]?.c !== undefined
+                                  ? Number(valores[filaKey][c.key].c || 0)
+                                  : registro
+                                    ? Number(registro?.[`${c.db}_c`] || 0)
+                                    : 0;
 
-                              const ncVal = registro
-                                ? Number(registro?.[`${c.db}_nc`] || 0)
-                                : 0;
+                              const ncVal =
+                                valores?.[filaKey]?.[c.key]?.nc !== undefined
+                                  ? Number(valores[filaKey][c.key].nc || 0)
+                                  : registro
+                                    ? Number(registro?.[`${c.db}_nc`] || 0)
+                                    : 0;
 
                               const total = cVal + ncVal;
 
                               return (
                                 <td
                                   key={c.key}
-                                  className={`p-2 border ${
-                                    modoNoche
-                                      ? "border-[#353535]"
-                                      : "border-gray-200"
-                                  }`}
+                                  className={`p-2 border ${modoNoche
+                                    ? "border-[#353535]"
+                                    : "border-gray-200"
+                                    }`}
                                 >
                                   <div
-                                    className={`rounded-xl p-2 ${
-                                      modoNoche ? "bg-[#202020]" : "bg-gray-50"
-                                    }`}
+                                    className={`rounded-xl p-2 ${modoNoche ? "bg-[#202020]" : "bg-gray-50"
+                                      }`}
                                   >
                                     <div className="grid grid-cols-2 gap-2">
                                       <input
+                                        disabled={editandoGrupo !== clave}
                                         value={
                                           valores?.[filaKey]?.[c.key]?.c !== undefined
                                             ? valores[filaKey][c.key].c
                                             : registro
-                                            ? String(registro?.[`${c.db}_c`] || "")
-                                            : ""
+                                              ? String(registro?.[`${c.db}_c`] || "")
+                                              : ""
                                         }
                                         onChange={(e) =>
                                           handleChange(filaKey, c.key, "c", e.target.value)
@@ -1008,20 +1203,20 @@ const campos = [
                                             guardarFila(filaKey, area, registro);
                                           }
                                         }}
-                                        className={`w-full text-center rounded-lg py-1 border font-semibold ${
-                                          modoNoche
-                                            ? "bg-[#111] text-white border-[#2f2f2f]"
-                                            : "bg-white text-gray-700 border-gray-200"
-                                        }`}
+                                        className={`w-full text-center rounded-lg py-1 border font-semibold ${modoNoche
+                                          ? "bg-[#111] text-white border-[#2f2f2f]"
+                                          : "bg-white text-gray-700 border-gray-200"
+                                          }`}
                                       />
 
                                       <input
+                                        disabled={editandoGrupo !== clave}
                                         value={
                                           valores?.[filaKey]?.[c.key]?.nc !== undefined
                                             ? valores[filaKey][c.key].nc
                                             : registro
-                                            ? String(registro?.[`${c.db}_nc`] || "")
-                                            : ""
+                                              ? String(registro?.[`${c.db}_nc`] || "")
+                                              : ""
                                         }
                                         onChange={(e) =>
                                           handleChange(filaKey, c.key, "nc", e.target.value)
@@ -1031,20 +1226,18 @@ const campos = [
                                             guardarFila(filaKey, area, registro);
                                           }
                                         }}
-                                        className={`w-full text-center rounded-lg py-1 border font-semibold ${
-                                          modoNoche
-                                            ? "bg-[#111] text-white border-[#2f2f2f]"
-                                            : "bg-white text-gray-700 border-gray-200"
-                                        }`}
+                                        className={`w-full text-center rounded-lg py-1 border font-semibold ${modoNoche
+                                          ? "bg-[#111] text-white border-[#2f2f2f]"
+                                          : "bg-white text-gray-700 border-gray-200"
+                                          }`}
                                       />
                                     </div>
 
                                     <div
-                                      className={`mt-2 text-center text-xs font-semibold py-1 rounded-lg border ${
-                                        modoNoche
-                                          ? "bg-blue-900/20 text-blue-300 border-blue-800/40"
-                                          : "bg-blue-50 text-blue-700 border-blue-200"
-                                      }`}
+                                      className={`mt-2 text-center text-xs font-semibold py-1 rounded-lg border ${modoNoche
+                                        ? "bg-blue-900/20 text-blue-300 border-blue-800/40"
+                                        : "bg-blue-50 text-blue-700 border-blue-200"
+                                        }`}
                                     >
                                       {total}
                                     </div>
@@ -1054,13 +1247,12 @@ const campos = [
                             })}
 
                             <td
-                              className={`p-3 border ${
-                                modoNoche ? "border-[#353535]" : "border-gray-200"
-                              }`}
+                              className={`p-3 border ${modoNoche ? "border-[#353535]" : "border-gray-200"
+                                }`}
                             >
                               <div className="flex flex-col gap-2">
                                 <textarea
-                                  disabled={!registro}
+                                  disabled={editandoGrupo !== clave}
                                   value={
                                     observaciones[filaKey] !== undefined
                                       ? observaciones[filaKey]
@@ -1074,21 +1266,30 @@ const campos = [
                                       guardarFila(filaKey, area, registro);
                                     }
                                   }}
-                                  className={`w-full p-2 rounded-xl border ${
-                                    modoNoche
-                                      ? "bg-[#222] text-white border-[#2f2f2f]"
-                                      : "bg-gray-50 text-gray-800 border-gray-200"
-                                  }`}
+                                  className={`w-full p-2 rounded-xl border ${modoNoche
+                                    ? "bg-[#222] text-white border-[#2f2f2f]"
+                                    : "bg-gray-50 text-gray-800 border-gray-200"
+                                    }`}
                                 />
 
                                 <div
-                                  className={`text-center text-sm font-semibold py-2 rounded-xl border ${
-                                    modoNoche
-                                      ? "bg-green-900/20 text-green-300 border-green-800/40"
-                                      : "bg-green-50 text-green-700 border-green-200"
-                                  }`}
+                                  className={`text-center text-sm font-semibold py-2 rounded-xl border ${modoNoche
+                                    ? "bg-green-900/20 text-green-300 border-green-800/40"
+                                    : "bg-green-50 text-green-700 border-green-200"
+                                    }`}
                                 >
-                                  Total: {registro?.total || 0}
+                                  Total: {
+                                    (valores?.[filaKey]?.[1]?.c ? Number(valores[filaKey][1].c) : Number(registro?.sanitarios_c || 0)) +
+                                    (valores?.[filaKey]?.[1]?.nc ? Number(valores[filaKey][1].nc) : Number(registro?.sanitarios_nc || 0)) +
+                                    (valores?.[filaKey]?.[2]?.c ? Number(valores[filaKey][2].c) : Number(registro?.orinales_c || 0)) +
+                                    (valores?.[filaKey]?.[2]?.nc ? Number(valores[filaKey][2].nc) : Number(registro?.orinales_nc || 0)) +
+                                    (valores?.[filaKey]?.[3]?.c ? Number(valores[filaKey][3].c) : Number(registro?.duchas_c || 0)) +
+                                    (valores?.[filaKey]?.[3]?.nc ? Number(valores[filaKey][3].nc) : Number(registro?.duchas_nc || 0)) +
+                                    (valores?.[filaKey]?.[4]?.c ? Number(valores[filaKey][4].c) : Number(registro?.lavamanos_c || 0)) +
+                                    (valores?.[filaKey]?.[4]?.nc ? Number(valores[filaKey][4].nc) : Number(registro?.lavamanos_nc || 0)) +
+                                    (valores?.[filaKey]?.[5]?.c ? Number(valores[filaKey][5].c) : Number(registro?.llaves_c || 0)) +
+                                    (valores?.[filaKey]?.[5]?.nc ? Number(valores[filaKey][5].nc) : Number(registro?.llaves_nc || 0))
+                                  }
                                 </div>
                               </div>
                             </td>
@@ -1100,46 +1301,40 @@ const campos = [
                 </div>
 
                 <div
-                  className={`mt-6 overflow-auto rounded-2xl border ${
-                    modoNoche
-                      ? "bg-[#1a1a1a] border-[#2f2f2f]"
-                      : "bg-white border-gray-200"
-                  }`}
+                  className={`mt-6 overflow-auto rounded-2xl border ${modoNoche
+                    ? "bg-[#1a1a1a] border-[#2f2f2f]"
+                    : "bg-white border-gray-200"
+                    }`}
                 >
                   <table className="w-full text-sm border-collapse">
                     <thead>
                       <tr
-                        className={`text-center text-xs uppercase ${
-                          modoNoche
-                            ? "text-gray-300 bg-[#202020]"
-                            : "text-gray-600 bg-gray-50"
-                        }`}
+                        className={`text-center text-xs uppercase ${modoNoche
+                          ? "text-gray-300 bg-[#202020]"
+                          : "text-gray-600 bg-red-600 text-white"
+                          }`}
                       >
                         <th
-                          className={`p-3 border ${
-                            modoNoche ? "border-[#353535]" : "border-gray-200"
-                          }`}
+                          className={`p-3 border ${modoNoche ? "border-gray-200" : "border-gray-200"
+                            }`}
                         >
                           Tipo
                         </th>
                         <th
-                          className={`p-3 border ${
-                            modoNoche ? "border-[#353535]" : "border-gray-200"
-                          }`}
+                          className={`p-3 border ${modoNoche ? "border-gray-200" : "border-gray-200"
+                            }`}
                         >
                           ✔ Cumple
                         </th>
                         <th
-                          className={`p-3 border ${
-                            modoNoche ? "border-[#353535]" : "border-gray-200"
-                          }`}
+                          className={`p-3 border ${modoNoche ? "border-gray-200" : "border-gray-200"
+                            }`}
                         >
                           ✖ No cumple
                         </th>
                         <th
-                          className={`p-3 border ${
-                            modoNoche ? "border-[#353535]" : "border-gray-200"
-                          }`}
+                          className={`p-3 border ${modoNoche ? "border-gray-200" : "border-gray-200"
+                            }`}
                         >
                           Total
                         </th>
@@ -1159,40 +1354,35 @@ const campos = [
                         return (
                           <tr
                             key={c.key}
-                            className={`${
-                              modoNoche
-                                ? "bg-[#181818] hover:bg-[#1f1f1f]"
-                                : "bg-white hover:bg-gray-50"
-                            }`}
+                            className={`${modoNoche
+                              ? "bg-[#181818] hover:bg-[#1f1f1f]"
+                              : "bg-white hover:bg-gray-50"
+                              }`}
                           >
                             <td
-                              className={`p-3 border font-semibold ${
-                                modoNoche ? "border-[#353535]" : "border-gray-200"
-                              }`}
+                              className={`p-3 border font-semibold ${modoNoche ? "border-gray-200" : "border-gray-200"
+                                }`}
                             >
                               {c.nombre}
                             </td>
 
                             <td
-                              className={`p-3 border text-center ${
-                                modoNoche ? "border-[#353535]" : "border-gray-200"
-                              }`}
+                              className={`p-3 border text-center ${modoNoche ? "border-gray-200" : "border-gray-200"
+                                }`}
                             >
                               {totalC}
                             </td>
 
                             <td
-                              className={`p-3 border text-center ${
-                                modoNoche ? "border-[#353535]" : "border-gray-200"
-                              }`}
+                              className={`p-3 border text-center ${modoNoche ? "border-gray-200" : "border-gray-200"
+                                }`}
                             >
                               {totalNC}
                             </td>
 
                             <td
-                              className={`p-3 border text-center font-bold ${
-                                modoNoche ? "border-[#353535]" : "border-gray-200"
-                              }`}
+                              className={`p-3 border text-center font-bold ${modoNoche ? "border-gray-200" : "border-gray-200"
+                                }`}
                             >
                               {totalC + totalNC}
                             </td>
@@ -1201,22 +1391,19 @@ const campos = [
                       })}
 
                       <tr
-                        className={`font-bold ${
-                          modoNoche ? "bg-[#222]" : "bg-gray-100"
-                        }`}
+                        className={`font-bold ${modoNoche ? "bg-[#222]" : "bg-gray-100"
+                          }`}
                       >
                         <td
-                          className={`p-3 border ${
-                            modoNoche ? "border-[#353535]" : "border-gray-200"
-                          }`}
+                          className={`p-3 border ${modoNoche ? "border-gray-200" : "border-gray-200"
+                            }`}
                         >
                           TOTAL
                         </td>
 
                         <td
-                          className={`p-3 border text-center ${
-                            modoNoche ? "border-[#353535]" : "border-gray-200"
-                          }`}
+                          className={`p-3 border text-center ${modoNoche ? "border-gray-200" : "border-gray-200"
+                            }`}
                         >
                           {registros.reduce(
                             (acc, r) =>
@@ -1231,9 +1418,8 @@ const campos = [
                         </td>
 
                         <td
-                          className={`p-3 border text-center ${
-                            modoNoche ? "border-[#353535]" : "border-gray-200"
-                          }`}
+                          className={`p-3 border text-center ${modoNoche ? "border-gray-200" : "border-gray-200"
+                            }`}
                         >
                           {registros.reduce(
                             (acc, r) =>
@@ -1248,9 +1434,8 @@ const campos = [
                         </td>
 
                         <td
-                          className={`p-3 border text-center ${
-                            modoNoche ? "border-[#353535]" : "border-gray-200"
-                          }`}
+                          className={`p-3 border text-center ${modoNoche ? "border-gray-200" : "border-gray-200"
+                            }`}
                         >
                           {registros.reduce(
                             (acc, r) => acc + Number(r.total || 0),

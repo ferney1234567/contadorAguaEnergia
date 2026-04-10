@@ -72,17 +72,22 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
   };
 
   useEffect(() => {
+    if (!responsable) return;
+
     const data = {
       valores,
       observaciones,
     };
-    localStorage.setItem("residuos_data", JSON.stringify(data));
-  }, [valores, observaciones]);
+
+    const key = `residuos_${responsable}`;
+    localStorage.setItem(key, JSON.stringify(data));
+  }, [valores, observaciones, responsable]);
 
 
   useEffect(() => {
     if (modoNuevaInspeccion) return; // 🔥 CLAVE
-    const data = localStorage.getItem("residuos_data");
+    const key = `residuos_${responsable}`;
+    const data = localStorage.getItem(key);
     if (data) {
       const parsed = JSON.parse(data);
       setValores(parsed.valores || {});
@@ -101,7 +106,7 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
   const finalizarInspeccion = async () => {
     setModoNuevaInspeccion(true);
     localStorage.setItem("modo_nueva_inspeccion", "true"); // 🔥 CLAVE
-    localStorage.removeItem("residuos_data");
+    localStorage.removeItem(`residuos_${responsable}`);
     setValores({});
     setObservaciones({});
     setInspecciones([]);
@@ -161,7 +166,8 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
       try {
         const guardado = localStorage.getItem("responsable");
         if (guardado) setResponsable(guardado);
-        const dataLocal = localStorage.getItem("residuos_data");
+        const key = `residuos_${responsable}`;
+        const dataLocal = localStorage.getItem(key);
         if (dataLocal) {
           const parsed = JSON.parse(dataLocal);
           setValores(parsed.valores || {});
@@ -446,13 +452,113 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
     return 0;
   };
 
+  const guardarTodo = async (responsableGrupo: string, fecha: string) => {
+    try {
+      if (!responsableGrupo) return;
+
+      const promesas: Promise<any>[] = [];
+
+      dataBackend.forEach((area: any) => {
+        const filaKey = `${fecha}__${responsableGrupo}__${area.id}`;
+
+        const registro = inspecciones.find(
+          (r) =>
+            r.area_id === area.id &&
+            r.responsable === responsableGrupo &&
+            r.fecha?.split("T")[0] === fecha
+        );
+
+        const body = {
+          id: registro?.id || null,
+          fecha,
+          responsable: responsableGrupo,
+          area_id: area.id,
+
+          reciclables_c: Number(valores?.[filaKey]?.[1]?.c || 0),
+          reciclables_nc: Number(valores?.[filaKey]?.[1]?.nc || 0),
+
+          ordinarios_c: Number(valores?.[filaKey]?.[2]?.c || 0),
+          ordinarios_nc: Number(valores?.[filaKey]?.[2]?.nc || 0),
+
+          peligrosos_c: Number(valores?.[filaKey]?.[3]?.c || 0),
+          peligrosos_nc: Number(valores?.[filaKey]?.[3]?.nc || 0),
+
+          presintos_c: Number(valores?.[filaKey]?.[4]?.c || 0),
+          presintos_nc: Number(valores?.[filaKey]?.[4]?.nc || 0),
+
+          observacion: observaciones[filaKey] || "",
+        };
+
+        const total =
+          body.reciclables_c +
+          body.reciclables_nc +
+          body.ordinarios_c +
+          body.ordinarios_nc +
+          body.peligrosos_c +
+          body.peligrosos_nc +
+          body.presintos_c +
+          body.presintos_nc;
+
+        // ❌ eliminar
+        if (total === 0) {
+          if (registro?.id) {
+            promesas.push(
+              fetch(`/api/inspecciones-residuos?id=${registro.id}`, {
+                method: "DELETE",
+              })
+            );
+          }
+
+          // 🔥 LIMPIAR FRONT TAMBIÉN
+          delete valores[filaKey];
+          delete observaciones[filaKey];
+
+          return;
+        } else {
+          // 🔥 UPSERT
+          promesas.push(
+            fetch("/api/inspecciones-residuos", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(body),
+            })
+          );
+        }
+      });
+
+      await Promise.all(promesas);
+
+      const res = await fetch("/api/inspecciones-residuos");
+      const data = await res.json();
+      setInspecciones(data);
+
+      Swal.fire({
+        icon: "success",
+        title: "Guardado completo",
+        timer: 1500,
+        showConfirmButton: false,
+      });
+
+      setEditandoGrupo(null);
+    } catch (error) {
+      console.error(error);
+
+      Swal.fire({
+        icon: "error",
+        title: "Error al guardar",
+      });
+    }
+  };
+
   const guardarFila = async (
     filaKey: string,
     area: any,
     registro: any
   ) => {
     try {
-      if (!area || !area.id) return;
+      if (!area?.id) return;
 
       const responsableFinal = responsable;
 
@@ -461,40 +567,43 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
           toast: true,
           position: "top-end",
           icon: "warning",
-          title: "Falta responsable",
-          timer: 1200,
+          title: "Debes seleccionar un responsable",
+          timer: 1500,
           showConfirmButton: false,
         });
         return;
       }
 
+      // 🔥 EVITA CRUZAR RESPONSABLES
+      let registroSeguro = registro;
+      if (registro && registro.responsable !== responsableFinal) {
+        registroSeguro = null;
+      }
+
       const body = {
-        id: registro?.id || null, // 🔥 si no existe → crea
-       fecha: fechaSesion,
+        id: registroSeguro?.id || null,
+        fecha: fechaSesion,
         responsable: responsableFinal,
         area_id: area.id,
 
-        reciclables_c: obtenerValor(filaKey, 1, "c", registro),
-        reciclables_nc: obtenerValor(filaKey, 1, "nc", registro),
+        reciclables_c: obtenerValor(filaKey, 1, "c", registroSeguro),
+        reciclables_nc: obtenerValor(filaKey, 1, "nc", registroSeguro),
 
-        ordinarios_c: obtenerValor(filaKey, 2, "c", registro),
-        ordinarios_nc: obtenerValor(filaKey, 2, "nc", registro),
+        ordinarios_c: obtenerValor(filaKey, 2, "c", registroSeguro),
+        ordinarios_nc: obtenerValor(filaKey, 2, "nc", registroSeguro),
 
-        peligrosos_c: obtenerValor(filaKey, 3, "c", registro),
-        peligrosos_nc: obtenerValor(filaKey, 3, "nc", registro),
+        peligrosos_c: obtenerValor(filaKey, 3, "c", registroSeguro),
+        peligrosos_nc: obtenerValor(filaKey, 3, "nc", registroSeguro),
 
-        presintos_c: obtenerValor(filaKey, 4, "c", registro),
-        presintos_nc: obtenerValor(filaKey, 4, "nc", registro),
+        presintos_c: obtenerValor(filaKey, 4, "c", registroSeguro),
+        presintos_nc: obtenerValor(filaKey, 4, "nc", registroSeguro),
 
         observacion:
           observaciones[filaKey] ||
-          registro?.observacion ||
+          registroSeguro?.observacion ||
           "",
       };
 
-      // =========================
-      // 🔥 ELIMINAR SI TODO ESTÁ VACÍO
-      // =========================
       const total =
         body.reciclables_c +
         body.reciclables_nc +
@@ -505,8 +614,11 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
         body.presintos_c +
         body.presintos_nc;
 
-      if (total === 0 && registro?.id) {
-        await fetch(`/api/inspecciones-residuos/${registro.id}`, {
+      // =========================
+      // ❌ ELIMINAR
+      // =========================
+      if (total === 0 && registroSeguro?.id) {
+        await fetch(`/api/inspecciones-residuos?id=${registroSeguro.id}`, {
           method: "DELETE",
         });
 
@@ -521,31 +633,11 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
       }
 
       // =========================
-      // ✏️ UPDATE
-      // =========================
-      else if (registro?.id) {
-        await fetch("/api/inspecciones-residuos", {
-          method: "PUT",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify(body),
-        });
-
-        Swal.fire({
-          toast: true,
-          position: "top-end",
-          icon: "success",
-          title: "Actualizado",
-          timer: 1000,
-          showConfirmButton: false,
-        });
-      }
-
-      // =========================
-      // ➕ CREATE
+      // 🔥 UPSERT (CREAR / EDITAR)
       // =========================
       else {
         await fetch("/api/inspecciones-residuos", {
-          method: "POST",
+          method: "POST", // 🔥 SOLO POST
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify(body),
         });
@@ -554,8 +646,10 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
           toast: true,
           position: "top-end",
           icon: "success",
-          title: "Creado",
-          timer: 1000,
+          title: registroSeguro?.id
+            ? "Registro actualizado"
+            : "Registro creado",
+          timer: 1200,
           showConfirmButton: false,
         });
       }
@@ -573,7 +667,7 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
       Swal.fire({
         icon: "error",
         title: "Error",
-        text: "No se pudo guardar",
+        text: "No se pudo guardar el registro",
       });
     }
   };
@@ -842,6 +936,23 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
                       Editar
                     </button>
 
+                    {/* 💾 GUARDAR */}
+                    <button
+                      onClick={() =>
+                        guardarTodo(
+                          responsableGrupo,
+                          registros[0]?.fecha?.split("T")[0]
+                        )
+                      }
+                      className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all
+    ${modoNoche
+                          ? "bg-green-700 text-white"
+                          : "bg-green-500 text-white"
+                        }`}
+                    >
+                      💾 Guardar
+                    </button>
+
                     {/* ❌ QUITAR EDICIÓN */}
                     <button
                       onClick={() => {
@@ -947,8 +1058,7 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
                     {/* BODY */}
                     <tbody>
                       {dataBackend.map((area: any) => {
-                        const filaKey = `${anio}__${semana}__${responsableGrupo}__${area.id}`;
-
+                        const filaKey = `${registros[0]?.fecha?.split("T")[0]}__${responsableGrupo}__${area.id}`;
                         const registro = registros.find(
                           (r) =>
                             r.area_id === area.id &&
@@ -1116,15 +1226,11 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
                                         onChange={(e) =>
                                           handleChange(filaKey, c.key, "c", e.target.value)
                                         }
-                                        onKeyDown={(e) => {
-                                          if (e.key === "Enter") {
-                                            guardarFila(filaKey, area, registro);
-                                          }
-                                        }}
+
                                         placeholder="0"
                                         className={`w-full text-center rounded-lg py-1 border font-semibold transition ${editandoGrupo === clave
-                                            ? "ring-2 ring-green-500"
-                                            : ""
+                                          ? "ring-2 ring-green-500"
+                                          : ""
                                           } ${modoNoche
                                             ? "bg-[#111] text-white border-[#2f2f2f]"
                                             : "bg-white text-gray-700 border-gray-200"
@@ -1144,15 +1250,11 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
                                         onChange={(e) =>
                                           handleChange(filaKey, c.key, "nc", e.target.value)
                                         }
-                                        onKeyDown={(e) => {
-                                          if (e.key === "Enter") {
-                                            guardarFila(filaKey, area, registro);
-                                          }
-                                        }}
+
                                         placeholder="0"
                                         className={`w-full text-center rounded-lg py-1 border font-semibold transition ${editandoGrupo === clave
-                                            ? "ring-2 ring-red-500"
-                                            : ""
+                                          ? "ring-2 ring-red-500"
+                                          : ""
                                           } ${modoNoche
                                             ? "bg-[#111] text-white border-[#2f2f2f]"
                                             : "bg-white text-gray-700 border-gray-200"
@@ -1190,15 +1292,11 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
                                       : registro?.observacion || ""
                                   }
                                   onChange={(e) => handleObs(filaKey, e.target.value)}
-                                  onKeyDown={(e) => {
-                                    if (e.key === "Enter") {
-                                      guardarFila(filaKey, area, registro);
-                                    }
-                                  }}
+
                                   placeholder="Escribe una observación..."
                                   className={`w-full p-2 rounded-xl border transition ${editandoGrupo === clave
-                                      ? "ring-2 ring-blue-500"
-                                      : ""
+                                    ? "ring-2 ring-blue-500"
+                                    : ""
                                     } ${modoNoche
                                       ? "bg-[#222] text-white border-[#2f2f2f]"
                                       : "bg-gray-50 text-gray-800 border-gray-200"
@@ -1232,8 +1330,8 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
                     <thead>
                       <tr
                         className={`text-center text-xs uppercase ${modoNoche
-                          ? "text-gray-300 bg-[#202020]"
-                          : "text-gray-600 bg-gray-50"
+                          ? "text-gray-300 bg-red-700 text-white"
+                          : "text-gray-600 bg-red-600 text-white"
                           }`}
                       >
                         <th
