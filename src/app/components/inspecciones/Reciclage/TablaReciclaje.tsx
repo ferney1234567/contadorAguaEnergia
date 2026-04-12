@@ -656,6 +656,54 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
   }
 };
 
+
+const eliminarInspeccionGrupo = async (responsableGrupo: string, fecha: string) => {
+  try {
+    if (!responsableGrupo) return;
+
+    const confirm = await Swal.fire({
+      title: "¿Eliminar inspección?",
+      text: `Se eliminarán los registros de ${responsableGrupo}`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      cancelButtonColor: "#3085d6",
+      confirmButtonText: "Sí, eliminar",
+    });
+
+    if (!confirm.isConfirmed) return;
+
+    // 🔥 ELIMINAR TODOS LOS REGISTROS DE ESE RESPONSABLE Y FECHA
+    await fetch("/api/inspecciones-residuos", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        responsable: responsableGrupo,
+        fecha: fecha,
+      }),
+    });
+
+    // 🔄 RECARGAR DATOS
+    const res = await fetch("/api/inspecciones-residuos");
+    const data = await res.json();
+    setInspecciones(data);
+
+    Swal.fire({
+      icon: "success",
+      title: "Inspección eliminada",
+      timer: 1200,
+      showConfirmButton: false,
+    });
+
+  } catch (error) {
+    console.error(error);
+
+    Swal.fire({
+      icon: "error",
+      title: "Error al eliminar",
+    });
+  }
+};
   
 
   return (
@@ -962,6 +1010,23 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
                     >
                       ❌ Quitar edición
                     </button>
+
+                    {/* 🗑️ ELIMINAR INSPECCIÓN */}
+<button
+  onClick={() =>
+    eliminarInspeccionGrupo(
+      responsableGrupo,
+      registros[0]?.fecha?.split("T")[0]
+    )
+  }
+  className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all
+    ${modoNoche
+      ? "bg-red-700 text-white"
+      : "bg-red-500 text-white"
+    } hover:scale-105`}
+>
+  🗑️ Eliminar inspección
+</button>
 
                   </div>
                   <div className="flex justify-center gap-3 mt-3 flex-wrap">

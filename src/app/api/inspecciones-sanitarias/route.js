@@ -79,29 +79,26 @@ export async function PUT(request) {
 ========================= */
 export async function DELETE(request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get("id");
-
-    if (!id) {
-      return Response.json(
-        { error: "Falta el parámetro id" },
-        { status: 400 }
-      );
-    }
+    const body = await request.json();
 
     const res = await fetch(
-      `${BACKEND_URL}/inspecciones-sanitarias/${id}`,
+      `${process.env.NEXT_PUBLIC_API_URL}/inspecciones-sanitarias`,
       {
         method: "DELETE",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(body),
       }
     );
 
     const data = await res.json();
 
     return Response.json(data, { status: res.status });
+
   } catch (error) {
     return Response.json(
-      { error: "Error eliminando inspección de agua" },
+      { error: "Error eliminando inspección sanitaria" },
       { status: 500 }
     );
   }

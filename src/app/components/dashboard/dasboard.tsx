@@ -7,6 +7,7 @@ import { exportarDashboardExcel } from "../../utils/exportadorgeneral";
 import { FaWater, FaBolt, FaChartLine, FaClipboardList, FaTint, FaLightbulb, } from "react-icons/fa";
 import { exportarDashboardPDF } from "../../utils/exportadorDashboardPDF";
 import { Doughnut } from "react-chartjs-2";
+import { FileText, Printer } from "lucide-react";
 
 ChartJS.register(ArcElement, BarElement, CategoryScale, LinearScale, PointElement, LineElement, Tooltip, Legend);
 
@@ -100,10 +101,13 @@ const DashboardInicio: FC<Props> = ({ modoNoche }) => {
   const [comparativoEnergia, setComparativoEnergia] = useState<number[]>(Array(12).fill(0));
   const [comparativoAgua, setComparativoAgua] = useState<number[]>(Array(12).fill(0));
   const [resmasMensual, setResmasMensual] = useState<number[]>(Array(12).fill(0));
-const [tonnerMensual, setTonnerMensual] = useState<number[]>(Array(12).fill(0));
-const totalResmas = resmasMensual.reduce((a, b) => a + b, 0);
-const totalTonner = tonnerMensual.reduce((a, b) => a + b, 0);
+  const [tonnerMensual, setTonnerMensual] = useState<number[]>(Array(12).fill(0));
+  const totalResmas = resmasMensual.reduce((a, b) => a + b, 0);
+  const totalTonner = tonnerMensual.reduce((a, b) => a + b, 0);
+  const [valoresAgua, setValoresAgua] = useState<number[]>(Array(12).fill(0));
+  const [valoresEnergia, setValoresEnergia] = useState<number[]>(Array(12).fill(0));
 
+  const anioActual = new Date().getFullYear();
   const totalAguaComparativo = comparativoAgua.reduce((a, b) => a + b, 0)
   const totalEnergiaComparativo = comparativoEnergia.reduce((a, b) => a + b, 0)
 
@@ -207,31 +211,31 @@ const totalTonner = tonnerMensual.reduce((a, b) => a + b, 0);
     ],
   };
 
- const dataEnergia = {
-  labels: meses,
-  datasets: [
-    {
-      label: "Consumo Energía (kWh)",
-      data: consumoEnergiaMensual,
-      backgroundColor: consumoEnergiaMensual.map((valor) => {
-        if (valor <= 1514) {
-          return "#0000CC "; // 🔵 Azul (óptimo)
-        }
+  const dataEnergia = {
+    labels: meses,
+    datasets: [
+      {
+        label: "Consumo Energía (kWh)",
+        data: consumoEnergiaMensual,
+        backgroundColor: consumoEnergiaMensual.map((valor) => {
+          if (valor <= 1514) {
+            return "#0000CC "; // 🔵 Azul (óptimo)
+          }
 
-        if (valor <= 1683) {
-          return "#005200 "; // 🟢 Verde (normal)
-        }
+          if (valor <= 1683) {
+            return "#005200 "; // 🟢 Verde (normal)
+          }
 
-        if (valor <= 1852) {
-          return "#facc15"; // 🟡 Amarillo (alerta)
-        }
+          if (valor <= 1852) {
+            return "#facc15"; // 🟡 Amarillo (alerta)
+          }
 
-        return "#C40000"; // 🔴 Rojo (crítico)
-      }),
-      borderRadius: 10,
-    },
-  ],
-};
+          return "#C40000"; // 🔴 Rojo (crítico)
+        }),
+        borderRadius: 10,
+      },
+    ],
+  };
 
   const dataAreaAgua = {
     labels: meses,
@@ -305,70 +309,70 @@ const totalTonner = tonnerMensual.reduce((a, b) => a + b, 0);
     ],
   };
 
-const dataAreaEnergia = {
-  labels: meses,
-  datasets: [
-    // ⚡ CONSUMO REAL
-    {
-      label: "Consumo Energía (kWh)",
-      data: consumoEnergiaMensual,
-      borderColor: colores.energia,
+  const dataAreaEnergia = {
+    labels: meses,
+    datasets: [
+      // ⚡ CONSUMO REAL
+      {
+        label: "Consumo Energía (kWh)",
+        data: consumoEnergiaMensual,
+        borderColor: colores.energia,
 
-      // 🔥 GRADIENTE DINÁMICO
-      backgroundColor: (context: any) => {
-        const chart = context.chart;
-        const { ctx, chartArea } = chart;
+        // 🔥 GRADIENTE DINÁMICO
+        backgroundColor: (context: any) => {
+          const chart = context.chart;
+          const { ctx, chartArea } = chart;
 
-        if (!chartArea) return null;
+          if (!chartArea) return null;
 
-        const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
+          const gradient = ctx.createLinearGradient(0, chartArea.top, 0, chartArea.bottom);
 
-        const ultimoValor = consumoEnergiaMensual.findLast(v => v > 0) || 0;
+          const ultimoValor = consumoEnergiaMensual.findLast(v => v > 0) || 0;
 
-        let color = "#0000CC ";
+          let color = "#0000CC ";
 
-        if (ultimoValor <= 1514) color = "#3b82f6"; // 🔵 Azul
-        else if (ultimoValor <= 1683) color = "#005200"; // 🟢 Verde
-        else if (ultimoValor <= 1852) color = "#facc15"; // 🟡 Amarillo
-        else color = "#C40000"; // 🔴 Rojo
+          if (ultimoValor <= 1514) color = "#3b82f6"; // 🔵 Azul
+          else if (ultimoValor <= 1683) color = "#005200"; // 🟢 Verde
+          else if (ultimoValor <= 1852) color = "#facc15"; // 🟡 Amarillo
+          else color = "#C40000"; // 🔴 Rojo
 
-        gradient.addColorStop(0, color + "80");
-        gradient.addColorStop(1, color + "05");
+          gradient.addColorStop(0, color + "80");
+          gradient.addColorStop(1, color + "05");
 
-        return gradient;
+          return gradient;
+        },
+
+        tension: 0.4,
+        fill: true,
+
+        pointRadius: 5,
+        pointHoverRadius: 7,
+
+        // 🔥 PUNTOS POR RANGO
+        pointBackgroundColor: consumoEnergiaMensual.map((v) => {
+          if (v <= 1514) return "#3b82f6"; // 🔵 Azul
+          if (v <= 1683) return "#005200"; // 🟢 Verde
+          if (v <= 1852) return "#facc15"; // 🟡 Amarillo
+          return "#C40000"; // 🔴 Rojo
+        }),
+
+        pointBorderColor: "#ffffff",
+        pointBorderWidth: 2,
       },
 
-      tension: 0.4,
-      fill: true,
-
-      pointRadius: 5,
-      pointHoverRadius: 7,
-
-      // 🔥 PUNTOS POR RANGO
-      pointBackgroundColor: consumoEnergiaMensual.map((v) => {
-        if (v <= 1514) return "#3b82f6"; // 🔵 Azul
-        if (v <= 1683) return "#005200"; // 🟢 Verde
-        if (v <= 1852) return "#facc15"; // 🟡 Amarillo
-        return "#C40000"; // 🔴 Rojo
-      }),
-
-      pointBorderColor: "#ffffff",
-      pointBorderWidth: 2,
-    },
-
-    // ⚫ META
-    {
-      label: "Meta Energía",
-      data: metasEnergiaMensual,
-      borderColor: "#64748b",
-      borderWidth: 2,
-      borderDash: [6, 6],
-      pointRadius: 3,
-      pointBackgroundColor: "#64748b",
-      fill: false,
-    },
-  ],
-};
+      // ⚫ META
+      {
+        label: "Meta Energía",
+        data: metasEnergiaMensual,
+        borderColor: "#64748b",
+        borderWidth: 2,
+        borderDash: [6, 6],
+        pointRadius: 3,
+        pointBackgroundColor: "#64748b",
+        fill: false,
+      },
+    ],
+  };
 
 
   const dataMetaAgua = {
@@ -394,80 +398,64 @@ const dataAreaEnergia = {
 
 
   useEffect(() => {
-
     const cargarComparativoEnergia = async () => {
-
       try {
-
         const res = await fetch("/api/comparativoEnergia/");
         const data = await res.json();
 
         const mesesEnergia = new Array(12).fill(0);
+        const valoresEnergiaTemp = new Array(12).fill(0);
 
         data.forEach((item: any) => {
-
           if (Number(item.anio) === Number(anio)) {
-
             const mesIndex = Number(item.mes) - 1;
 
             if (mesIndex >= 0 && mesIndex < 12) {
               mesesEnergia[mesIndex] += Number(item.kw_consumidos || 0);
+              valoresEnergiaTemp[mesIndex] += Number(item.valor_consumo_energia || 0);
             }
-
           }
-
         });
 
         setComparativoEnergia(mesesEnergia);
-
+        setValoresEnergia(valoresEnergiaTemp);
       } catch (error) {
-
         console.error("Error cargando comparativo energia", error);
-
       }
-
     };
 
     cargarComparativoEnergia();
-
   }, [anio]);
 
 
   useEffect(() => {
-
     const cargarComparativoAgua = async () => {
-
       try {
-
         const res = await fetch("/api/comparativoAgua/");
         const data = await res.json();
 
         const mesesAgua = new Array(12).fill(0);
+        const valoresAguaTemp = new Array(12).fill(0);
 
         data.forEach((item: any) => {
+          if (Number(item.anio) === Number(anio)) {
+            const mesIndex = Number(item.mes) - 1;
 
-          if (item.anio === anio) {
-
-            const mesIndex = item.mes - 1;
-
-            mesesAgua[mesIndex] += Number(item.m3_consumidos);
-
+            if (mesIndex >= 0 && mesIndex < 12) {
+              mesesAgua[mesIndex] += Number(item.m3_consumidos || 0);
+              valoresAguaTemp[mesIndex] += Number(item.valor_consumo_agua || 0);
+            }
           }
-
         });
 
         setComparativoAgua(mesesAgua);
-
+        setValoresAgua(valoresAguaTemp);
       } catch (error) {
-
         console.error("Error cargando comparativo agua", error);
-
       }
-
     };
 
     cargarComparativoAgua();
-
   }, [anio]);
 
   useEffect(() => {
@@ -588,100 +576,138 @@ const dataAreaEnergia = {
 
 
   useEffect(() => {
-  const cargarResmas = async () => {
-    try {
-      const res = await fetch("/api/resmas");
-      const data = await res.json();
+    const cargarResmas = async () => {
+      try {
+        const res = await fetch("/api/resmas");
+        const data = await res.json();
 
-      const meses = Array(12).fill(0);
+        const meses = Array(12).fill(0);
 
-      data.forEach((item: any) => {
-        if (Number(item.anio) === Number(anio)) {
-          const mesIndex = Number(item.mes) - 1;
-          meses[mesIndex] += Number(item.cantidad || 0);
+        data.forEach((item: any) => {
+          if (Number(item.anio) === Number(anio)) {
+            const mesIndex = Number(item.mes) - 1;
+            meses[mesIndex] += Number(item.cantidad || 0);
+          }
+        });
+
+        setResmasMensual(meses);
+      } catch (error) {
+        console.error("Error resmas", error);
+      }
+    };
+
+    const cargarTonner = async () => {
+      try {
+        const res = await fetch("/api/tonners");
+        const data = await res.json();
+
+        const meses = Array(12).fill(0);
+
+        data.forEach((item: any) => {
+          const fecha = new Date(item.fecha);
+          if (fecha.getFullYear() === anio) {
+            const mesIndex = fecha.getMonth();
+            meses[mesIndex] += Number(item.cantidad || 0);
+          }
+        });
+
+        setTonnerMensual(meses);
+      } catch (error) {
+        console.error("Error tonner", error);
+      }
+    };
+
+    cargarResmas();
+    cargarTonner();
+  }, [anio]);
+
+
+  const dataResmas = {
+    labels: meses,
+    datasets: [
+      {
+        label: "Consumo de papel (resmas)",
+        data: resmasMensual,
+
+        borderColor: "#22c55e",
+        borderWidth: 3,
+
+        fill: true,
+        tension: 0.5,
+
+        // 🔥 GRADIENTE
+        backgroundColor: (context: any) => {
+          const { ctx, chartArea } = context.chart;
+          if (!chartArea) return;
+
+          const gradient = ctx.createLinearGradient(0, 0, 0, chartArea.bottom);
+          gradient.addColorStop(0, "rgba(34,197,94,0.6)");
+          gradient.addColorStop(1, "rgba(34,197,94,0.05)");
+
+          return gradient;
+        },
+
+        pointRadius: 5,
+        pointHoverRadius: 8,
+        pointBackgroundColor: "#22c55e",
+        pointBorderColor: "#fff",
+        pointBorderWidth: 2,
+
+        // 🔥 SOMBRA
+        segment: {
+          borderColor: (ctx: any) => {
+            return ctx.p0.parsed.y > ctx.p1.parsed.y
+              ? "#16a34a"
+              : "#22c55e";
+          }
         }
-      });
-
-      setResmasMensual(meses);
-    } catch (error) {
-      console.error("Error resmas", error);
-    }
+      },
+    ],
   };
 
-  const cargarTonner = async () => {
-    try {
-      const res = await fetch("/api/tonners");
-      const data = await res.json();
+  const dataTonner = {
+    labels: meses,
+    datasets: [
+      {
+        label: "Uso de tonner",
+        data: tonnerMensual,
 
-      const meses = Array(12).fill(0);
+        borderRadius: 12,
+        borderSkipped: false,
 
-      data.forEach((item: any) => {
-        const fecha = new Date(item.fecha);
-        if (fecha.getFullYear() === anio) {
-          const mesIndex = fecha.getMonth();
-          meses[mesIndex] += Number(item.cantidad || 0);
-        }
-      });
+        // 🔥 COLORES DINÁMICOS
+        backgroundColor: tonnerMensual.map((v) => {
+          if (v <= 10) return "#3b82f6";
+          if (v <= 20) return "#22c55e";
+          if (v <= 30) return "#facc15";
+          return "#ef4444";
+        }),
 
-      setTonnerMensual(meses);
-    } catch (error) {
-      console.error("Error tonner", error);
-    }
+        borderColor: "#1d4ed8",
+        borderWidth: 2,
+
+        hoverBackgroundColor: "#60a5fa",
+      },
+    ],
   };
-
-  cargarResmas();
-  cargarTonner();
-}, [anio]);
-
-
-const dataResmas = {
-  labels: meses,
-  datasets: [
-    {
-      label: "Consumo de papel (resmas)",
-      data: resmasMensual,
-      borderColor: "#22c55e",
-      backgroundColor: "rgba(34,197,94,0.25)",
-      fill: true,
-      tension: 0.5,
-      pointRadius: 4,
-      pointBackgroundColor: "#22c55e",
-    },
-  ],
-};
-
-const dataTonner = {
-  labels: meses,
-  datasets: [
-    {
-      label: "Uso de tonner",
-      data: tonnerMensual,
-      backgroundColor: "rgba(59,130,246,0.2)",
-      borderColor: "#3b82f6",
-      pointBackgroundColor: "#8b5cf6",
-      borderWidth: 2,
-    },
-  ],
-};
-
-const opcionesRadar = {
-  responsive: true,
-  scales: {
-    r: {
-      ticks: {
-        color: modoNoche ? "#ccc" : "#444",
-      },
-      grid: {
-        color: modoNoche ? "#333" : "#ddd",
+  const opcionesRadar = {
+    responsive: true,
+    scales: {
+      r: {
+        ticks: {
+          color: modoNoche ? "#ccc" : "#444",
+        },
+        grid: {
+          color: modoNoche ? "#333" : "#ddd",
+        },
       },
     },
-  },
-  plugins: {
-    legend: {
-      labels: { color: modoNoche ? "#fff" : "#000" },
+    plugins: {
+      legend: {
+        labels: { color: modoNoche ? "#fff" : "#000" },
+      },
     },
-  },
-};
+  };
 
 
 
@@ -723,38 +749,38 @@ const opcionesRadar = {
 
 
   const dataDiferenciaEnergiaMensual = {
-  labels: meses,
-  datasets: [
-    {
-      label: "Meta mensual (kWh)",
-      data: metasEnergiaMensual,
-      backgroundColor: modoNoche ? "#334155" : "#e5e7eb",
-      borderRadius: 6,
-      barThickness: 14,
-    },
-    {
-      label: "Consumo real (kWh)",
-      data: consumoEnergiaMensual,
-      backgroundColor: consumoEnergiaMensual.map((v) => {
-        if (v <= 1514) {
-          return "#0000CC"; // 🔵 Azul (óptimo)
-        }
+    labels: meses,
+    datasets: [
+      {
+        label: "Meta mensual (kWh)",
+        data: metasEnergiaMensual,
+        backgroundColor: modoNoche ? "#334155" : "#e5e7eb",
+        borderRadius: 6,
+        barThickness: 14,
+      },
+      {
+        label: "Consumo real (kWh)",
+        data: consumoEnergiaMensual,
+        backgroundColor: consumoEnergiaMensual.map((v) => {
+          if (v <= 1514) {
+            return "#0000CC"; // 🔵 Azul (óptimo)
+          }
 
-        if (v <= 1683) {
-          return "#005200"; // 🟢 Verde (normal)
-        }
+          if (v <= 1683) {
+            return "#005200"; // 🟢 Verde (normal)
+          }
 
-        if (v <= 1852) {
-          return "#facc15"; // 🟡 Amarillo (alerta)
-        }
+          if (v <= 1852) {
+            return "#facc15"; // 🟡 Amarillo (alerta)
+          }
 
-        return "#C40000"; // 🔴 Rojo (alto consumo)
-      }),
-      borderRadius: 6,
-      barThickness: 14,
-    },
-  ],
-};
+          return "#C40000"; // 🔴 Rojo (alto consumo)
+        }),
+        borderRadius: 6,
+        barThickness: 14,
+      },
+    ],
+  };
 
 
   const handleExportarExcel = () => {
@@ -813,7 +839,8 @@ const opcionesRadar = {
       `}
           >
 
-            {aniosDisponibles.map((y) => (
+
+            {Array.from({ length: 10 }, (_, i) => anioActual - 2 + i).map((y) => (
               <option key={y} value={y}>
                 {y}
               </option>
@@ -935,84 +962,84 @@ const opcionesRadar = {
       {/* BARRAS */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mb-10">
 
-       <div className={`p-6 rounded-xl shadow-lg border ${cardBg} ${cardBorder}`}>
+        <div className={`p-6 rounded-xl shadow-lg border ${cardBg} ${cardBorder}`}>
 
-  <h3 className={`font-bold text-lg mb-4 flex items-center gap-2 ${textColor}`}>
-    <FaTint className="text-blue-500" />
-    Consumo mensual de Agua
-    <span className="ml-2 text-sm font-semibold text-blue-400">
-      (Meta: {metaAgua || 0} L)
-    </span>
-  </h3>
+          <h3 className={`font-bold text-lg mb-4 flex items-center gap-2 ${textColor}`}>
+            <FaTint className="text-blue-500" />
+            Consumo mensual de Agua
+            <span className="ml-2 text-sm font-semibold text-blue-400">
+              (Meta: {metaAgua || 0} L)
+            </span>
+          </h3>
 
-  {/* 🔥 LEYENDA SEMÁFORO */}
-  <div className="flex flex-wrap gap-4 mb-4 text-xs font-semibold">
+          {/* 🔥 LEYENDA SEMÁFORO */}
+          <div className="flex flex-wrap gap-4 mb-4 text-xs font-semibold">
 
-    <div className="flex items-center gap-2">
-      <div className="w-10 h-3 rounded bg-blue-500"></div>
-      <span className={textColor}>Óptimo (0 - 54)</span>
-    </div>
+            <div className="flex items-center gap-2">
+              <div className="w-10 h-3 rounded bg-[#0000CC]"></div>
+              <span className={textColor}>Óptimo (0 - 54)</span>
+            </div>
 
-    <div className="flex items-center gap-2">
-      <div className="w-10 h-3 rounded bg-green-500"></div>
-      <span className={textColor}>Normal (55 - 59)</span>
-    </div>
+            <div className="flex items-center gap-2">
+              <div className="w-10 h-3 rounded bg-[#3E6102]"></div>
+              <span className={textColor}>Normal (55 - 59)</span>
+            </div>
 
-    <div className="flex items-center gap-2">
-      <div className="w-10 h-3 rounded bg-yellow-400"></div>
-      <span className={textColor}>Alerta (60 - 64)</span>
-    </div>
+            <div className="flex items-center gap-2">
+              <div className="w-10 h-3 rounded bg-[#facc15]"></div>
+              <span className={textColor}>Alerta (60 - 64)</span>
+            </div>
 
-    <div className="flex items-center gap-2">
-      <div className="w-10 h-3 rounded bg-red-500"></div>
-      <span className={textColor}>Crítico (65+)</span>
-    </div>
+            <div className="flex items-center gap-2">
+              <div className="w-10 h-3 rounded bg-[#ef4444]"></div>
+              <span className={textColor}>Crítico (65+)</span>
+            </div>
 
-  </div>
+          </div>
 
-  <Bar data={dataAgua} options={opcionesBarras} />
+          <Bar data={dataAgua} options={opcionesBarras} />
 
-</div>
+        </div>
 
         <div className={`p-6 rounded-xl shadow-lg border ${cardBg} ${cardBorder}`}>
 
-  <h3 className={`font-bold text-lg mb-4 flex items-center gap-2 ${textColor}`}>
-    <FaLightbulb className="text-yellow-500" />
-    Consumo mensual de Energía
-    <span className="ml-2 text-sm font-semibold text-yellow-400">
-      (Meta: {metaEnergia || 0} kWh)
-    </span>
-  </h3>
+          <h3 className={`font-bold text-lg mb-4 flex items-center gap-2 ${textColor}`}>
+            <FaLightbulb className="text-yellow-500" />
+            Consumo mensual de Energía
+            <span className="ml-2 text-sm font-semibold text-yellow-400">
+              (Meta: {metaEnergia || 0} kWh)
+            </span>
+          </h3>
 
-  {/* 🔥 LEYENDA SEMÁFORO ENERGÍA */}
-  <div className="flex flex-wrap gap-4 mb-4 text-xs font-semibold">
+          {/* 🔥 LEYENDA SEMÁFORO ENERGÍA */}
+          <div className="flex flex-wrap gap-4 mb-4 text-xs font-semibold">
 
-    <div className="flex items-center gap-2">
-      <div className="w-12 h-3 rounded-full bg-blue-500"></div>
-      <span className={textColor}>Óptimo (0 - 1514)</span>
-    </div>
+            <div className="flex items-center gap-2">
+              <div className="w-12 h-3 rounded-full bg-[#0000CC]"></div>
+              <span className={textColor}>Óptimo (0-1514)</span>
+            </div>
 
-    <div className="flex items-center gap-2">
-      <div className="w-12 h-3 rounded-full bg-green-500"></div>
-      <span className={textColor}>Normal (1515 - 1683)</span>
-    </div>
+            <div className="flex items-center gap-2">
+              <div className="w-12 h-3 rounded-full bg-[#3E6102]"></div>
+              <span className={textColor}>Normal (1515-1683)</span>
+            </div>
 
-    <div className="flex items-center gap-2">
-      <div className="w-12 h-3 rounded-full bg-yellow-400"></div>
-      <span className={textColor}>Alerta (1684 - 1852)</span>
-    </div>
+            <div className="flex items-center gap-2">
+              <div className="w-12 h-3 rounded-full bg-[#facc15]"></div>
+              <span className={textColor}>Alerta (1684-1852)</span>
+            </div>
 
-    <div className="flex items-center gap-2">
-      <div className="w-12 h-3 rounded-full bg-red-500"></div>
-      <span className={textColor}>Crítico (1853+)</span>
-    </div>
+            <div className="flex items-center gap-2">
+              <div className="w-12 h-3 rounded-full bg-[#ef4444]"></div>
+              <span className={textColor}>Crítico (1853+)</span>
+            </div>
 
-  </div>
+          </div>
 
-  {/* 📊 GRÁFICA */}
-  <Bar data={dataEnergia} options={opcionesBarras} />
+          {/* 📊 GRÁFICA */}
+          <Bar data={dataEnergia} options={opcionesBarras} />
 
-</div>
+        </div>
       </div>
 
 
@@ -1142,7 +1169,13 @@ const opcionesRadar = {
                     tooltip: {
                       callbacks: {
                         label: (context: any) => {
-                          return `${context.label}: ${comparativoAgua[context.dataIndex]} L`
+                          const i = context.dataIndex;
+
+                          return [
+                            `Mes: ${context.label}`,
+                            `Consumo: ${comparativoAgua[i]} m³`,
+                            `Valor: $${valoresAgua[i].toLocaleString()}`
+                          ];
                         }
                       }
                     }
@@ -1150,15 +1183,17 @@ const opcionesRadar = {
                 }}
               />
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-
-                <span className="text-2xl font-bold text-blue-500">
-                  {totalAguaComparativo.toLocaleString()}
+                <span className="text-xl font-bold text-blue-500">
+                  {totalAguaComparativo.toLocaleString()} m³
                 </span>
 
-                <span className="text-xs text-gray-400">
-                  Total anual
+                <span className="text-sm font-semibold text-gray-400">
+                  ${valoresAgua.reduce((a, b) => a + b, 0).toLocaleString()}
                 </span>
 
+                <span className="text-[11px] text-gray-500">
+                  Total consumo / total a pagar
+                </span>
               </div>
             </div>
 
@@ -1226,7 +1261,13 @@ const opcionesRadar = {
                     tooltip: {
                       callbacks: {
                         label: (context: any) => {
-                          return `${context.label}: ${comparativoEnergia[context.dataIndex]} kWh`
+                          const i = context.dataIndex;
+
+                          return [
+                            `Mes: ${context.label}`,
+                            `Consumo: ${comparativoEnergia[i]} kWh`,
+                            `Valor: $${valoresEnergia[i].toLocaleString()}`
+                          ];
                         }
                       }
                     }
@@ -1234,22 +1275,24 @@ const opcionesRadar = {
                 }}
               />
               <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none">
-
-                <span className="text-2xl font-bold text-yellow-500">
-                  {totalEnergiaComparativo.toLocaleString()}
+                <span className="text-xl font-bold text-yellow-500">
+                  {totalEnergiaComparativo.toLocaleString()} kWh
                 </span>
 
-                <span className="text-xs text-gray-400">
-                  Total anual
+                <span className="text-sm font-semibold text-gray-400">
+                  ${valoresEnergia.reduce((a, b) => a + b, 0).toLocaleString()}
                 </span>
 
+                <span className="text-[11px] text-gray-500">
+                  Total consumo / total a pagar
+                </span>
               </div>
 
             </div>
 
           </div>
 
-          
+
 
         </div>
 
@@ -1258,47 +1301,83 @@ const opcionesRadar = {
       </div>
 
       {/* ================= RESMAS Y TONNER ================= */}
-<div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-12">
 
-  {/* RESMAS */}
-  <div className={`p-6 rounded-xl shadow-lg border ${cardBg} ${cardBorder}`}>
-    
-    <h3 className={`font-bold text-lg mb-4 flex items-center gap-2 ${textColor}`}>
-      📄 Consumo de Resmas
-    </h3>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-12">
 
-    {/* TOTAL ANUAL */}
-    <div className="mb-4 text-center">
-      <p className="text-3xl font-bold text-green-500">
-        {totalResmas.toLocaleString()}
-      </p>
-      <span className={textSoft}>Total anual</span>
-    </div>
+        {/* RESMAS */}
+        <div className={`p-6 rounded-2xl shadow-md border transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ${cardBg} ${cardBorder}`}>
 
-    <Line data={dataResmas} options={opcionesArea} />
+          {/* HEADER */}
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 rounded-xl bg-green-500/10 shadow-[0_0_12px_rgba(34,197,94,0.4)]">
+              <FileText size={20} className="text-green-500" />
+            </div>
 
-  </div>
+            <div>
+              <h3 className={`font-semibold text-lg tracking-wide ${textColor}`}>
+                Consumo de Resmas
+              </h3>
+              <p className="text-xs opacity-60">
+                Control anual de uso de papel
+              </p>
+            </div>
+          </div>
 
-  {/* TONNER */}
-  <div className={`p-6 rounded-xl shadow-lg border ${cardBg} ${cardBorder}`}>
-    
-    <h3 className={`font-bold text-lg mb-4 flex items-center gap-2 ${textColor}`}>
-      🖨️ Consumo de Tonner
-    </h3>
+          {/* TOTAL */}
+          <div className="mb-6 text-center">
+            <p className="text-4xl font-bold text-green-500 tracking-tight">
+              {totalResmas.toLocaleString()}
+            </p>
+            <span className={`text-sm ${textSoft}`}>
+              Total anual
+            </span>
+          </div>
 
-    {/* TOTAL ANUAL */}
-    <div className="mb-4 text-center">
-      <p className="text-3xl font-bold text-blue-500">
-        {totalTonner.toLocaleString()}
-      </p>
-      <span className={textSoft}>Total anual</span>
-    </div>
+          {/* GRAFICA */}
+          <div className="mt-4">
+            <Line data={dataResmas} options={opcionesArea} />
+          </div>
 
-    <Bar data={dataTonner} options={opcionesBarras} />
+        </div>
 
-  </div>
 
-</div>
+        {/* TONNER */}
+        <div className={`p-6 rounded-2xl shadow-md border transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ${cardBg} ${cardBorder}`}>
+
+          {/* HEADER */}
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 rounded-xl bg-blue-500/10 shadow-[0_0_12px_rgba(59,130,246,0.4)]">
+              <Printer size={20} className="text-blue-500" />
+            </div>
+
+            <div>
+              <h3 className={`font-semibold text-lg tracking-wide ${textColor}`}>
+                Consumo de Tonner
+              </h3>
+              <p className="text-xs opacity-60">
+                Control de impresiones
+              </p>
+            </div>
+          </div>
+
+          {/* TOTAL */}
+          <div className="mb-6 text-center">
+            <p className="text-4xl font-bold text-blue-500 tracking-tight">
+              {totalTonner.toLocaleString()}
+            </p>
+            <span className={`text-sm ${textSoft}`}>
+              Total anual
+            </span>
+          </div>
+
+          {/* GRAFICA */}
+          <div className="mt-4">
+            <Bar data={dataTonner} options={opcionesBarras} />
+          </div>
+
+        </div>
+
+      </div>
 
     </div>
 

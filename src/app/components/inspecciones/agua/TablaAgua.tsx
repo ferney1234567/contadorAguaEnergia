@@ -690,6 +690,56 @@ export default function TablaSanitarios({
     }
   };
 
+
+  const eliminarInspeccionGrupo = async (responsableGrupo: string, fecha: string) => {
+  try {
+    const confirm = await Swal.fire({
+      title: "¿Eliminar inspección?",
+      text: `Se eliminará toda la inspección de ${responsableGrupo}`,
+      icon: "warning",
+      showCancelButton: true,
+      confirmButtonColor: "#d33",
+      confirmButtonText: "Sí, eliminar",
+    });
+
+    if (!confirm.isConfirmed) return;
+
+    const res = await fetch("/api/inspecciones-sanitarias", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        responsable: responsableGrupo,
+        fecha: fecha,
+      }),
+    });
+
+    if (!res.ok) {
+      const errorText = await res.text();
+      throw new Error(errorText);
+    }
+
+    // 🔄 RECARGAR
+    const dataRes = await fetch("/api/inspecciones-sanitarias");
+    const data = await dataRes.json();
+    setInspecciones(Array.isArray(data) ? data : data?.data || []);
+
+    Swal.fire({
+      icon: "success",
+      title: "Inspección eliminada",
+      timer: 1200,
+      showConfirmButton: false,
+    });
+
+  } catch (error) {
+    console.error(error);
+
+    Swal.fire({
+      icon: "error",
+      title: "Error eliminando",
+    });
+  }
+};
+
   return (
     <div className={`w-full rounded-3xl p-3 sm:p-4 md:p-6 ${estilos.tarjeta}`}>
       <div className="mb-5 flex flex-col gap-4">
@@ -989,7 +1039,26 @@ export default function TablaSanitarios({
                     >
                       ❌ Quitar edición
                     </button>
+
+                    <button
+  onClick={() =>
+    eliminarInspeccionGrupo(
+      responsableGrupo,
+      fechaGrupo
+    )
+  }
+  className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all
+    ${modoNoche
+      ? "bg-red-700 text-white"
+      : "bg-red-500 text-white"
+    } hover:scale-105`}
+>
+  🗑️ Eliminar inspección
+</button>
                   </div>
+
+                  {/* 🗑️ ELIMINAR INSPECCIÓN */}
+
 
                   <div className="flex justify-center gap-3 mt-3 flex-wrap">
                     <span
