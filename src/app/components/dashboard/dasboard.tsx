@@ -851,7 +851,7 @@ const DashboardInicio: FC<Props> = ({ modoNoche }) => {
         {/* === ACCIONES === */}
         <div className="flex items-center gap-3">
           <button
-            onClick={() => window.open("https://drive.google.com", "_blank")}
+            onClick={() => window.open("https://drive.google.com/drive/u/0/folders/1JJ3SAsGBkipUVOdvQMjJ4n3RxaMXIS5q", "_blank")}
             className="px-5 py-2.5 rounded-lg text-sm font-semibold
   bg-blue-600 hover:bg-blue-700
   text-white shadow-md flex items-center gap-2"
