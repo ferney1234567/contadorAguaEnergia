@@ -5,6 +5,7 @@ import { CalendarDays, Search, User2, Filter, Plus, Recycle, Trash2, AlertTriang
 import Swal from "sweetalert2";
 import MovilReciclaje from "./modalReciclaje";
 import { exportarResiduosPDF } from "@/app/utils/exportadorResiduosPDF";
+import { CheckCircle, XCircle, BarChart3 } from "lucide-react";
 
 type RegistroValores = {
   [fila: string]: { [campo: number]: { c?: string; nc?: string } };
@@ -121,61 +122,61 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
   };
 
   useEffect(() => {
-  if (!dataBackend.length) return;
-  if (modoNuevaInspeccion) return;
-  if (editandoGrupo) return; // 🔥 CLAVE
+    if (!dataBackend.length) return;
+    if (modoNuevaInspeccion) return;
+    if (editandoGrupo) return; // 🔥 CLAVE
 
-  const nuevosValores: RegistroValores = {};
-  const nuevasObservaciones: RegistroObservaciones = {};
+    const nuevosValores: RegistroValores = {};
+    const nuevasObservaciones: RegistroObservaciones = {};
 
-  dataBackend.forEach((area) => {
-    const filaKey = `${fechaSesion}__${responsable}__${area.id}`;
+    dataBackend.forEach((area) => {
+      const filaKey = `${fechaSesion}__${responsable}__${area.id}`;
 
-    const inspeccion = inspecciones
-      .filter(
-        (i) =>
-          i.area_id === area.id &&
-          i.responsable === responsable &&
-          i.fecha?.split("T")[0] === fechaSesion
-      )
-      .slice(-1)[0];
+      const inspeccion = inspecciones
+        .filter(
+          (i) =>
+            i.area_id === area.id &&
+            i.responsable === responsable &&
+            i.fecha?.split("T")[0] === fechaSesion
+        )
+        .slice(-1)[0];
 
-    if (!inspeccion) return;
+      if (!inspeccion) return;
 
-    nuevosValores[filaKey] = {
-      1: {
-        c: String(inspeccion.reciclables_c || ""),
-        nc: String(inspeccion.reciclables_nc || ""),
-      },
-      2: {
-        c: String(inspeccion.ordinarios_c || ""),
-        nc: String(inspeccion.ordinarios_nc || ""),
-      },
-      3: {
-        c: String(inspeccion.peligrosos_c || ""),
-        nc: String(inspeccion.peligrosos_nc || ""),
-      },
-      4: {
-        c: String(inspeccion.presintos_c || ""),
-        nc: String(inspeccion.presintos_nc || ""),
-      },
-    };
+      nuevosValores[filaKey] = {
+        1: {
+          c: String(inspeccion.reciclables_c || ""),
+          nc: String(inspeccion.reciclables_nc || ""),
+        },
+        2: {
+          c: String(inspeccion.ordinarios_c || ""),
+          nc: String(inspeccion.ordinarios_nc || ""),
+        },
+        3: {
+          c: String(inspeccion.peligrosos_c || ""),
+          nc: String(inspeccion.peligrosos_nc || ""),
+        },
+        4: {
+          c: String(inspeccion.presintos_c || ""),
+          nc: String(inspeccion.presintos_nc || ""),
+        },
+      };
 
-    nuevasObservaciones[filaKey] = inspeccion.observacion || "";
-  });
+      nuevasObservaciones[filaKey] = inspeccion.observacion || "";
+    });
 
-  // 🔥 IMPORTANTE: NO REEMPLAZAR → MEZCLAR
-  setValores((prev) => ({
-    ...nuevosValores,
-    ...prev,
-  }));
+    // 🔥 IMPORTANTE: NO REEMPLAZAR → MEZCLAR
+    setValores((prev) => ({
+      ...nuevosValores,
+      ...prev,
+    }));
 
-  setObservaciones((prev) => ({
-    ...nuevasObservaciones,
-    ...prev,
-  }));
+    setObservaciones((prev) => ({
+      ...nuevasObservaciones,
+      ...prev,
+    }));
 
-}, [dataBackend, inspecciones, responsable, fechaSesion, editandoGrupo]);
+  }, [dataBackend, inspecciones, responsable, fechaSesion, editandoGrupo]);
 
   useEffect(() => {
     const init = async () => {
@@ -469,138 +470,54 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
   };
 
   const guardarFila = async (
-  filaKey: string,
-  area: any,
-  registro: any
-) => {
-  try {
-    if (!area?.id) return;
+    filaKey: string,
+    area: any,
+    registro: any
+  ) => {
+    try {
+      if (!area?.id) return;
 
-    const responsableFinal = responsable;
+      const responsableFinal = responsable;
 
-    if (!responsableFinal) {
-      Swal.fire({
-        toast: true,
-        position: "top-end",
-        icon: "warning",
-        title: "Debes seleccionar un responsable",
-        timer: 1500,
-        showConfirmButton: false,
-      });
-      return;
-    }
+      if (!responsableFinal) {
+        Swal.fire({
+          toast: true,
+          position: "top-end",
+          icon: "warning",
+          title: "Debes seleccionar un responsable",
+          timer: 1500,
+          showConfirmButton: false,
+        });
+        return;
+      }
 
-    let registroSeguro = registro;
-    if (registro && registro.responsable !== responsableFinal) {
-      registroSeguro = null;
-    }
-
-    const body = {
-      id: registroSeguro?.id || null,
-      fecha: fechaSesion,
-      responsable: responsableFinal,
-      area_id: area.id,
-
-      reciclables_c: obtenerValor(filaKey, 1, "c", registroSeguro),
-      reciclables_nc: obtenerValor(filaKey, 1, "nc", registroSeguro),
-
-      ordinarios_c: obtenerValor(filaKey, 2, "c", registroSeguro),
-      ordinarios_nc: obtenerValor(filaKey, 2, "nc", registroSeguro),
-
-      peligrosos_c: obtenerValor(filaKey, 3, "c", registroSeguro),
-      peligrosos_nc: obtenerValor(filaKey, 3, "nc", registroSeguro),
-
-      presintos_c: obtenerValor(filaKey, 4, "c", registroSeguro),
-      presintos_nc: obtenerValor(filaKey, 4, "nc", registroSeguro),
-
-      observacion:
-        observaciones[filaKey] ||
-        registroSeguro?.observacion ||
-        "",
-    };
-
-    const total =
-      body.reciclables_c +
-      body.reciclables_nc +
-      body.ordinarios_c +
-      body.ordinarios_nc +
-      body.peligrosos_c +
-      body.peligrosos_nc +
-      body.presintos_c +
-      body.presintos_nc;
-
-    // 🔥 SOLO GUARDAR SI HAY DATOS
-    if (total > 0) {
-      await fetch("/api/inspecciones-residuos", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(body),
-      });
-
-      Swal.fire({
-        toast: true,
-        position: "top-end",
-        icon: "success",
-        title: registroSeguro?.id
-          ? "Registro actualizado"
-          : "Registro creado",
-        timer: 1200,
-        showConfirmButton: false,
-      });
-    }
-
-    // 🚫 YA NO ELIMINAMOS AUTOMÁTICO
-
-    const res = await fetch("/api/inspecciones-residuos");
-    const data = await res.json();
-    setInspecciones(data);
-
-  } catch (error) {
-    console.error(error);
-
-    Swal.fire({
-      icon: "error",
-      title: "Error",
-      text: "No se pudo guardar el registro",
-    });
-  }
-};
-
-  const guardarTodo = async (responsableGrupo: string, fecha: string) => {
-  try {
-    if (!responsableGrupo) return;
-
-    const promesas: Promise<any>[] = [];
-
-    dataBackend.forEach((area: any) => {
-      const filaKey = `${fecha}__${responsableGrupo}__${area.id}`;
-
-      const registro = inspecciones.find(
-        (r) =>
-          r.area_id === area.id &&
-          r.responsable === responsableGrupo &&
-          r.fecha?.split("T")[0] === fecha
-      );
+      let registroSeguro = registro;
+      if (registro && registro.responsable !== responsableFinal) {
+        registroSeguro = null;
+      }
 
       const body = {
-        id: registro?.id || null,
-        fecha,
-        responsable: responsableGrupo,
+        id: registroSeguro?.id || null,
+        fecha: fechaSesion,
+        responsable: responsableFinal,
         area_id: area.id,
 
-        reciclables_c: Number(valores?.[filaKey]?.[1]?.c || 0),
-        reciclables_nc: Number(valores?.[filaKey]?.[1]?.nc || 0),
+        reciclables_c: obtenerValor(filaKey, 1, "c", registroSeguro),
+        reciclables_nc: obtenerValor(filaKey, 1, "nc", registroSeguro),
 
-        ordinarios_c: Number(valores?.[filaKey]?.[2]?.c || 0),
-        ordinarios_nc: Number(valores?.[filaKey]?.[2]?.nc || 0),
+        ordinarios_c: obtenerValor(filaKey, 2, "c", registroSeguro),
+        ordinarios_nc: obtenerValor(filaKey, 2, "nc", registroSeguro),
 
-        peligrosos_c: Number(valores?.[filaKey]?.[3]?.c || 0),
-        peligrosos_nc: Number(valores?.[filaKey]?.[3]?.nc || 0),
+        peligrosos_c: obtenerValor(filaKey, 3, "c", registroSeguro),
+        peligrosos_nc: obtenerValor(filaKey, 3, "nc", registroSeguro),
 
-        presintos_c: Number(valores?.[filaKey]?.[4]?.c || 0),
-        presintos_nc: Number(valores?.[filaKey]?.[4]?.nc || 0),
+        presintos_c: obtenerValor(filaKey, 4, "c", registroSeguro),
+        presintos_nc: obtenerValor(filaKey, 4, "nc", registroSeguro),
 
-        observacion: observaciones[filaKey] || "",
+        observacion:
+          observaciones[filaKey] ||
+          registroSeguro?.observacion ||
+          "",
       };
 
       const total =
@@ -613,98 +530,182 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
         body.presintos_c +
         body.presintos_nc;
 
-      // 🔥 SOLO GUARDAR (NO BORRAR AUTOMÁTICAMENTE)
+      // 🔥 SOLO GUARDAR SI HAY DATOS
       if (total > 0) {
-        promesas.push(
-          fetch("/api/inspecciones-residuos", {
-            method: "POST",
-            headers: {
-              "Content-Type": "application/json",
-            },
-            body: JSON.stringify(body),
-          })
-        );
+        await fetch("/api/inspecciones-residuos", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify(body),
+        });
+
+        Swal.fire({
+          toast: true,
+          position: "top-end",
+          icon: "success",
+          title: registroSeguro?.id
+            ? "Registro actualizado"
+            : "Registro creado",
+          timer: 1200,
+          showConfirmButton: false,
+        });
       }
 
-      // 🚨 IMPORTANTE:
-      // YA NO BORRAMOS AUTOMÁTICAMENTE
-      // SOLO se elimina con botón manual (si quieres luego lo agregamos)
-    });
+      // 🚫 YA NO ELIMINAMOS AUTOMÁTICO
 
-    await Promise.all(promesas);
+      const res = await fetch("/api/inspecciones-residuos");
+      const data = await res.json();
+      setInspecciones(data);
 
-    const res = await fetch("/api/inspecciones-residuos");
-    const data = await res.json();
-    setInspecciones(data);
+    } catch (error) {
+      console.error(error);
 
-    Swal.fire({
-      icon: "success",
-      title: "Guardado completo",
-      timer: 1500,
-      showConfirmButton: false,
-    });
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "No se pudo guardar el registro",
+      });
+    }
+  };
 
-    setEditandoGrupo(null);
+  const guardarTodo = async (responsableGrupo: string, fecha: string) => {
+    try {
+      if (!responsableGrupo) return;
 
-  } catch (error) {
-    console.error(error);
+      const promesas: Promise<any>[] = [];
 
-    Swal.fire({
-      icon: "error",
-      title: "Error al guardar",
-    });
-  }
-};
+      dataBackend.forEach((area: any) => {
+        const filaKey = `${fecha}__${responsableGrupo}__${area.id}`;
+
+        const registro = inspecciones.find(
+          (r) =>
+            r.area_id === area.id &&
+            r.responsable === responsableGrupo &&
+            r.fecha?.split("T")[0] === fecha
+        );
+
+        const body = {
+          id: registro?.id || null,
+          fecha,
+          responsable: responsableGrupo,
+          area_id: area.id,
+
+          reciclables_c: Number(valores?.[filaKey]?.[1]?.c || 0),
+          reciclables_nc: Number(valores?.[filaKey]?.[1]?.nc || 0),
+
+          ordinarios_c: Number(valores?.[filaKey]?.[2]?.c || 0),
+          ordinarios_nc: Number(valores?.[filaKey]?.[2]?.nc || 0),
+
+          peligrosos_c: Number(valores?.[filaKey]?.[3]?.c || 0),
+          peligrosos_nc: Number(valores?.[filaKey]?.[3]?.nc || 0),
+
+          presintos_c: Number(valores?.[filaKey]?.[4]?.c || 0),
+          presintos_nc: Number(valores?.[filaKey]?.[4]?.nc || 0),
+
+          observacion: observaciones[filaKey] || "",
+        };
+
+        const total =
+          body.reciclables_c +
+          body.reciclables_nc +
+          body.ordinarios_c +
+          body.ordinarios_nc +
+          body.peligrosos_c +
+          body.peligrosos_nc +
+          body.presintos_c +
+          body.presintos_nc;
+
+        // 🔥 SOLO GUARDAR (NO BORRAR AUTOMÁTICAMENTE)
+        if (total > 0) {
+          promesas.push(
+            fetch("/api/inspecciones-residuos", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+              },
+              body: JSON.stringify(body),
+            })
+          );
+        }
+
+        // 🚨 IMPORTANTE:
+        // YA NO BORRAMOS AUTOMÁTICAMENTE
+        // SOLO se elimina con botón manual (si quieres luego lo agregamos)
+      });
+
+      await Promise.all(promesas);
+
+      const res = await fetch("/api/inspecciones-residuos");
+      const data = await res.json();
+      setInspecciones(data);
+
+      Swal.fire({
+        icon: "success",
+        title: "Guardado completo",
+        timer: 1500,
+        showConfirmButton: false,
+      });
+
+      setEditandoGrupo(null);
+
+    } catch (error) {
+      console.error(error);
+
+      Swal.fire({
+        icon: "error",
+        title: "Error al guardar",
+      });
+    }
+  };
 
 
-const eliminarInspeccionGrupo = async (responsableGrupo: string, fecha: string) => {
-  try {
-    if (!responsableGrupo) return;
+  const eliminarInspeccionGrupo = async (responsableGrupo: string, fecha: string) => {
+    try {
+      if (!responsableGrupo) return;
 
-    const confirm = await Swal.fire({
-      title: "¿Eliminar inspección?",
-      text: `Se eliminarán los registros de ${responsableGrupo}`,
-      icon: "warning",
-      showCancelButton: true,
-      confirmButtonColor: "#d33",
-      cancelButtonColor: "#3085d6",
-      confirmButtonText: "Sí, eliminar",
-    });
+      const confirm = await Swal.fire({
+        title: "¿Eliminar inspección?",
+        text: `Se eliminarán los registros de ${responsableGrupo}`,
+        icon: "warning",
+        showCancelButton: true,
+        confirmButtonColor: "#d33",
+        cancelButtonColor: "#3085d6",
+        confirmButtonText: "Sí, eliminar",
+      });
 
-    if (!confirm.isConfirmed) return;
+      if (!confirm.isConfirmed) return;
 
-    // 🔥 ELIMINAR TODOS LOS REGISTROS DE ESE RESPONSABLE Y FECHA
-    await fetch("/api/inspecciones-residuos", {
-      method: "DELETE",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        responsable: responsableGrupo,
-        fecha: fecha,
-      }),
-    });
+      // 🔥 ELIMINAR TODOS LOS REGISTROS DE ESE RESPONSABLE Y FECHA
+      await fetch("/api/inspecciones-residuos", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          responsable: responsableGrupo,
+          fecha: fecha,
+        }),
+      });
 
-    // 🔄 RECARGAR DATOS
-    const res = await fetch("/api/inspecciones-residuos");
-    const data = await res.json();
-    setInspecciones(data);
+      // 🔄 RECARGAR DATOS
+      const res = await fetch("/api/inspecciones-residuos");
+      const data = await res.json();
+      setInspecciones(data);
 
-    Swal.fire({
-      icon: "success",
-      title: "Inspección eliminada",
-      timer: 1200,
-      showConfirmButton: false,
-    });
+      Swal.fire({
+        icon: "success",
+        title: "Inspección eliminada",
+        timer: 1200,
+        showConfirmButton: false,
+      });
 
-  } catch (error) {
-    console.error(error);
+    } catch (error) {
+      console.error(error);
 
-    Swal.fire({
-      icon: "error",
-      title: "Error al eliminar",
-    });
-  }
-};
-  
+      Swal.fire({
+        icon: "error",
+        title: "Error al eliminar",
+      });
+    }
+  };
+
 
   return (
     <div className={`w-full rounded-3xl p-3 sm:p-4 md:p-6 ${estilos.tarjeta}`}>
@@ -719,6 +720,85 @@ const eliminarInspeccionGrupo = async (responsableGrupo: string, fecha: string) 
           <p className={`mt-1 text-xs sm:text-sm ${estilos.subtitulo}`}>
             Control de inspecciones, filtros e historial en tiempo real
           </p>
+          {/* 🔥 RESUMEN GENERAL PRO */}
+          <div className="grid grid-cols-3 gap-3 mt-3 max-w-xl mx-auto">
+
+            {(() => {
+              let totalC = 0;
+              let totalNC = 0;
+
+              inspecciones.forEach((r) => {
+                totalC +=
+                  Number(r.reciclables_c || 0) +
+                  Number(r.ordinarios_c || 0) +
+                  Number(r.peligrosos_c || 0) +
+                  Number(r.presintos_c || 0);
+
+                totalNC +=
+                  Number(r.reciclables_nc || 0) +
+                  Number(r.ordinarios_nc || 0) +
+                  Number(r.peligrosos_nc || 0) +
+                  Number(r.presintos_nc || 0);
+              });
+
+              const totalGeneral = totalC + totalNC;
+
+              const cards = [
+                {
+                  titulo: "Cumplen",
+                  valor: totalC,
+                  icono: CheckCircle,
+                  color: "text-green-500",
+                  bg: "bg-green-500/10",
+                },
+                {
+                  titulo: "No cumplen",
+                  valor: totalNC,
+                  icono: XCircle,
+                  color: "text-red-500",
+                  bg: "bg-red-500/10",
+                },
+                {
+                  titulo: "Total",
+                  valor: totalGeneral,
+                  icono: BarChart3,
+                  color: "text-blue-500",
+                  bg: "bg-blue-500/10",
+                },
+              ];
+
+              return cards.map((c, i) => {
+                const Icono = c.icono;
+
+                return (
+                  <div
+                    key={i}
+                    className={`rounded-xl px-3 py-3 border shadow-sm transition-all duration-300 
+          hover:shadow-md hover:-translate-y-0.5 text-center
+          ${modoNoche
+                        ? "bg-[#1a1a1a] border-[#2e2e2e]"
+                        : "bg-white border-gray-200"
+                      }`}
+                  >
+                    {/* ICONO */}
+                    <div className={`mx-auto w-fit p-2 rounded-lg ${c.bg}`}>
+                      <Icono className={`w-4 h-4 ${c.color}`} />
+                    </div>
+
+                    {/* TEXTO */}
+                    <p className={`text-[10px] mt-2 ${modoNoche ? "text-gray-400" : "text-gray-500"}`}>
+                      {c.titulo}
+                    </p>
+
+                    <h3 className={`text-sm font-bold ${modoNoche ? "text-white" : "text-gray-800"}`}>
+                      {c.valor}
+                    </h3>
+                  </div>
+                );
+              });
+            })()}
+
+          </div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -1012,21 +1092,21 @@ const eliminarInspeccionGrupo = async (responsableGrupo: string, fecha: string) 
                     </button>
 
                     {/* 🗑️ ELIMINAR INSPECCIÓN */}
-<button
-  onClick={() =>
-    eliminarInspeccionGrupo(
-      responsableGrupo,
-      registros[0]?.fecha?.split("T")[0]
-    )
-  }
-  className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all
+                    <button
+                      onClick={() =>
+                        eliminarInspeccionGrupo(
+                          responsableGrupo,
+                          registros[0]?.fecha?.split("T")[0]
+                        )
+                      }
+                      className={`flex items-center justify-center gap-2 px-5 py-2.5 rounded-xl text-sm font-semibold transition-all
     ${modoNoche
-      ? "bg-red-700 text-white"
-      : "bg-red-500 text-white"
-    } hover:scale-105`}
->
-  🗑️ Eliminar inspección
-</button>
+                          ? "bg-red-700 text-white"
+                          : "bg-red-500 text-white"
+                        } hover:scale-105`}
+                    >
+                      🗑️ Eliminar inspección
+                    </button>
 
                   </div>
                   <div className="flex justify-center gap-3 mt-3 flex-wrap">

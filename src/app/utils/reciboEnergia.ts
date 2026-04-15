@@ -1,12 +1,13 @@
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
-// ✅ FUNCIÓN PARA CARGAR IMAGEN DESDE PUBLIC
+// =========================
+// 🖼️ CARGAR IMAGEN
+// =========================
 const cargarImagen = (url: string): Promise<string> => {
   return new Promise((resolve, reject) => {
     const img = new Image();
-    img.crossOrigin = "anonymous"; // 🔥 importante
-
+    img.crossOrigin = "anonymous";
     img.src = url;
 
     img.onload = () => {
@@ -17,85 +18,85 @@ const cargarImagen = (url: string): Promise<string> => {
       const ctx = canvas.getContext("2d");
       ctx?.drawImage(img, 0, 0);
 
-      const base64 = canvas.toDataURL("image/png");
-      resolve(base64);
+      resolve(canvas.toDataURL("image/png"));
     };
 
     img.onerror = reject;
   });
 };
 
-// ✅ TIPOS
-type Medicion = {
-  consumo: number;
-  valor: number;
-};
-
-type Sede = {
-  nombre: string;
-  ubicacion: string;
-  datos: Medicion[];
-};
-
-// ✅ FUNCIÓN PRINCIPAL
-export const generarReciboEnergia = async (datosEnergia: Sede[]) => {
-
+// =========================
+// ⚡ FUNCIÓN PRINCIPAL
+// =========================
+export const generarReciboEnergia = async (datosEnergia: any[]) => {
   const doc = new jsPDF();
 
-  // =========================
-  // 🎨 HEADER
-  // =========================
+  // HEADER
   doc.setFillColor(180, 0, 0);
   doc.rect(0, 0, 210, 35, "F");
 
-  // =========================
-  // 🖼️ LOGO DESDE PUBLIC
-  // =========================
+  // LOGO
   try {
     const logoBase64 = await cargarImagen("/img/logo.png");
-
     doc.addImage(logoBase64, "PNG", 15, 5, 25, 25);
-  } catch (error) {
-    console.log("Error cargando logo");
-  }
+  } catch {}
 
-  // =========================
-  // 🧾 TITULOS
-  // =========================
+  // TITULOS
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(16);
   doc.text("ENVÍA S.A.S", 105, 15, { align: "center" });
 
   doc.setFontSize(11);
-  doc.text("RECIBO DE ENERGÍA", 105, 25, { align: "center" });
+  doc.text("REPORTE DE CONSUMO DE ENERGÍA", 105, 25, { align: "center" });
 
-  // =========================
-  // 📅 FECHA
-  // =========================
+  // FECHA
   doc.setTextColor(80);
   doc.setFontSize(10);
   doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 14, 45);
 
   // =========================
-  // 📊 CALCULOS
+  // 🔥 CALCULOS
   // =========================
-  let totalConsumo = 0;
+  let totalKwh = 0;
   let totalValor = 0;
+
+  let totalPrincipalKwh = 0;
+  let totalPrincipalValor = 0;
+
+  let totalReceptoriasKwh = 0;
+  let totalReceptoriasValor = 0;
 
   const filas: any[] = [];
 
   datosEnergia.forEach((d) => {
-    const consumo = d.datos.reduce((acc, m) => acc + (m.consumo || 0), 0);
-    const valor = d.datos.reduce((acc, m) => acc + (m.valor || 0), 0);
+    const consumo = d.datos.reduce(
+      (acc: number, m: any) => acc + Number(m.kWh || 0),
+      0
+    );
 
-    totalConsumo += consumo;
+    const valor = d.datos.reduce(
+      (acc: number, m: any) => acc + Number(m.valor || 0),
+      0
+    );
+
+    totalKwh += consumo;
     totalValor += valor;
+
+    if (d.nombre?.toUpperCase().includes("SEDE PPAL")) {
+      totalPrincipalKwh += consumo;
+      totalPrincipalValor += valor;
+    }
+
+    if (d.nombre?.toUpperCase().includes("RECEPTORIA")) {
+      totalReceptoriasKwh += consumo;
+      totalReceptoriasValor += valor;
+    }
 
     filas.push([
       d.nombre,
       d.ubicacion,
-      consumo.toFixed(2) + " kWh",
-      `$ ${valor.toLocaleString()}`
+      `${consumo.toFixed(2)} kWh`,
+      `$ ${valor.toLocaleString("es-CO")}`
     ]);
   });
 
@@ -106,38 +107,79 @@ export const generarReciboEnergia = async (datosEnergia: Sede[]) => {
     startY: 55,
     head: [["Sede", "Ubicación", "Consumo", "Valor"]],
     body: filas,
+    styles: {
+      fontSize: 9,
+      cellPadding: 3,
+    },
     headStyles: {
       fillColor: [200, 0, 0],
-      textColor: 255
+      textColor: 255,
     },
     alternateRowStyles: {
-      fillColor: [245, 245, 245]
-    }
+      fillColor: [245, 245, 245],
+    },
   });
 
   const finalY = (doc as any).lastAutoTable.finalY || 100;
 
   // =========================
-  // ⚡ RESUMEN
+  // 🔥 TOTALES (COMO AGUA)
   // =========================
   doc.setFontSize(11);
-  doc.text(`Consumo total: ${totalConsumo.toFixed(2)} kWh`, 14, finalY + 15);
+  doc.setTextColor(0);
+
+  doc.text(`Consumo total: ${totalKwh.toFixed(2)} kWh`, 14, finalY + 15);
+
+  doc.text(
+    `Total sede principal: ${totalPrincipalKwh.toFixed(2)} kWh`,
+    14,
+    finalY + 22
+  );
+
+  doc.text(
+    `Total receptorias: ${totalReceptoriasKwh.toFixed(2)} kWh`,
+    14,
+    finalY + 29
+  );
 
   // =========================
-  // 💰 TOTAL
+  // 💰 CAJA TOTAL
   // =========================
   doc.setFillColor(200, 0, 0);
-  doc.roundedRect(130, finalY + 5, 60, 25, 5, 5, "F");
+  doc.roundedRect(130, finalY + 10, 60, 25, 5, 5, "F");
 
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(10);
-  doc.text("TOTAL A PAGAR", 160, finalY + 15, { align: "center" });
+  doc.text("TOTAL A PAGAR", 160, finalY + 20, { align: "center" });
 
   doc.setFontSize(14);
-  doc.text(`$ ${totalValor.toLocaleString()}`, 160, finalY + 25, { align: "center" });
+  doc.text(
+    `$ ${totalValor.toLocaleString("es-CO")}`,
+    160,
+    finalY + 30,
+    { align: "center" }
+  );
 
   // =========================
-  // 📄 DESCARGAR
+  // FOOTER
   // =========================
-  doc.save("recibo_energia_envia.pdf");
+  doc.setFontSize(9);
+  doc.setTextColor(100);
+
+  doc.text(
+    "Documento generado para uso corporativo de ENVÍA S.A.S.",
+    105,
+    finalY + 50,
+    { align: "center" }
+  );
+
+  doc.text(
+    "Control interno de consumo energético.",
+    105,
+    finalY + 55,
+    { align: "center" }
+  );
+
+  // DESCARGA
+  doc.save("reporte_energia_envia.pdf");
 };

@@ -17,7 +17,7 @@ const cargarImagen = (url: string): Promise<string> => {
       const ctx = canvas.getContext("2d");
       ctx?.drawImage(img, 0, 0);
 
-      const base64 = canvas.toDataURL("/image/png");
+      const base64 = canvas.toDataURL("image/png");
       resolve(base64);
     };
 
@@ -27,17 +27,16 @@ const cargarImagen = (url: string): Promise<string> => {
 
 // ✅ FUNCIÓN PRINCIPAL
 export const generarReciboPDF = async (datosEnergia: any[]) => {
-
   const doc = new jsPDF();
 
   // =========================
-  // 🎨 HEADER ROJO
+  // 🎨 HEADER ROJO CORPORATIVO
   // =========================
   doc.setFillColor(180, 0, 0);
   doc.rect(0, 0, 210, 35, "F");
 
   // =========================
-  // 🖼️ LOGO DESDE PUBLIC
+  // 🖼️ LOGO
   // =========================
   try {
     const logoBase64 = await cargarImagen("/img/logo.png");
@@ -47,21 +46,21 @@ export const generarReciboPDF = async (datosEnergia: any[]) => {
   }
 
   // =========================
-  // 🧾 TITULOS
+  // 🧾 TITULOS CORPORATIVOS
   // =========================
   doc.setTextColor(255, 255, 255);
   doc.setFontSize(16);
   doc.text("ENVÍA S.A.S", 105, 15, { align: "center" });
 
   doc.setFontSize(11);
-  doc.text("RECIBO DE AGUA", 105, 25, { align: "center" });
+  doc.text("REPORTE DE CONSUMO DE AGUA", 105, 25, { align: "center" });
 
   // =========================
   // 📅 FECHA
   // =========================
   doc.setTextColor(80);
   doc.setFontSize(10);
-  doc.text(`Fecha: ${new Date().toLocaleDateString()}`, 14, 45);
+  doc.text(`Fecha de generación: ${new Date().toLocaleDateString()}`, 14, 45);
 
   // =========================
   // 📊 CALCULOS
@@ -72,9 +71,15 @@ export const generarReciboPDF = async (datosEnergia: any[]) => {
   const filas: any[] = [];
 
   datosEnergia.forEach((d) => {
+    const consumo = d.datos.reduce(
+      (acc: number, m: any) => acc + (m.M3 || 0),
+      0
+    );
 
-    const consumo = d.datos.reduce((acc: number, m: any) => acc + (m.M3 || 0), 0);
-    const valor = d.datos.reduce((acc: number, m: any) => acc + (m.valor || 0), 0);
+    const valor = d.datos.reduce(
+      (acc: number, m: any) => acc + (m.valor || 0),
+      0
+    );
 
     totalM3 += consumo;
     totalValor += valor;
@@ -130,20 +135,33 @@ export const generarReciboPDF = async (datosEnergia: any[]) => {
   doc.text(`$ ${totalValor.toLocaleString()}`, 160, finalY + 25, { align: "center" });
 
   // =========================
-  // 📉 LINEA
+  // 📉 LINEA SEPARADORA
   // =========================
   doc.setDrawColor(200);
   doc.line(14, finalY + 40, 196, finalY + 40);
 
   // =========================
-  // 🧾 FOOTER
+  // 🧾 FOOTER CORPORATIVO (CAMBIO IMPORTANTE)
   // =========================
   doc.setFontSize(9);
-  doc.setTextColor(120);
-  doc.text("Gracias por confiar en ENVÍA 💧", 105, finalY + 50, { align: "center" });
+  doc.setTextColor(100);
+
+  doc.text(
+    "Documento generado para uso corporativo de ENVÍA S.A.S.",
+    105,
+    finalY + 50,
+    { align: "center" }
+  );
+
+  doc.text(
+    "Este reporte es confidencial y hace parte del control interno de consumo.",
+    105,
+    finalY + 55,
+    { align: "center" }
+  );
 
   // =========================
   // 📄 DESCARGA
   // =========================
-  doc.save("recibo_agua_envia.pdf");
+  doc.save("reporte_consumo_agua_envia.pdf");
 };

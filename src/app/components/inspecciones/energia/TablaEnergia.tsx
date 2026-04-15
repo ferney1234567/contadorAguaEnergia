@@ -1,20 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import {
-  CalendarDays,
-  Search,
-  Filter,
-  Plus,
-  Edit,
-  Lightbulb,
-  Sun,
-  LampFloor,
-  Wind,
-} from "lucide-react";
+import {CalendarDays,Search,Filter,Plus,Edit,Lightbulb,Sun,LampFloor,Wind,} from "lucide-react";
 import Swal from "sweetalert2";
 import MovilEnergia from "./modalEnergia";
 import { exportarEnergiaPDF } from "@/app/utils/exportadorEnergiaPDF";
+import { CheckCircle, XCircle, BarChart3 } from "lucide-react";
 
 type RegistroValores = {
   [filaKey: string]: { [campo: number]: { c?: string; nc?: string } };
@@ -735,6 +726,85 @@ export default function TablaEnergiaIgual({
           <p className={`mt-1 text-xs sm:text-sm ${estilos.subtitulo}`}>
             Control de inspecciones, filtros e historial en tiempo real
           </p>
+          {/* 🔥 RESUMEN ENERGÍA PRO (COMPACTO) */}
+<div className="grid grid-cols-3 gap-3 mt-3 max-w-xl mx-auto">
+
+  {(() => {
+    let totalC = 0;
+    let totalNC = 0;
+
+    inspecciones.forEach((r) => {
+      totalC +=
+        Number(r.bombillas_c || 0) +
+        Number(r.reflectores_c || 0) +
+        Number(r.lamparas_c || 0) +
+        Number(r.aires_c || 0);
+
+      totalNC +=
+        Number(r.bombillas_nc || 0) +
+        Number(r.reflectores_nc || 0) +
+        Number(r.lamparas_nc || 0) +
+        Number(r.aires_nc || 0);
+    });
+
+    const totalGeneral = totalC + totalNC;
+
+    const cards = [
+      {
+        titulo: "Cumplen",
+        valor: totalC,
+        icono: CheckCircle,
+        color: "text-green-500",
+        bg: "bg-green-500/10",
+      },
+      {
+        titulo: "No cumplen",
+        valor: totalNC,
+        icono: XCircle,
+        color: "text-red-500",
+        bg: "bg-red-500/10",
+      },
+      {
+        titulo: "Total",
+        valor: totalGeneral,
+        icono: BarChart3,
+        color: "text-blue-500",
+        bg: "bg-blue-500/10",
+      },
+    ];
+
+    return cards.map((c, i) => {
+      const Icono = c.icono;
+
+      return (
+        <div
+          key={i}
+          className={`rounded-xl px-3 py-3 border shadow-sm transition-all duration-300 
+          hover:shadow-md hover:-translate-y-0.5 text-center
+          ${modoNoche 
+            ? "bg-[#1a1a1a] border-[#2e2e2e]" 
+            : "bg-white border-gray-200"
+          }`}
+        >
+          {/* ICONO */}
+          <div className={`mx-auto w-fit p-2 rounded-lg ${c.bg}`}>
+            <Icono className={`w-4 h-4 ${c.color}`} />
+          </div>
+
+          {/* TEXTO */}
+          <p className={`text-[10px] mt-2 ${modoNoche ? "text-gray-400" : "text-gray-500"}`}>
+            {c.titulo}
+          </p>
+
+          <h3 className={`text-sm font-bold ${modoNoche ? "text-white" : "text-gray-800"}`}>
+            {c.valor}
+          </h3>
+        </div>
+      );
+    });
+  })()}
+
+</div>
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
