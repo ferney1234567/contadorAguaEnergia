@@ -856,6 +856,7 @@ const DashboardInicio: FC<Props> = ({ modoNoche }) => {
   bg-blue-600 hover:bg-blue-700
   text-white shadow-md flex items-center gap-2"
           >
+            
             ☁️ Ir a Drive
           </button>
           <button

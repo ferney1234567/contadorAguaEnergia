@@ -184,7 +184,7 @@ export default function ComparativoEnergia({ modoNoche }: Props) {
 
   const cargarSedes = async () => {
     try {
-      const res = await fetch("/api/sedes");
+      const res = await fetch("/api/sedes_energia");
       const data = await res.json();
 
       if (!Array.isArray(data)) {
@@ -203,7 +203,7 @@ export default function ComparativoEnergia({ modoNoche }: Props) {
     try {
       const [resComparativo, resSedes] = await Promise.all([
         fetch("/api/comparativoEnergia"),
-        fetch("/api/sedes"),
+        fetch("/api/sedes_energia"),
       ]);
 
       let data = await resComparativo.json();
@@ -220,7 +220,7 @@ export default function ComparativoEnergia({ modoNoche }: Props) {
         const datosMeses = Array.from({ length: 12 }, (_, mesIndex) => {
           const encontrado = data.find(
             (d: any) =>
-              d.sede_id === sede.id &&
+              d.sede_energia === sede.id &&
               Number(d.anio) === anioActual &&
               Number(d.mes) === mesIndex + 1
           );
@@ -234,7 +234,7 @@ export default function ComparativoEnergia({ modoNoche }: Props) {
 
         return {
           id: sede.id,
-          sede_id: sede.id,
+          sede_energia: sede.id,
           nombre: sede.nombre,
           ubicacion: sede.ubicacion,
           cuenta: sede.cuenta,
@@ -265,13 +265,13 @@ export default function ComparativoEnergia({ modoNoche }: Props) {
 
   const actualizarSede = async (fila: any) => {
     try {
-      const res = await fetch("/api/sedes", {
+      const res = await fetch("/api/sedes_energia", {
         method: "PUT",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          id: fila.sede_id || fila.id,
+          id: fila.sede_energia || fila.id,
           nombre: fila.nombre,
           ubicacion: fila.ubicacion,
           cuenta: fila.cuenta,
@@ -303,11 +303,11 @@ export default function ComparativoEnergia({ modoNoche }: Props) {
       const mesData = fila.datos?.[mesIndex];
       if (!mesData) return;
 
-      const sede = sedesDB.find((s) => s.id === fila.sede_id);
+      const sede = sedesDB.find((s) => s.id === fila.sede_energia);
       if (!sede) return;
 
       const payload = {
-        sede_id: sede.id,
+        sede_energia: sede.id,
         anio: Number(anio),
         mes: mesIndex + 1,
         kw_consumidos:
@@ -337,7 +337,7 @@ export default function ComparativoEnergia({ modoNoche }: Props) {
 
       setDatosEnergia((prev) =>
         prev.map((f) =>
-          f.sede_id === fila.sede_id
+          f.sede_energia === fila.sede_energia
             ? {
                 ...f,
                 datos: f.datos.map((d: any, i: number) =>
@@ -378,7 +378,7 @@ export default function ComparativoEnergia({ modoNoche }: Props) {
       let sede = sedesDB.find((s) => s.nombre === nuevaFila.nombre);
 
       if (!sede) {
-        const res = await fetch("/api/sedes", {
+        const res = await fetch("/api/sedes_energia", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
@@ -394,7 +394,7 @@ export default function ComparativoEnergia({ modoNoche }: Props) {
 
       const nueva = {
         ...nuevaFila,
-        sede_id: sede.id,
+        sede_energia: sede.id,
         anio: Number(anio),
       };
 
@@ -444,18 +444,18 @@ export default function ComparativoEnergia({ modoNoche }: Props) {
 
     if (result.isConfirmed) {
       try {
-        await fetch(`/api/comparativoEnergia/por-sede/${fila.sede_id}`, {
+        await fetch(`/api/comparativoEnergia/por-sedes_energia/${fila.sede_energia}`, {
           method: "DELETE",
         });
 
-        const res = await fetch(`/api/sedes?id=${fila.sede_id}`, {
+        const res = await fetch(`/api/sedes_energia?id=${fila.sede_energia}`, {
           method: "DELETE",
         });
 
         if (!res.ok) throw new Error();
 
-        setDatosEnergia((prev) => prev.filter((f) => f.sede_id !== fila.sede_id));
-        setSedesDB((prev) => prev.filter((s) => s.id !== fila.sede_id));
+        setDatosEnergia((prev) => prev.filter((f) => f.sede_energia !== fila.sede_energia));
+        setSedesDB((prev) => prev.filter((s) => s.id !== fila.sede_energia));
 
         Swal.fire({
           toast: true,
