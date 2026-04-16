@@ -205,7 +205,7 @@ export default function TablaEnergiaIgual({
         if (guardado) setResponsable(guardado);
 
         const [areasRes, inspeccionesRes] = await Promise.all([
-          fetch("/api/areas"),
+          fetch("/api/areas-energia"),
           fetch("/api/inspecciones-energia"),
         ]);
 
@@ -243,13 +243,13 @@ export default function TablaEnergiaIgual({
     const nuevosValores: RegistroValores = {};
     const nuevasObservaciones: RegistroObservaciones = {};
 
-    dataBackend.forEach((area) => {
-      const filaKey = getFilaKey(fechaSesion, responsable, area.id);
+   dataBackend.forEach((areaEnergia) => {
+      const filaKey = getFilaKey(fechaSesion, responsable, areaEnergia.id);
 
       const inspeccion = inspecciones
         .filter(
           (i) =>
-            i.area_id === area.id &&
+            i.area_id === areaEnergia.id &&
             i.responsable === responsable &&
             normalizarFecha(i.fecha) === fechaSesion
         )
@@ -463,9 +463,9 @@ export default function TablaEnergiaIgual({
     }, 0);
   };
 
-  const guardarFila = async (filaKey: string, area: any, registro: any) => {
+  const guardarFila = async (filaKey: string, areaEnergia: any, registro: any) => {
     try {
-      if (!area?.id) return;
+      if (!areaEnergia?.id) return;
 
       const responsableFinal = responsable;
 
@@ -490,7 +490,7 @@ export default function TablaEnergiaIgual({
         id: registroSeguro?.id || null,
         fecha: fechaSesion,
         responsable: responsableFinal,
-        area_id: area.id,
+        area_id: areaEnergia.id,
 
         bombillas_c: obtenerValor(filaKey, 1, "c", registroSeguro),
         bombillas_nc: obtenerValor(filaKey, 1, "nc", registroSeguro),
@@ -575,12 +575,12 @@ export default function TablaEnergiaIgual({
 
       const promesas: Promise<any>[] = [];
 
-      dataBackend.forEach((area: any) => {
-        const filaKey = getFilaKey(fecha, responsableGrupo, area.id);
+      dataBackend.forEach((areaEnergia: any) => {
+        const filaKey = getFilaKey(fecha, responsableGrupo, areaEnergia.id);
 
         const registro = inspecciones.find(
           (r) =>
-            r.area_id === area.id &&
+            r.area_id === areaEnergia.id &&
             r.responsable === responsableGrupo &&
             normalizarFecha(r.fecha) === fecha
         );
@@ -589,7 +589,7 @@ export default function TablaEnergiaIgual({
           id: registro?.id || null,
           fecha,
           responsable: responsableGrupo,
-          area_id: area.id,
+          area_id: areaEnergia.id,
 
           bombillas_c: Number(valores?.[filaKey]?.[1]?.c || 0),
           bombillas_nc: Number(valores?.[filaKey]?.[1]?.nc || 0),
@@ -936,7 +936,7 @@ export default function TablaEnergiaIgual({
                         return;
                       }
 
-                      const res = await fetch("/api/areas", {
+                      const res = await fetch("/api/areas-energia", {
                         method: "POST",
                         headers: { "Content-Type": "application/json" },
                         body: JSON.stringify({ nombre: valor }),
@@ -1157,7 +1157,7 @@ export default function TablaEnergiaIgual({
                             modoNoche ? "border-[#353535]" : "border-gray-200"
                           }`}
                         >
-                          Área / Puesto
+                          Área de energía
                         </th>
 
                         {campos.map((c) => (
@@ -1188,16 +1188,16 @@ export default function TablaEnergiaIgual({
                     </thead>
 
                     <tbody>
-                      {dataBackendFiltrada.map((area: any) => {
+                      {dataBackendFiltrada.map((areaEnergia: any) => {
                         const filaKey = getFilaKey(
                           fechaGrupo,
                           responsableGrupo,
-                          area.id
+                          areaEnergia.id
                         );
 
                         const registro = registros.find(
                           (r) =>
-                            r.area_id === area.id &&
+                            r.area_id === areaEnergia.id &&
                             r.responsable === responsableGrupo &&
                             normalizarFecha(r.fecha) === fechaGrupo
                         );
@@ -1218,12 +1218,12 @@ export default function TablaEnergiaIgual({
                             >
                               <input
                                 disabled={editandoGrupo !== clave}
-                                value={area.nombre || ""}
+                                value={areaEnergia.nombre || ""}
                                 onChange={(e) => {
                                   const nuevo = e.target.value;
                                   setdataBackend((prev) =>
                                     prev.map((item) =>
-                                      item.id === area.id
+                                      item.id === areaEnergia.id
                                         ? { ...item, nombre: nuevo }
                                         : item
                                     )
@@ -1233,12 +1233,12 @@ export default function TablaEnergiaIgual({
                                   if (e.key === "Enter") {
                                     e.preventDefault();
 
-                                    const valor = String(area.nombre || "").trim();
+                                    const valor = String(areaEnergia.nombre || "").trim();
 
                                     try {
                                       if (!valor) {
                                         const res = await fetch(
-                                          `/api/areas?id=${area.id}`,
+                                          `/api/areas-energia?id=${areaEnergia.id}`,
                                           { method: "DELETE" }
                                         );
 
@@ -1248,7 +1248,7 @@ export default function TablaEnergiaIgual({
                                         }
 
                                         setdataBackend((prev) =>
-                                          prev.filter((item) => item.id !== area.id)
+                                          prev.filter((item) => item.id !== areaEnergia.id)
                                         );
 
                                         Swal.fire({
@@ -1265,7 +1265,7 @@ export default function TablaEnergiaIgual({
 
                                       const duplicada = dataBackend.some(
                                         (a) =>
-                                          a.id !== area.id &&
+                                          a.id !== areaEnergia.id &&
                                           String(a?.nombre || "")
                                             .toLowerCase()
                                             .trim() === valor.toLowerCase()
@@ -1283,13 +1283,13 @@ export default function TablaEnergiaIgual({
                                         return;
                                       }
 
-                                      const res = await fetch("/api/areas", {
+                                      const res = await fetch("/api/areas-energia", {
                                         method: "PUT",
                                         headers: {
                                           "Content-Type": "application/json",
                                         },
                                         body: JSON.stringify({
-                                          id: area.id,
+                                          id: areaEnergia.id,
                                           nombre: valor,
                                         }),
                                       });
@@ -1301,7 +1301,7 @@ export default function TablaEnergiaIgual({
 
                                       setdataBackend((prev) =>
                                         prev.map((item) =>
-                                          item.id === area.id
+                                          item.id === areaEnergia.id
                                             ? { ...item, nombre: valor }
                                             : item
                                         )
@@ -1379,7 +1379,7 @@ export default function TablaEnergiaIgual({
                                         onKeyDown={(e) => {
                                           if (e.key === "Enter") {
                                             e.preventDefault();
-                                            guardarFila(filaKey, area, registro);
+                                            guardarFila(filaKey, areaEnergia, registro);
                                           }
                                         }}
                                         placeholder="0"
@@ -1407,7 +1407,7 @@ export default function TablaEnergiaIgual({
                                         onKeyDown={(e) => {
                                           if (e.key === "Enter") {
                                             e.preventDefault();
-                                            guardarFila(filaKey, area, registro);
+                                            guardarFila(filaKey, areaEnergia, registro);
                                           }
                                         }}
                                         placeholder="0"
@@ -1452,7 +1452,7 @@ export default function TablaEnergiaIgual({
                                   onKeyDown={(e) => {
                                     if (e.key === "Enter" && !e.shiftKey) {
                                       e.preventDefault();
-                                      guardarFila(filaKey, area, registro);
+                                      guardarFila(filaKey, areaEnergia, registro);
                                     }
                                   }}
                                   placeholder="Escribe una observación..."

@@ -5,61 +5,59 @@ if (!BACKEND_URL) {
 }
 
 /* =========================
-   GET · LISTAR AREAS
+   GET · LISTAR AREAS ENERGIA
 ========================= */
 export async function GET() {
   try {
-    const res = await fetch(`${BACKEND_URL}/areas`);
+    const res = await fetch(`${BACKEND_URL}/areas-energia`);
     const data = await res.json();
 
     return Response.json(data, { status: res.status });
   } catch (error) {
     return Response.json(
-      { error: "Error obteniendo áreas" },
+      { error: "Error obteniendo áreas de energía" },
       { status: 500 }
     );
   }
 }
 
 /* =========================
-   POST · CREAR AREA
+   POST · CREAR AREA ENERGIA
 ========================= */
 export async function POST(request) {
   try {
     const body = await request.json();
 
-    const nombre = body.nombre ? String(body.nombre).trim() : "";
-
-    if (!nombre) {
+    if (!body.nombre || !String(body.nombre).trim()) {
       return Response.json(
         { error: "El nombre es obligatorio" },
         { status: 400 }
       );
     }
 
-    const res = await fetch(`${BACKEND_URL}/areas`, {
+    const res = await fetch(`${BACKEND_URL}/areas-energia`, {
       method: "POST",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({ nombre }),
+      body: JSON.stringify({
+        nombre: String(body.nombre).trim(),
+      }),
     });
 
     const data = await res.json();
 
     return Response.json(data, { status: res.status });
-
   } catch (error) {
     return Response.json(
-      { error: "Error creando área" },
+      { error: "Error creando área de energía" },
       { status: 500 }
     );
   }
 }
 
 /* =========================
-   PUT · ACTUALIZAR AREA
-   ✔ Usa ID en el body
+   PUT · ACTUALIZAR AREA ENERGIA
 ========================= */
 export async function PUT(request) {
   try {
@@ -75,7 +73,7 @@ export async function PUT(request) {
       );
     }
 
-    const res = await fetch(`${BACKEND_URL}/areas/${id}`, {
+    const res = await fetch(`${BACKEND_URL}/areas-energia/${id}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
@@ -86,18 +84,16 @@ export async function PUT(request) {
     const data = await res.json();
 
     return Response.json(data, { status: res.status });
-
   } catch (error) {
     return Response.json(
-      { error: "Error actualizando área" },
+      { error: "Error actualizando área de energía" },
       { status: 500 }
     );
   }
 }
 
 /* =========================
-   DELETE · ELIMINAR AREA
-   ✔ Usa ?id= en query
+   DELETE · ELIMINAR AREA ENERGIA
 ========================= */
 export async function DELETE(request) {
   try {
@@ -111,17 +107,16 @@ export async function DELETE(request) {
       );
     }
 
-    const res = await fetch(`${BACKEND_URL}/areas/${id}`, {
+    const res = await fetch(`${BACKEND_URL}/areas-energia/${id}`, {
       method: "DELETE",
     });
 
     const data = await res.json();
 
     return Response.json(data, { status: res.status });
-
   } catch (error) {
     return Response.json(
-      { error: "Error eliminando área" },
+      { error: "Error eliminando área de energía" },
       { status: 500 }
     );
   }

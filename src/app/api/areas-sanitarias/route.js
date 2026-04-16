@@ -29,7 +29,9 @@ export async function POST(request) {
   try {
     const body = await request.json();
 
-    if (!body.nombre) {
+    const nombre = body.nombre ? String(body.nombre).trim() : "";
+
+    if (!nombre) {
       return Response.json(
         { error: "El nombre es obligatorio" },
         { status: 400 }
@@ -41,9 +43,7 @@ export async function POST(request) {
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        nombre: body.nombre,
-      }),
+      body: JSON.stringify({ nombre }),
     });
 
     const data = await res.json();
@@ -60,26 +60,28 @@ export async function POST(request) {
 
 /* =========================
    PUT · ACTUALIZAR AREA SANITARIA
+   ✔ usa id en el body
 ========================= */
 export async function PUT(request) {
   try {
     const body = await request.json();
 
-    if (!body.id || !body.nombre) {
+    const id = body.id;
+    const nombre = body.nombre ? String(body.nombre).trim() : "";
+
+    if (!id || !nombre) {
       return Response.json(
         { error: "Faltan id o nombre" },
         { status: 400 }
       );
     }
 
-    const res = await fetch(`${BACKEND_URL}/areas-sanitarias/${body.id}`, {
+    const res = await fetch(`${BACKEND_URL}/areas-sanitarias/${id}`, {
       method: "PUT",
       headers: {
         "Content-Type": "application/json",
       },
-      body: JSON.stringify({
-        nombre: body.nombre,
-      }),
+      body: JSON.stringify({ nombre }),
     });
 
     const data = await res.json();
@@ -96,15 +98,16 @@ export async function PUT(request) {
 
 /* =========================
    DELETE · ELIMINAR AREA SANITARIA
+   ✔ usa ?id=
 ========================= */
 export async function DELETE(request) {
   try {
-    const { searchParams } = new URL(request.url);
-    const id = searchParams.get("id");
+    const url = new URL(request.url);
+    const id = url.searchParams.get("id");
 
-    if (!id) {
+    if (!id || isNaN(Number(id))) {
       return Response.json(
-        { error: "Falta el id" },
+        { error: "ID inválido o faltante" },
         { status: 400 }
       );
     }

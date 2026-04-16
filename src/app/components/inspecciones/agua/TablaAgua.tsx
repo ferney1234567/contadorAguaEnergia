@@ -493,11 +493,25 @@ export default function TablaSanitarios({
         registroSeguro = null;
       }
 
+const fechaNormal = fechaSesion;
+
+const obtenerSemana = (fecha: string) => {
+  const d = new Date(fecha);
+  const inicio = new Date(d.getFullYear(), 0, 1);
+  const dias = Math.floor((d.getTime() - inicio.getTime()) / (1000 * 60 * 60 * 24));
+  return Math.ceil((dias + inicio.getDay() + 1) / 7);
+};
+
+const semana = obtenerSemana(fechaNormal);
+const anio = new Date(fechaNormal).getFullYear();
+
       const body = {
-        id: registroSeguro?.id || null,
+        id: registroSeguro?.id ?? null,
         fecha: fechaSesion,
         responsable: responsableFinal,
         area_id: area.id,
+        anio: anio,
+semana: semana,
 
         sanitarios_c: obtenerValor(filaKey, 1, "c", registroSeguro),
         sanitarios_nc: obtenerValor(filaKey, 1, "nc", registroSeguro),
@@ -520,10 +534,10 @@ export default function TablaSanitarios({
       const total = calcularTotalFila(filaKey, registroSeguro);
 
       if (total === 0 && registroSeguro?.id) {
-        const deleteRes = await fetch(
-          `/api/inspecciones-sanitarias?id=${registroSeguro.id}`,
-          { method: "DELETE" }
-        );
+       const deleteRes = await fetch(
+  `/api/inspecciones-sanitarias?id=${registroSeguro.id}`,
+  { method: "DELETE" }
+);
 
         if (!deleteRes.ok) {
           const errorText = await deleteRes.text();
@@ -1251,103 +1265,112 @@ export default function TablaSanitarios({
                                     )
                                   );
                                 }}
-                                onKeyDown={async (e) => {
-                                  if (e.key === "Enter") {
-                                    e.preventDefault();
+                              onKeyDown={async (e) => {
+  if (e.key === "Enter") {
+    e.preventDefault();
 
-                                    const valor = String(area.nombre || "").trim();
+    const valor = String(area.nombre || "").trim();
 
-                                    try {
-                                      if (!valor) {
-                                        const res = await fetch(
-                                          `/api/areas-sanitarias?id=${area.id}`,
-                                          { method: "DELETE" }
-                                        );
+    try {
+      // =========================
+      // ❌ ELIMINAR
+      // =========================
+      if (!valor) {
+        const res = await fetch(`/api/areas-sanitarias?id=${area.id}`, {
+          method: "DELETE",
+        });
 
-                                        if (!res.ok) {
-                                          const errorText = await res.text();
-                                          throw new Error(errorText);
-                                        }
+        if (!res.ok) {
+          const errorText = await res.text();
+          console.error("ERROR BACKEND:", errorText);
+          throw new Error(errorText);
+        }
 
-                                        setdataBackend((prev) =>
-                                          prev.filter((item) => item.id !== area.id)
-                                        );
+        setdataBackend((prev) =>
+          prev.filter((item) => item.id !== area.id)
+        );
 
-                                        Swal.fire({
-                                          toast: true,
-                                          position: "top-end",
-                                          icon: "success",
-                                          title: "Área eliminada",
-                                          timer: 1200,
-                                          showConfirmButton: false,
-                                        });
+        Swal.fire({
+          toast: true,
+          position: "top-end",
+          icon: "success",
+          title: "Área eliminada correctamente",
+          timer: 1200,
+          showConfirmButton: false,
+        });
 
-                                        return;
-                                      }
+        return;
+      }
 
-                                      const duplicada = dataBackend.some(
-                                        (a) =>
-                                          a.id !== area.id &&
-                                          String(a?.nombre || "")
-                                            .toLowerCase()
-                                            .trim() === valor.toLowerCase()
-                                      );
+      // =========================
+      // ✏️ VALIDAR DUPLICADOS
+      // =========================
+      const duplicada = dataBackend.some(
+        (a) =>
+          a.id !== area.id &&
+          String(a?.nombre || "").toLowerCase().trim() === valor.toLowerCase()
+      );
 
-                                      if (duplicada) {
-                                        Swal.fire({
-                                          toast: true,
-                                          position: "top-end",
-                                          icon: "warning",
-                                          title: "Ya existe un área con ese nombre",
-                                          timer: 1400,
-                                          showConfirmButton: false,
-                                        });
-                                        return;
-                                      }
+      if (duplicada) {
+        Swal.fire({
+          toast: true,
+          position: "top-end",
+          icon: "warning",
+          title: "Ya existe un área con ese nombre",
+          timer: 1400,
+          showConfirmButton: false,
+        });
+        return;
+      }
 
-                                      const res = await fetch("/api/areas-sanitarias", {
-                                        method: "PUT",
-                                        headers: {
-                                          "Content-Type": "application/json",
-                                        },
-                                        body: JSON.stringify({
-                                          id: area.id,
-                                          nombre: valor,
-                                        }),
-                                      });
+      // =========================
+      // ✏️ EDITAR (CORRECTO)
+      // =========================
+      const res = await fetch(`/api/areas-sanitarias`, {
+        method: "PUT",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify({
+          id: area.id,
+          nombre: valor,
+        }),
+      });
 
-                                      if (!res.ok) {
-                                        const errorText = await res.text();
-                                        throw new Error(errorText);
-                                      }
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error("ERROR BACKEND:", errorText);
+        throw new Error(errorText);
+      }
 
-                                      setdataBackend((prev) =>
-                                        prev.map((item) =>
-                                          item.id === area.id
-                                            ? { ...item, nombre: valor }
-                                            : item
-                                        )
-                                      );
+      setdataBackend((prev) =>
+        prev.map((item) =>
+          item.id === area.id
+            ? { ...item, nombre: valor }
+            : item
+        )
+      );
 
-                                      Swal.fire({
-                                        toast: true,
-                                        position: "top-end",
-                                        icon: "success",
-                                        title: "Área actualizada",
-                                        timer: 1200,
-                                        showConfirmButton: false,
-                                      });
-                                    } catch (error) {
-                                      console.error(error);
+      Swal.fire({
+        toast: true,
+        position: "top-end",
+        icon: "success",
+        title: "Área actualizada correctamente",
+        timer: 1200,
+        showConfirmButton: false,
+      });
 
-                                      Swal.fire({
-                                        icon: "error",
-                                        title: "Error",
-                                        text: "No se pudo actualizar/eliminar el área",
-                                      });
-                                    }
-                                  }
-                                }}
+    } catch (error) {
+      console.error(error);
+
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "No se pudo actualizar o eliminar el área",
+      });
+    }
+  }
+}}
                                 className={`w-full text-center font-semibold rounded-xl px-3 py-2 ${
                                   modoNoche
                                     ? "bg-[#222] text-white"

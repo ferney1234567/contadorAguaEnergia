@@ -1226,92 +1226,92 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
                                   );
                                 }}
                                 onKeyDown={async (e) => {
-                                  if (e.key === "Enter") {
-                                    e.preventDefault();
+  if (e.key === "Enter") {
+    e.preventDefault();
 
-                                    const valor = (area.nombre || "").trim();
+    const valor = (area.nombre || "").trim();
 
-                                    try {
-                                      // =========================
-                                      // ❌ ELIMINAR
-                                      // =========================
-                                      if (!valor) {
-                                        const res = await fetch(`/api/areas?id=${area.id}`, {
-                                          method: "DELETE",
-                                        });
+    try {
+      // =========================
+      // ❌ ELIMINAR
+      // =========================
+      if (!valor) {
+        const res = await fetch(`/api/areas?id=${area.id}`, {
+          method: "DELETE",
+        });
 
-                                        if (!res.ok) {
-                                          const errorText = await res.text();
-                                          console.error("ERROR BACKEND:", errorText);
-                                          throw new Error(errorText);
-                                        }
+        if (!res.ok) {
+          const errorText = await res.text();
+          console.error("ERROR BACKEND:", errorText);
+          throw new Error(errorText);
+        }
 
-                                        // 🔥 actualizar UI
-                                        setdataBackend((prev) =>
-                                          prev.filter((item) => item.id !== area.id)
-                                        );
+        // 🔥 actualizar UI
+        setdataBackend((prev) =>
+          prev.filter((item) => item.id !== area.id)
+        );
 
-                                        Swal.fire({
-                                          toast: true,
-                                          position: "top-end",
-                                          icon: "success",
-                                          title: "Área eliminada",
-                                          timer: 1200,
-                                          showConfirmButton: false,
-                                        });
+        Swal.fire({
+          toast: true,
+          position: "top-end",
+          icon: "success",
+          title: "Área eliminada correctamente",
+          timer: 1200,
+          showConfirmButton: false,
+        });
 
-                                        return;
-                                      }
+        return;
+      }
 
-                                      // =========================
-                                      // ✏️ EDITAR
-                                      // =========================
-                                      const res = await fetch(`/api/areas`, {
-                                        method: "PUT",
-                                        headers: {
-                                          "Content-Type": "application/json",
-                                        },
-                                        body: JSON.stringify({
-                                          id: area.id,
-                                          nombre: valor,
-                                        }),
-                                      });
+      // =========================
+      // ✏️ EDITAR
+      // =========================
+      const res = await fetch(`/api/areas`, {
+  method: "PUT",
+  headers: {
+    "Content-Type": "application/json",
+  },
+  body: JSON.stringify({
+    id: area.id,
+    nombre: valor,
+  }),
+});
 
-                                      if (!res.ok) {
-                                        const errorText = await res.text();
-                                        console.error("ERROR BACKEND:", errorText);
-                                        throw new Error(errorText);
-                                      }
+      if (!res.ok) {
+        const errorText = await res.text();
+        console.error("ERROR BACKEND:", errorText);
+        throw new Error(errorText);
+      }
 
-                                      // 🔥 actualizar UI local
-                                      setdataBackend((prev) =>
-                                        prev.map((item) =>
-                                          item.id === area.id
-                                            ? { ...item, nombre: valor }
-                                            : item
-                                        )
-                                      );
+      // 🔥 actualizar UI
+      setdataBackend((prev) =>
+        prev.map((item) =>
+          item.id === area.id
+            ? { ...item, nombre: valor }
+            : item
+        )
+      );
 
-                                      Swal.fire({
-                                        toast: true,
-                                        position: "top-end",
-                                        icon: "success",
-                                        title: "Área actualizada",
-                                        timer: 1200,
-                                        showConfirmButton: false,
-                                      });
+      Swal.fire({
+        toast: true,
+        position: "top-end",
+        icon: "success",
+        title: "Área actualizada correctamente",
+        timer: 1200,
+        showConfirmButton: false,
+      });
 
-                                    } catch (error) {
-                                      console.error(error);
+    } catch (error) {
+      console.error(error);
 
-                                      Swal.fire({
-                                        icon: "error",
-                                        title: "Error",
-                                        text: "No se pudo actualizar/eliminar el área",
-                                      });
-                                    }
-                                  }
-                                }}
+      Swal.fire({
+        icon: "error",
+        title: "Error",
+        text: "No se pudo actualizar o eliminar el área",
+      });
+    }
+  }
+}}
                                 className={`w-full text-center font-semibold rounded-xl px-3 py-2 ${modoNoche
                                   ? "bg-[#222] text-white"
                                   : "bg-gray-50 text-gray-800"
