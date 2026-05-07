@@ -84,6 +84,14 @@ export default function MovilEnergia({
     }));
   };
 
+  const obtenerInicioSemana = (fecha: string) => {
+    const base = fecha.split("T")[0];
+    const date = new Date(base);
+    const diff = (date.getDay() + 6) % 7;
+    date.setDate(date.getDate() - diff);
+    return date.toISOString().split("T")[0];
+  };
+
   const totalGeneral =
     Number(valores?.[1]?.c || 0) +
     Number(valores?.[1]?.nc || 0) +
@@ -108,8 +116,8 @@ const guardar = async () => {
   }
 
   const hoy = new Date().toISOString().split("T")[0];
+  const semanaActual = obtenerInicioSemana(hoy);
 
-  // 🔥 VALIDACIÓN DUPLICADO
   const yaExiste = await fetch("/api/inspecciones-energia")
     .then(res => res.json())
     .then((data) => {
@@ -117,7 +125,7 @@ const guardar = async () => {
         return (
           item.area_id === Number(areaId) &&
           item.responsable === responsable &&
-          item.fecha?.split("T")[0] === hoy
+          obtenerInicioSemana(item.fecha) === semanaActual
         );
       });
     });

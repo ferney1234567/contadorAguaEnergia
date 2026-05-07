@@ -124,9 +124,13 @@ export default function TablaSanitarios({
     areaId: number | string
   ) => `${fecha}__${responsableFila}__${areaId}`;
 
-  const normalizarFecha = (fecha: string) => {
+  const obtenerInicioSemana = (fecha: string) => {
     if (!fecha) return "";
-    return fecha.split("T")[0];
+    const base = fecha.split("T")[0];
+    const date = new Date(base);
+    const diff = (date.getDay() + 6) % 7; // Lunes como inicio de semana
+    date.setDate(date.getDate() - diff);
+    return date.toISOString().split("T")[0];
   };
 
   const limpiarEstadoFila = (filaKey: string) => {
@@ -249,12 +253,13 @@ export default function TablaSanitarios({
     dataBackend.forEach((area) => {
       const filaKey = getFilaKey(fechaSesion, responsable, area.id);
 
+      const semanaActual = obtenerInicioSemana(fechaSesion);
       const inspeccion = inspecciones
         .filter(
           (i) =>
             i.area_id === area.id &&
             i.responsable === responsable &&
-            normalizarFecha(i.fecha) === fechaSesion
+            obtenerInicioSemana(i.fecha) === semanaActual
         )
         .slice(-1)[0];
 
@@ -381,7 +386,7 @@ export default function TablaSanitarios({
     const grupos: Record<string, any[]> = {};
 
     inspecciones.forEach((item) => {
-      const fecha = normalizarFecha(item.fecha);
+      const fecha = obtenerInicioSemana(item.fecha);
       const responsableItem = item.responsable || "sin-responsable";
       const semana = obtenerSemana(fecha);
       const anio = new Date(fecha).getFullYear();
@@ -406,7 +411,7 @@ export default function TablaSanitarios({
         if (mesFiltro === "Todos") return true;
 
         return registros.some((r) => {
-          const fecha = normalizarFecha(r.fecha);
+          const fecha = obtenerInicioSemana(r.fecha);
           const d = new Date(fecha);
           return String(d.getMonth() + 1).padStart(2, "0") === mesFiltro;
         });
@@ -606,7 +611,7 @@ semana: semana,
           (r) =>
             r.area_id === area.id &&
             r.responsable === responsableGrupo &&
-            normalizarFecha(r.fecha) === fecha
+            obtenerInicioSemana(r.fecha) === fecha
         );
 
         const body = {
@@ -1235,7 +1240,7 @@ semana: semana,
                           (r) =>
                             r.area_id === area.id &&
                             r.responsable === responsableGrupo &&
-                            normalizarFecha(r.fecha) === fechaGrupo
+                            obtenerInicioSemana(r.fecha) === fechaGrupo
                         );
 
                         return (

@@ -305,14 +305,6 @@ export default function TablaTonners({ modoNoche }: { modoNoche: boolean }) {
 
           <div className="flex flex-wrap gap-3">
             <button
-              onClick={cargar}
-              className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-blue-500 text-white shadow-md hover:scale-105 transition"
-            >
-              <RefreshCcw size={18} />
-              Recargar
-            </button>
-
-            <button
               onClick={() => setMostrarModalAreas(true)}
               className="flex items-center gap-2 px-4 py-3 rounded-2xl bg-gradient-to-r from-purple-600 to-purple-500 text-white shadow-md hover:scale-105 transition"
             >

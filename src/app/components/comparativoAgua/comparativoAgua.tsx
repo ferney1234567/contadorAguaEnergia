@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import React from "react";
 import Swal from "sweetalert2";
 import { Search, Filter, Droplets, TrendingUp, Building2, DollarSign, MapPin, Calendar, CheckSquare, CheckCircle, User } from "lucide-react";
@@ -25,9 +25,22 @@ export default function ComparativoAgua({ modoNoche }: Props) {
   const [busqueda, setBusqueda] = useState("");
   const startYear = 2025;
   const futureYears = 6; // hasta 2031 inicialmente
+  const years = Array.from(
+    { length: currentYear - startYear + 1 + futureYears },
+    (_, i) => startYear + i
+  );
+  const [autoSaveTimeout, setAutoSaveTimeout] = useState<NodeJS.Timeout | null>(null);
   const inputsRef = React.useRef<(HTMLInputElement | HTMLSelectElement | null)[][]>([]);
-  const years = Array.from({ length: (currentYear - startYear + 1) + futureYears }, (_, i) => startYear + i);
-  const [nuevaFila, setNuevaFila] = useState({ nombre: "", ubicacion: "", cuenta: "", datos: Array.from({ length: 12 }, () => ({ M3: 0, valor: 0, cumple: true })) });
+  const [nuevaFila, setNuevaFila] = useState({
+    nombre: "",
+    ubicacion: "",
+    cuenta: "",
+    datos: Array.from({ length: 12 }, () => ({
+      M3: 0,
+      valor: 0,
+      cumple: true,
+    })),
+  });
   const editarNuevaFila = (campo: string, valor: any) => { setNuevaFila(prev => ({ ...prev, [campo]: valor })); };
   const editarFila = (filaIndex: number, campo: string, valor: any) => {
     const nuevosDatos = [...datosEnergia]; nuevosDatos[filaIndex] = { ...nuevosDatos[filaIndex], [campo]: valor }; setDatosEnergia(nuevosDatos);
@@ -235,6 +248,11 @@ export default function ComparativoAgua({ modoNoche }: Props) {
       })
     );
 
+    // 🔧 FIX: Guardar inmediatamente para evitar pérdida de datos
+    const filaActualizada = datosEnergia[filaIndex];
+    if (filaActualizada) {
+      guardarRegistro(filaActualizada, mesIndex);
+    }
   };
   const fondo = modoNoche
     ? "bg-[#0f0f0f] text-white"
@@ -350,16 +368,23 @@ export default function ComparativoAgua({ modoNoche }: Props) {
       }, 0);
 
   };
+  const guardarAutomatico = (fila: any, mesIndex: number) => {
+    if (autoSaveTimeout) clearTimeout(autoSaveTimeout);
+
+    const timeout = setTimeout(() => {
+      guardarRegistro(fila, mesIndex);
+    }, 600);
+
+    setAutoSaveTimeout(timeout);
+  };
+
   const guardarRegistro = async (fila: any, mesIndex: number) => {
     try {
       const mesData = fila.datos?.[mesIndex];
       if (!mesData) return;
 
-      const sede = sedesDB.find(s => s.id === fila.sede_id);
-      if (!sede) return;
-
       const payload = {
-        sede_id: sede.id,
+        sede_id: fila.sede_id || fila.id,
         anio: Number(anio),
         mes: mesIndex + 1,
         m3_consumidos:
@@ -369,32 +394,41 @@ export default function ComparativoAgua({ modoNoche }: Props) {
         cumple: mesData.cumple,
       };
 
-      const res = await fetch(`/api/comparativoAgua`, {
+      // 🔧 FIX: Evitar guardados duplicados o vacíos
+      if (payload.m3_consumidos === null && payload.valor_consumo_agua === null) {
+        return;
+      }
+
+      const res = await fetch("/api/comparativoAgua", {
         method: "POST",
         headers: {
-          "Content-Type": "application/json"
+          "Content-Type": "application/json",
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify(payload),
       });
 
-      if (!res.ok) throw new Error();
+      if (!res.ok) {
+        const error = await res.text();
+        console.error("ERROR BACKEND:", error);
+        throw new Error(error || "Error desconocido");
+      }
 
-      setDatosEnergia(prev =>
-        prev.map(f =>
-          f.sede_id === fila.sede_id
+      setDatosEnergia((prev) =>
+        prev.map((f) =>
+          f.sede_id === fila.sede_id || f.id === fila.sede_id
             ? {
-              ...f,
-              datos: f.datos.map((d: any, i: number) =>
-                i === mesIndex
-                  ? {
-                    ...d,
-                    M3: payload.m3_consumidos,
-                    valor: payload.valor_consumo_agua,
-                    cumple: payload.cumple
-                  }
-                  : d
-              )
-            }
+                ...f,
+                datos: f.datos.map((d: any, i: number) =>
+                  i === mesIndex
+                    ? {
+                        ...d,
+                        M3: payload.m3_consumidos,
+                        valor: payload.valor_consumo_agua,
+                        cumple: payload.cumple,
+                      }
+                    : d
+                ),
+              }
             : f
         )
       );
@@ -404,14 +438,14 @@ export default function ComparativoAgua({ modoNoche }: Props) {
         position: "top-end",
         icon: "success",
         title: "Actualizado con éxito",
+        showConfirmButton: false,
         timer: 1200,
-        showConfirmButton: false
       });
-
-    } catch {
+    } catch (error) {
+      console.error(error);
       Swal.fire({
         icon: "error",
-        title: "Error actualizando"
+        title: "Error guardando datos",
       });
     }
   };
@@ -755,6 +789,7 @@ ${modoNoche ? "border-[#333]" : "border-gray-300"}`}>
       }
 
       editarCelda(i, inicio + j, "M3", valor);
+      guardarAutomatico(fila, inicio + j);
     }}
   />
 </td>
@@ -792,6 +827,7 @@ ${modoNoche ? "border-[#333]" : "border-gray-300"}`}>
     onChange={(e) => {
       const valorLimpio = limpiarNumero(e.target.value);
       editarCelda(i, inicio + j, "valor", valorLimpio);
+      guardarAutomatico(fila, inicio + j);
     }}
   />
 </td>

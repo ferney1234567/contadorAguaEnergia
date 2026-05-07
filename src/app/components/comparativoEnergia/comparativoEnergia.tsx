@@ -61,6 +61,8 @@ export default function ComparativoEnergia({ modoNoche }: Props) {
 
   const inputsRef = React.useRef<(HTMLInputElement | HTMLSelectElement | null)[][]>([]);
 
+  const [autoSaveTimeout, setAutoSaveTimeout] = useState<NodeJS.Timeout | null>(null);
+
   const [nuevaFila, setNuevaFila] = useState({
     nombre: "",
     ubicacion: "",
@@ -140,6 +142,12 @@ export default function ComparativoEnergia({ modoNoche }: Props) {
         };
       })
     );
+
+    // 🔧 FIX: Guardar inmediatamente para evitar pérdida de datos
+    const filaActualizada = datosEnergia[filaIndex];
+    if (filaActualizada) {
+      guardarRegistro(filaActualizada, mesIndex);
+    }
   };
 
   const manejarTeclas = (
@@ -298,6 +306,16 @@ export default function ComparativoEnergia({ modoNoche }: Props) {
     }
   };
 
+  const guardarAutomatico = (fila: any, mesIndex: number) => {
+    if (autoSaveTimeout) clearTimeout(autoSaveTimeout);
+
+    const timeout = setTimeout(() => {
+      guardarRegistro(fila, mesIndex);
+    }, 600);
+
+    setAutoSaveTimeout(timeout);
+  };
+
   const guardarRegistro = async (fila: any, mesIndex: number) => {
     try {
       const mesData = fila.datos?.[mesIndex];
@@ -320,6 +338,11 @@ export default function ComparativoEnergia({ modoNoche }: Props) {
             : Number(mesData.valor),
         cumple: mesData.cumple,
       };
+
+      // 🔧 FIX: Evitar guardados duplicados o vacíos
+      if (payload.kw_consumidos === null && payload.valor_consumo_energia === null) {
+        return;
+      }
 
       const res = await fetch("/api/comparativoEnergia", {
         method: "POST",
@@ -821,6 +844,7 @@ export default function ComparativoEnergia({ modoNoche }: Props) {
                         onChange={(e) => {
                           const valor = limpiarNumeroDecimal(e.target.value);
                           editarCelda(i, inicio + j, "kWh", valor);
+                          guardarAutomatico(fila, inicio + j);
                         }}
                       />
                     </td>
@@ -857,6 +881,7 @@ export default function ComparativoEnergia({ modoNoche }: Props) {
                         onChange={(e) => {
                           const valorLimpio = limpiarNumeroEntero(e.target.value);
                           editarCelda(i, inicio + j, "valor", valorLimpio);
+                          guardarAutomatico(fila, inicio + j);
                         }}
                       />
                     </td>

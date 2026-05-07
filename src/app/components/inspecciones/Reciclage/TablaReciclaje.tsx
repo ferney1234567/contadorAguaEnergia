@@ -72,6 +72,15 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
     localStorage.removeItem("modo_nueva_inspeccion");
   };
 
+  const obtenerInicioSemana = (fecha: string) => {
+    if (!fecha) return "";
+    const base = fecha.split("T")[0];
+    const date = new Date(base);
+    const diff = (date.getDay() + 6) % 7;
+    date.setDate(date.getDate() - diff);
+    return date.toISOString().split("T")[0];
+  };
+
   useEffect(() => {
     if (!responsable) return;
 
@@ -132,12 +141,13 @@ export default function TablaReciclaje({ modoNoche, dataBackend: dataInicial, }:
     dataBackend.forEach((area) => {
       const filaKey = `${fechaSesion}__${responsable}__${area.id}`;
 
+      const semanaActual = obtenerInicioSemana(fechaSesion);
       const inspeccion = inspecciones
         .filter(
           (i) =>
             i.area_id === area.id &&
             i.responsable === responsable &&
-            i.fecha?.split("T")[0] === fechaSesion
+            obtenerInicioSemana(i.fecha) === semanaActual
         )
         .slice(-1)[0];
 

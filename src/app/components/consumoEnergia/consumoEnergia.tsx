@@ -210,10 +210,10 @@ const [lecturas, setLecturas] = useState<LecturasPorAnio>({});
     if (!nuevasLecturas[anio][mes]) nuevasLecturas[anio][mes] = {};
 
     nuevasLecturas[anio][mes][dia] = {
-      bodega2: String(item.bodega1),
-      bodega4: String(item.bodega2),
-      total2: item.total_bodega1,
-      total4: item.total_bodega2,
+      bodega2: String(item.bodega1 || 0),
+      bodega4: String(item.bodega2 || 0),
+      total2: item.total_bodega1 || 0,
+      total4: item.total_bodega2 || 0,
     };
   });
 
@@ -478,14 +478,18 @@ useEffect(() => {
   campo: "bodega2" | "bodega4",
   valor: string
 ) => {
-  const limpio = limpiarNumero(valor);
-
   // ⛔ Bloquear domingos y festivos
   const diasMes = obtenerDiasDelMes(mes);
   const diaInfo = diasMes.find((d) => d.dia === dia);
 
   if (diaInfo?.tipo === "D" || diaInfo?.tipo === "F") {
     return;
+  }
+
+  // 🔧 FIX: Permitir valores vacíos y números válidos
+  let limpio = valor;
+  if (valor !== "") {
+    limpio = limpiarNumero(valor);
   }
 
   let datoActualizado: LecturaDia | null = null;
@@ -567,8 +571,12 @@ useEffect(() => {
   dia: number,
   data: LecturaDia
 ) => {
-  // ⛔ NO AUTOSAVE SI AMBOS CAMPOS ESTÁN VACÍOS
-  if (!data.bodega2 && !data.bodega4) {
+  // 🔧 FIX: Mejorar validación para evitar borrado
+  const b2Str = data.bodega2 || "";
+  const b4Str = data.bodega4 || "";
+  
+  // Solo guardar si hay datos o si explícitamente se quiere guardar vacío
+  if (b2Str === "" && b4Str === "") {
     return;
   }
 

@@ -68,6 +68,14 @@ export default function MovilSanitario({
     }));
   };
 
+  const obtenerInicioSemana = (fecha: string) => {
+    const base = fecha.split("T")[0];
+    const date = new Date(base);
+    const diff = (date.getDay() + 6) % 7;
+    date.setDate(date.getDate() - diff);
+    return date.toISOString().split("T")[0];
+  };
+
   const guardar = async () => {
   if (!areaId || !responsable) {
     Swal.fire({
@@ -81,17 +89,17 @@ export default function MovilSanitario({
     return;
   }
 
-  // 🔥 VALIDACIÓN DUPLICADO (PRO)
-  const hoy = new Date().toISOString().split("T")[0];
+const hoy = new Date().toISOString().split("T")[0];
+    const semanaActual = obtenerInicioSemana(hoy);
 
-  const yaExiste = await fetch("/api/inspecciones-sanitarias")
-    .then(res => res.json())
-    .then((data) => {
-      return data.some((item: any) => {
-        return (
-          item.area_id === Number(areaId) &&
-          item.responsable === responsable &&
-          item.fecha?.split("T")[0] === hoy
+    const yaExiste = await fetch("/api/inspecciones-sanitarias")
+      .then(res => res.json())
+      .then((data) => {
+        return data.some((item: any) => {
+          return (
+            item.area_id === Number(areaId) &&
+            item.responsable === responsable &&
+            obtenerInicioSemana(item.fecha) === semanaActual
         );
       });
     });

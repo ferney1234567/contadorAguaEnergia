@@ -76,6 +76,14 @@ export default function MovilReciclaje({
     }));
   };
 
+  const obtenerInicioSemana = (fecha: string) => {
+    const base = fecha.split("T")[0];
+    const date = new Date(base);
+    const diff = (date.getDay() + 6) % 7;
+    date.setDate(date.getDate() - diff);
+    return date.toISOString().split("T")[0];
+  };
+
   const guardar = async () => {
     if (!areaId || !responsable) {
       Swal.fire({
@@ -89,9 +97,8 @@ export default function MovilReciclaje({
       return;
     }
 
-    // 🔥 VALIDACIÓN DUPLICADO
-    // 🔥 VALIDACIÓN REAL (POR DÍA + ÁREA + RESPONSABLE)
     const hoy = new Date().toISOString().split("T")[0];
+    const semanaActual = obtenerInicioSemana(hoy);
 
     const yaExiste = await fetch("/api/inspecciones-residuos")
       .then(res => res.json())
@@ -100,7 +107,7 @@ export default function MovilReciclaje({
           return (
             item.area_id === Number(areaId) &&
             item.responsable === responsable &&
-            item.fecha?.split("T")[0] === hoy
+            obtenerInicioSemana(item.fecha) === semanaActual
           );
         });
       });

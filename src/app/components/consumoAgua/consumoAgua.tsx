@@ -253,10 +253,10 @@ useEffect(() => {
       if (!nuevasLecturas[anio][mes]) nuevasLecturas[anio][mes] = {};
 
       nuevasLecturas[anio][mes][dia] = {
-        bodega2: String(item.bodega1),
-        bodega4: String(item.bodega2),
-        total2: item.total_bodega1,
-        total4: item.total_bodega2,
+        bodega2: String(item.bodega1 || 0),
+        bodega4: String(item.bodega2 || 0),
+        total2: item.total_bodega1 || 0,
+        total4: item.total_bodega2 || 0,
       };
     });
 
@@ -498,14 +498,18 @@ const navegarConFlechas = (
     campo: "bodega2" | "bodega4",
     valor: string
   ) => {
-    const limpio = limpiarNumero(valor);
-
     // ⛔ Bloquear domingos y festivos
     const diasMes = obtenerDiasDelMes(mes);
     const diaInfo = diasMes.find((d) => d.dia === dia);
 
     if (diaInfo?.tipo === "D" || diaInfo?.tipo === "F") {
       return;
+    }
+
+    // 🔧 FIX: Permitir valores vacíos y números válidos
+    let limpio = valor;
+    if (valor !== "") {
+      limpio = limpiarNumero(valor);
     }
 
     let datoActualizado: LecturaDia | null = null;
@@ -585,15 +589,21 @@ const navegarConFlechas = (
     dia: number,
     data: LecturaDia
   ) => {
-    const b2 = Number(data.bodega2 || 0);
-    const b4 = Number(data.bodega4 || 0);
+    // 🔧 FIX: Mejorar validación para evitar borrado
+    const b2Str = data.bodega2 || "";
+    const b4Str = data.bodega4 || "";
+    
+    // Solo guardar si hay datos o si explícitamente se quiere guardar vacío
+    if (b2Str === "" && b4Str === "") {
+      return;
+    }
 
     const payload = {
       fecha: new Date(anioSeleccionado, mes, dia)
         .toISOString()
         .split("T")[0],
-      bodega1: b2,
-      bodega2: b4,
+      bodega1: Number(b2Str || 0),
+      bodega2: Number(b4Str || 0),
       total_bodega1: data.total2 || 0,
       total_bodega2: data.total4 || 0,
     };

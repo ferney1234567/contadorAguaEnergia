@@ -123,9 +123,13 @@ export default function TablaEnergiaIgual({
     areaId: number | string
   ) => `${fecha}__${responsableFila}__${areaId}`;
 
-  const normalizarFecha = (fecha: string) => {
+  const obtenerInicioSemana = (fecha: string) => {
     if (!fecha) return "";
-    return fecha.split("T")[0];
+    const base = fecha.split("T")[0];
+    const date = new Date(base);
+    const diff = (date.getDay() + 6) % 7;
+    date.setDate(date.getDate() - diff);
+    return date.toISOString().split("T")[0];
   };
 
   const limpiarEstadoFila = (filaKey: string) => {
@@ -246,12 +250,13 @@ export default function TablaEnergiaIgual({
    dataBackend.forEach((areaEnergia) => {
       const filaKey = getFilaKey(fechaSesion, responsable, areaEnergia.id);
 
+      const semanaActual = obtenerInicioSemana(fechaSesion);
       const inspeccion = inspecciones
         .filter(
           (i) =>
             i.area_id === areaEnergia.id &&
             i.responsable === responsable &&
-            normalizarFecha(i.fecha) === fechaSesion
+            obtenerInicioSemana(i.fecha) === semanaActual
         )
         .slice(-1)[0];
 
