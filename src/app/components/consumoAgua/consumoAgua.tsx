@@ -242,6 +242,7 @@ useEffect(() => {
 
     const nuevasLecturas: any = {};
 
+    // 🔧 MANEJAR MÚLTIPLES REGISTROS POR FECHA
     aguaDB.forEach((item) => {
       const fecha = new Date(item.fecha + "T00:00:00");
 
@@ -252,12 +253,21 @@ useEffect(() => {
       if (!nuevasLecturas[anio]) nuevasLecturas[anio] = {};
       if (!nuevasLecturas[anio][mes]) nuevasLecturas[anio][mes] = {};
 
-      nuevasLecturas[anio][mes][dia] = {
+      const claveFecha = `${dia}`;
+      
+      // Si ya existe un registro para esta fecha, crear array
+      if (!nuevasLecturas[anio][mes][claveFecha]) {
+        nuevasLecturas[anio][mes][claveFecha] = [];
+      }
+
+      // Agregar el registro al array
+      nuevasLecturas[anio][mes][claveFecha].push({
+        id: item.id,
         bodega2: String(item.bodega1 || 0),
         bodega4: String(item.bodega2 || 0),
         total2: item.total_bodega1 || 0,
         total4: item.total_bodega2 || 0,
-      };
+      });
     });
 
     setLecturas(nuevasLecturas);
